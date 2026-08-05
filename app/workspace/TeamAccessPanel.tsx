@@ -59,10 +59,11 @@ export function TeamAccessPanel({
       email: draft.email,
       displayName: draft.displayName,
       confirm: true,
-    }, (temporaryPassword) => {
+    }, (temporaryPassword, membershipId) => {
       onProfilesChange(profiles.map((item) => item.id === profile.id
         ? {
             ...item,
+            membershipId,
             memberEmail: draft.email.trim().toLowerCase(),
             memberDisplayName: draft.displayName.trim(),
             hasCredential: true,
@@ -126,7 +127,7 @@ export function TeamAccessPanel({
   async function runAccountAction(
     employeeProfileId: string,
     requestBody: Record<string, unknown>,
-    onSuccess: (temporaryPassword: string) => void,
+    onSuccess: (temporaryPassword: string, membershipId: string | null) => void,
   ) {
     setLoadingProfileId(employeeProfileId);
     setMessage("");
@@ -138,19 +139,32 @@ export function TeamAccessPanel({
         body: JSON.stringify(requestBody),
       });
       const body = (await response.json()) as {
+        membershipId?: string;
         temporaryPassword?: string;
         error?: string;
       };
       if (!response.ok || !body.temporaryPassword) {
         throw new Error(body.error ?? "The temporary password could not be created.");
       }
-      onSuccess(body.temporaryPassword);
+      onSuccess(body.temporaryPassword, body.membershipId ?? null);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "The staff account could not be updated.",
       );
     } finally {
       setLoadingProfileId(null);
+    }
+  }
+
+  async function copyTemporaryPassword(password: string) {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(password);
+      setMessage("Temporary password copied.");
+    } catch {
+      setMessage(
+        "Copy unavailable. Select the temporary password and copy it manually.",
+      );
     }
   }
 
@@ -231,7 +245,7 @@ export function TeamAccessPanel({
                   <div>
                     <button
                       type="button"
-                      onClick={() => navigator.clipboard.writeText(
+                      onClick={() => copyTemporaryPassword(
                         temporaryCredential.temporaryPassword,
                       )}
                       aria-label="Copy temporary password"

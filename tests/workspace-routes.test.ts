@@ -30,6 +30,7 @@ function dependencies(actor: WorkspaceActor | null) {
     addBlockedPeriod: vi.fn().mockResolvedValue(true),
     listTeamProfiles: vi.fn().mockResolvedValue([]),
     createStaffAccount: vi.fn().mockResolvedValue({
+      membershipId: "membership-theo",
       temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
     }),
     resetStaffPassword: vi.fn().mockResolvedValue({
@@ -155,6 +156,7 @@ describe("workspace mutations", () => {
       confirm: true,
     });
     expect(created.status).toBe(201);
+    expect(created.body.membershipId).toBe("membership-theo");
     expect(created.body.temporaryPassword).toMatch(/^[A-HJ-NP-Z2-9-]+$/);
     expect(adminDeps.createStaffAccount).toHaveBeenCalledWith(
       "membership-admin",
@@ -162,6 +164,7 @@ describe("workspace mutations", () => {
         employeeProfileId: "theo-brooks",
         email: "theo@example.com",
         displayName: "Theo Brooks",
+        confirm: true,
       },
     );
   });
@@ -214,6 +217,11 @@ describe("workspace mutations", () => {
       status: 200,
       body: { temporaryPassword: "VWXYZ-23456-789AB-CDEFG" },
     });
+    expect(deps.resetStaffPassword).toHaveBeenCalledWith(
+      "membership-admin",
+      "maya-chen",
+      true,
+    );
     expect(JSON.stringify(team.body)).not.toMatch(/password/i);
   });
 
@@ -260,6 +268,7 @@ describe("workspace mutations", () => {
       employeeProfileId: "maya-chen",
       email: "maya@example.com",
       displayName: "Maya Chen",
+      confirm: true,
     });
   });
 
@@ -292,6 +301,7 @@ describe("workspace mutations", () => {
       "membership-admin",
       "maya-chen",
       false,
+      true,
     );
   });
 });

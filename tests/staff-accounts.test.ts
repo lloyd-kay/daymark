@@ -4,7 +4,6 @@ const repository = vi.hoisted(() => ({
   insertStaffCredential: vi.fn(),
   replaceStaffPasswordVerifier: vi.fn(),
   setStaffActiveState: vi.fn(),
-  revokeMembershipSessions: vi.fn(),
 }));
 
 const password = vi.hoisted(() => ({
@@ -34,7 +33,6 @@ beforeEach(() => {
   repository.insertStaffCredential.mockResolvedValue({ membershipId: "membership-theo" });
   repository.replaceStaffPasswordVerifier.mockResolvedValue(true);
   repository.setStaffActiveState.mockResolvedValue({ membershipId: "membership-theo" });
-  repository.revokeMembershipSessions.mockResolvedValue(undefined);
 });
 
 describe("staff credential lifecycle", () => {
@@ -43,9 +41,13 @@ describe("staff credential lifecycle", () => {
       employeeProfileId: "theo-brooks",
       email: "theo@example.com",
       displayName: "Theo Brooks",
+      confirm: true,
     });
 
-    expect(result).toEqual({ temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV" });
+    expect(result).toEqual({
+      membershipId: "membership-theo",
+      temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
+    });
     expect(repository.insertStaffCredential).toHaveBeenCalledWith(
       "membership-admin",
       {
@@ -53,6 +55,7 @@ describe("staff credential lifecycle", () => {
         email: "theo@example.com",
         displayName: "Theo Brooks",
         verifier,
+        confirm: true,
       },
     );
     expect(JSON.stringify(repository.insertStaffCredential.mock.calls)).not.toContain(
@@ -67,17 +70,19 @@ describe("staff credential lifecycle", () => {
       employeeProfileId: "theo-brooks",
       email: "theo@example.com",
       displayName: "Theo Brooks",
+      confirm: true,
     })).resolves.toBeNull();
   });
 
   it("returns plaintext only when an authorized verifier replacement succeeds", async () => {
-    const result = await resetStaffPassword("membership-admin", "theo-brooks");
+    const result = await resetStaffPassword("membership-admin", "theo-brooks", true);
 
     expect(result).toEqual({ temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV" });
     expect(repository.replaceStaffPasswordVerifier).toHaveBeenCalledWith(
       "membership-admin",
       "theo-brooks",
       verifier,
+      true,
     );
     expect(JSON.stringify(repository.replaceStaffPasswordVerifier.mock.calls)).not.toContain(
       "ABCDE-FGHJK-LMNPQ-RSTUV",
@@ -85,35 +90,31 @@ describe("staff credential lifecycle", () => {
 
     repository.replaceStaffPasswordVerifier.mockResolvedValue(false);
     await expect(
-      resetStaffPassword("membership-admin", "theo-brooks"),
+      resetStaffPassword("membership-admin", "theo-brooks", true),
     ).resolves.toBeNull();
   });
 
-  it("updates both active states and revokes target sessions on deactivation", async () => {
+  it("delegates deactivation to the repository's atomic state-and-session batch", async () => {
     await expect(
-      setStaffActive("membership-admin", "theo-brooks", false),
+      setStaffActive("membership-admin", "theo-brooks", false, true),
     ).resolves.toBe(true);
 
     expect(repository.setStaffActiveState).toHaveBeenCalledWith(
       "membership-admin",
       "theo-brooks",
       false,
-    );
-    expect(repository.revokeMembershipSessions).toHaveBeenCalledWith(
-      "membership-theo",
+      true,
     );
   });
 
-  it("does not revoke sessions for activation or rejected changes", async () => {
+  it("returns false when an atomic active-state change is rejected", async () => {
     await expect(
-      setStaffActive("membership-admin", "theo-brooks", true),
+      setStaffActive("membership-admin", "theo-brooks", true, true),
     ).resolves.toBe(true);
-    expect(repository.revokeMembershipSessions).not.toHaveBeenCalled();
 
     repository.setStaffActiveState.mockResolvedValue(null);
     await expect(
-      setStaffActive("membership-admin", "theo-brooks", false),
+      setStaffActive("membership-admin", "theo-brooks", false, true),
     ).resolves.toBe(false);
-    expect(repository.revokeMembershipSessions).not.toHaveBeenCalled();
   });
 });

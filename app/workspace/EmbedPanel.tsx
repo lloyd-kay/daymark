@@ -13,6 +13,7 @@ export function EmbedPanel({ profiles }: { profiles: TeamProfile[] }) {
   const [mode, setMode] = useState<EmbedMode>("floating");
   const [employee, setEmployee] = useState("all");
   const [copied, setCopied] = useState(false);
+  const [copyMessage, setCopyMessage] = useState("");
   const origin = useSyncExternalStore(subscribeToOrigin, browserOrigin, serverOrigin);
   const publicProfiles = useMemo(
     () => profiles.filter(
@@ -27,8 +28,15 @@ export function EmbedPanel({ profiles }: { profiles: TeamProfile[] }) {
 
   async function copySnippet() {
     if (!snippet) return;
-    await navigator.clipboard.writeText(snippet);
-    setCopied(true);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(snippet);
+      setCopied(true);
+      setCopyMessage("Snippet copied.");
+    } catch {
+      setCopied(false);
+      setCopyMessage("Copy unavailable. Select the snippet and copy it manually.");
+    }
   }
 
   return (
@@ -106,6 +114,7 @@ export function EmbedPanel({ profiles }: { profiles: TeamProfile[] }) {
         <button type="button" onClick={copySnippet} disabled={!snippet}>
           <Copy size={15} /> {copied ? "Copied" : "Copy snippet"}
         </button>
+        {copyMessage ? <p className="workspace-message" role="status">{copyMessage}</p> : null}
       </div>
     </div>
   );

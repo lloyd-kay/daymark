@@ -31,16 +31,23 @@ type WorkspaceDependencies = {
   listTeamProfiles: () => Promise<unknown>;
   createStaffAccount: (
     adminMembershipId: string,
-    input: { employeeProfileId: string; email: string; displayName: string },
-  ) => Promise<{ temporaryPassword: string } | null>;
+    input: {
+      employeeProfileId: string;
+      email: string;
+      displayName: string;
+      confirm: boolean;
+    },
+  ) => Promise<{ membershipId: string; temporaryPassword: string } | null>;
   resetStaffPassword: (
     adminMembershipId: string,
     employeeProfileId: string,
+    confirm: boolean,
   ) => Promise<{ temporaryPassword: string } | null>;
   setStaffActive: (
     adminMembershipId: string,
     employeeProfileId: string,
     active: boolean,
+    confirm: boolean,
   ) => Promise<boolean>;
 };
 
@@ -171,10 +178,16 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
         if (!input) return badRequest("Check the staff account details.");
         const account = await dependencies.createStaffAccount(
           actor.membershipId,
-          input,
+          { ...input, confirm: true },
         );
         return account
-          ? { status: 201, body: { temporaryPassword: account.temporaryPassword } }
+          ? {
+              status: 201,
+              body: {
+                membershipId: account.membershipId,
+                temporaryPassword: account.temporaryPassword,
+              },
+            }
           : badRequest("The staff account could not be created.");
       }
       if (body.action === "reset-password") {
@@ -182,6 +195,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
         const reset = await dependencies.resetStaffPassword(
           actor.membershipId,
           employeeProfileId,
+          true,
         );
         return reset
           ? { status: 200, body: { temporaryPassword: reset.temporaryPassword } }
@@ -193,6 +207,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
           actor.membershipId,
           employeeProfileId,
           body.active,
+          true,
         );
         return changed
           ? { status: 200, body: { ok: true } }

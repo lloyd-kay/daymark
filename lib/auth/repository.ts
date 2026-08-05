@@ -1,6 +1,7 @@
 import {
   and,
   eq,
+  exists,
   gt,
   isNotNull,
   isNull,
@@ -414,8 +415,18 @@ export async function insertStaffCredential(
     email: string;
     displayName: string;
     verifier: PasswordVerifier;
+    confirm: boolean;
   },
 ): Promise<{ membershipId: string } | null> {
+  if (
+    input.confirm !== true
+    || !validEmployeeProfileId(input.employeeProfileId)
+    || !validNormalizedEmail(input.email)
+    || !validTrimmedDisplayName(input.displayName)
+  ) {
+    return null;
+  }
+
   const db = await database();
   const [administrator] = await db
     .select({ id: memberships.id })
@@ -443,42 +454,81 @@ export async function insertStaffCredential(
 
   const membershipId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
-  const email = normalizedEmail(input.email);
-  await db.batch([
-    db.insert(memberships).values({
-      id: membershipId,
-      oaiUserId: null,
-      email,
-      displayName: input.displayName,
-      role: "employee",
-      active: true,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }),
-    db.insert(credentials).values({
-      id: crypto.randomUUID(),
-      membershipId,
-      email,
-      passwordHash: input.verifier.hash,
-      passwordSalt: input.verifier.salt,
-      passwordIterations: input.verifier.iterations,
-      mustChangePassword: true,
-      failedAttempts: 0,
-      lockedUntil: null,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    }),
+  const email = input.email;
+  const administratorIsActive = exists(
+    db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.id, administratorMembershipId),
+          eq(memberships.role, "admin"),
+          eq(memberships.active, true),
+        ),
+      ),
+  );
+  const profileIsEligible = and(
+    eq(employeeProfiles.id, input.employeeProfileId),
+    eq(employeeProfiles.active, true),
+    isNull(employeeProfiles.membershipId),
+    administratorIsActive,
+  );
+  const membershipExists = exists(
+    db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.id, membershipId),
+          eq(memberships.role, "employee"),
+          eq(memberships.active, true),
+        ),
+      ),
+  );
+  const results = await db.batch([
+    db.insert(memberships).select(
+      db
+        .select({
+          id: sql<string>`${membershipId}`.as("id"),
+          oaiUserId: sql<string | null>`null`.as("oai_user_id"),
+          email: sql<string>`${email}`.as("email"),
+          displayName: sql<string>`${input.displayName}`.as("display_name"),
+          role: sql<"employee">`'employee'`.as("role"),
+          active: sql<boolean>`true`.as("active"),
+          createdAt: sql<string>`${timestamp}`.as("created_at"),
+          updatedAt: sql<string>`${timestamp}`.as("updated_at"),
+        })
+        .from(employeeProfiles)
+        .where(profileIsEligible)
+        .limit(1),
+    ),
+    db.insert(credentials).select(
+      db
+        .select({
+          id: sql<string>`${crypto.randomUUID()}`.as("id"),
+          membershipId: sql<string>`${membershipId}`.as("membership_id"),
+          email: sql<string>`${email}`.as("email"),
+          passwordHash: sql<string>`${input.verifier.hash}`.as("password_hash"),
+          passwordSalt: sql<string>`${input.verifier.salt}`.as("password_salt"),
+          passwordIterations: sql<number>`${input.verifier.iterations}`.as(
+            "password_iterations",
+          ),
+          mustChangePassword: sql<boolean>`true`.as("must_change_password"),
+          failedAttempts: sql<number>`0`.as("failed_attempts"),
+          lockedUntil: sql<string | null>`null`.as("locked_until"),
+          createdAt: sql<string>`${timestamp}`.as("created_at"),
+          updatedAt: sql<string>`${timestamp}`.as("updated_at"),
+        })
+        .from(employeeProfiles)
+        .where(and(profileIsEligible, membershipExists))
+        .limit(1),
+    ),
     db
       .update(employeeProfiles)
       .set({ membershipId, updatedAt: timestamp })
-      .where(
-        and(
-          eq(employeeProfiles.id, input.employeeProfileId),
-          eq(employeeProfiles.active, true),
-          isNull(employeeProfiles.membershipId),
-        ),
-      ),
+      .where(and(profileIsEligible, membershipExists)),
   ]);
+  if (!requiredWritesChanged(results, [0, 1, 2])) return null;
   return { membershipId };
 }
 
@@ -486,8 +536,11 @@ export async function replaceStaffPasswordVerifier(
   administratorMembershipId: string,
   employeeProfileId: string,
   verifier: PasswordVerifier,
+  confirm: boolean,
   now = new Date(),
 ): Promise<boolean> {
+  if (confirm !== true || !validEmployeeProfileId(employeeProfileId)) return false;
+
   const db = await database();
   const [administrator] = await db
     .select({ id: memberships.id })
@@ -519,7 +572,38 @@ export async function replaceStaffPasswordVerifier(
     || !staffPasswordResetIsAllowed(target, target.membershipId)
   ) return false;
 
-  await db.batch([
+  const administratorIsActive = exists(
+    db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.id, administratorMembershipId),
+          eq(memberships.role, "admin"),
+          eq(memberships.active, true),
+        ),
+      ),
+  );
+  const targetIsCurrentAndActive = exists(
+    db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .innerJoin(
+        employeeProfiles,
+        eq(employeeProfiles.membershipId, memberships.id),
+      )
+      .where(
+        and(
+          eq(memberships.id, target.membershipId),
+          eq(memberships.role, "employee"),
+          eq(memberships.active, true),
+          eq(employeeProfiles.id, employeeProfileId),
+          eq(employeeProfiles.active, true),
+          administratorIsActive,
+        ),
+      ),
+  );
+  const results = await db.batch([
     db
       .update(credentials)
       .set({
@@ -531,7 +615,12 @@ export async function replaceStaffPasswordVerifier(
         lockedUntil: null,
         updatedAt: now.toISOString(),
       })
-      .where(eq(credentials.membershipId, target.membershipId)),
+      .where(
+        and(
+          eq(credentials.membershipId, target.membershipId),
+          targetIsCurrentAndActive,
+        ),
+      ),
     db
       .update(authSessions)
       .set({ revokedAt: now.toISOString() })
@@ -539,17 +628,22 @@ export async function replaceStaffPasswordVerifier(
         and(
           eq(authSessions.membershipId, target.membershipId),
           isNull(authSessions.revokedAt),
+          targetIsCurrentAndActive,
         ),
       ),
   ]);
-  return true;
+  return requiredWritesChanged(results, [0]);
 }
 
 export async function setStaffActiveState(
   administratorMembershipId: string,
   employeeProfileId: string,
   active: boolean,
+  confirm: boolean,
+  now = new Date(),
 ): Promise<{ membershipId: string } | null> {
+  if (confirm !== true || !validEmployeeProfileId(employeeProfileId)) return null;
+
   const db = await database();
   const [administrator] = await db
     .select({ id: memberships.id })
@@ -581,27 +675,74 @@ export async function setStaffActiveState(
     return null;
   }
 
-  const timestamp = new Date().toISOString();
-  await db.batch([
+  const timestamp = now.toISOString();
+  const administratorIsActive = exists(
     db
-      .update(memberships)
-      .set({ active, updatedAt: timestamp })
+      .select({ id: memberships.id })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.id, administratorMembershipId),
+          eq(memberships.role, "admin"),
+          eq(memberships.active, true),
+        ),
+      ),
+  );
+  const targetIsCurrent = exists(
+    db
+      .select({ id: memberships.id })
+      .from(memberships)
+      .innerJoin(
+        employeeProfiles,
+        eq(employeeProfiles.membershipId, memberships.id),
+      )
+      .innerJoin(credentials, eq(credentials.membershipId, memberships.id))
       .where(
         and(
           eq(memberships.id, target.membershipId),
           eq(memberships.role, "employee"),
-        ),
-      ),
-    db
-      .update(employeeProfiles)
-      .set({ active, updatedAt: timestamp })
-      .where(
-        and(
           eq(employeeProfiles.id, employeeProfileId),
-          eq(employeeProfiles.membershipId, target.membershipId),
+          administratorIsActive,
         ),
       ),
-  ]);
+  );
+  const membershipUpdate = db
+    .update(memberships)
+    .set({ active, updatedAt: timestamp })
+    .where(
+      and(
+        eq(memberships.id, target.membershipId),
+        eq(memberships.role, "employee"),
+        administratorIsActive,
+        targetIsCurrent,
+      ),
+    );
+  const profileUpdate = db
+    .update(employeeProfiles)
+    .set({ active, updatedAt: timestamp })
+    .where(
+      and(
+        eq(employeeProfiles.id, employeeProfileId),
+        eq(employeeProfiles.membershipId, target.membershipId),
+        administratorIsActive,
+        targetIsCurrent,
+      ),
+    );
+  const sessionRevocation = db
+    .update(authSessions)
+    .set({ revokedAt: timestamp })
+    .where(
+      and(
+        eq(authSessions.membershipId, target.membershipId),
+        isNull(authSessions.revokedAt),
+        administratorIsActive,
+        targetIsCurrent,
+      ),
+    );
+  const results = active
+    ? await db.batch([membershipUpdate, profileUpdate])
+    : await db.batch([membershipUpdate, profileUpdate, sessionRevocation]);
+  if (!requiredWritesChanged(results, [0, 1])) return null;
   return { membershipId: target.membershipId };
 }
 
@@ -632,6 +773,28 @@ function laterRetry(left: string | null, right: string | null): string | null {
 
 function normalizedEmail(value: string): string {
   return value.trim().toLowerCase();
+}
+
+const SAFE_EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validEmployeeProfileId(value: string): boolean {
+  return value !== "all" && SAFE_EMPLOYEE_PROFILE_ID.test(value);
+}
+
+function validNormalizedEmail(value: string): boolean {
+  return value.length <= 254 && value === normalizedEmail(value) && EMAIL.test(value);
+}
+
+function validTrimmedDisplayName(value: string): boolean {
+  return value.length >= 1 && value.length <= 80 && value === value.trim();
+}
+
+function requiredWritesChanged(results: readonly unknown[], indexes: readonly number[]): boolean {
+  return indexes.every((index) => {
+    const result = results[index] as { meta?: { changes?: unknown } } | undefined;
+    return Number(result?.meta?.changes ?? 0) === 1;
+  });
 }
 
 async function database() {
