@@ -1,0 +1,229 @@
+<style>
+  .widget-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .widget-choice {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 18px;
+    background: #fffdf7;
+    box-shadow: 0 14px 40px rgba(22, 42, 61, 0.1);
+    overflow: hidden;
+    transition: transform 160ms ease, border-color 160ms ease;
+  }
+  .widget-choice:hover { transform: translateY(-3px); }
+  .widget-choice.selected { border-color: #d7654d; }
+  .choice-copy { padding: 18px 20px 20px; }
+  .choice-copy h3 { margin: 0 0 6px; color: #17324b; }
+  .choice-copy p { margin: 0; color: #61707b; line-height: 1.45; }
+  .choice-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    color: #a94636;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .choice-label::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d7654d;
+  }
+  .host-page {
+    position: relative;
+    min-height: 390px;
+    padding: 18px;
+    background: #ebe7dc;
+    overflow: hidden;
+  }
+  .host-browser {
+    position: relative;
+    min-height: 352px;
+    border: 1px solid rgba(23, 50, 75, .16);
+    border-radius: 13px;
+    background: #fbfaf6;
+    overflow: hidden;
+  }
+  .host-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 25px;
+    padding: 0 10px;
+    background: #17324b;
+  }
+  .host-bar i { width: 6px; height: 6px; border-radius: 50%; background: #f3d5bb; opacity: .75; }
+  .host-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 17px 20px;
+    color: #314a43;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+  }
+  .host-links { display: flex; gap: 13px; color: #7a827d; font-size: 8px; }
+  .host-hero {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 16px;
+    padding: 34px 20px 28px;
+  }
+  .host-kicker { color: #b4774d; font-size: 8px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  .host-title { margin: 8px 0 9px; color: #243d36; font-family: Georgia, serif; font-size: 29px; line-height: .98; }
+  .host-copy { max-width: 200px; color: #7a827d; font-size: 9px; line-height: 1.6; }
+  .host-art {
+    min-height: 170px;
+    border-radius: 90px 90px 12px 12px;
+    background: linear-gradient(145deg, #8ba397 0 45%, #d4a77e 45% 68%, #efe5cc 68%);
+  }
+  .host-strip { height: 42px; margin: 0 20px; border-top: 1px solid #d9d4c8; }
+  .daymark-fab {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 14px 10px 10px;
+    color: #fffaf0;
+    background: #17324b;
+    box-shadow: 0 7px 20px rgba(23, 50, 75, .28);
+    font: 700 9px/1 Arial, sans-serif;
+  }
+  .daymark-dot { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #d7654d; font: 700 12px Georgia, serif; }
+  .floating-panel {
+    position: absolute;
+    right: 14px;
+    bottom: 57px;
+    width: 205px;
+    padding: 14px;
+    border: 1px solid rgba(23, 50, 75, .14);
+    border-radius: 13px;
+    background: #fffaf0;
+    box-shadow: 0 12px 32px rgba(23, 50, 75, .18);
+  }
+  .dm-eyebrow { color: #d7654d; font: 800 7px/1 Arial, sans-serif; letter-spacing: .13em; }
+  .dm-title { margin: 6px 0 11px; color: #17324b; font: 20px/.95 Georgia, serif; }
+  .person-row { display: flex; gap: 6px; margin-bottom: 9px; }
+  .person-chip { flex: 1; padding: 7px 5px; border: 1px solid #d8d0be; border-radius: 8px; color: #51606a; font-size: 7px; text-align: center; }
+  .person-chip.active { border-color: #d7654d; background: #f5e0da; color: #17324b; }
+  .slot-row { display: flex; gap: 5px; }
+  .slot { flex: 1; padding: 6px 3px; border-radius: 6px; background: #e0e9df; color: #17324b; font-size: 7px; text-align: center; }
+  .inline-host .host-hero { padding-bottom: 18px; }
+  .inline-panel {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    min-height: 140px;
+    margin: 0 20px 20px;
+    border: 1px solid rgba(23, 50, 75, .14);
+    border-radius: 12px;
+    background: #fffaf0;
+    box-shadow: 0 8px 18px rgba(23, 50, 75, .08);
+    overflow: hidden;
+  }
+  .inline-rail {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 13px 10px;
+    color: #fff7e8;
+    background: #d7654d;
+  }
+  .inline-rail strong { font: 14px Georgia, serif; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .08em; }
+  .inline-rail span { font-size: 7px; opacity: .85; }
+  .inline-main { padding: 14px; }
+  .inline-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .inline-head h4 { margin: 3px 0 10px; color: #17324b; font: 18px Georgia, serif; }
+  .mini-step { color: #7b6d91; font-size: 7px; font-weight: 700; letter-spacing: .1em; }
+  .inline-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .inline-tab { min-height: 55px; padding: 7px; border-radius: 7px 7px 3px 3px; color: #17324b; font-size: 7px; }
+  .inline-tab:nth-child(1) { background: #dfe9dd; }
+  .inline-tab:nth-child(2) { background: #e5dced; }
+  .inline-tab:nth-child(3) { background: #f2dfad; }
+  .inline-tab:nth-child(4) { background: #d9e9f1; }
+  .inline-tab b { display: block; margin-top: 6px; font-size: 9px; }
+  @media (max-width: 850px) {
+    .widget-choice-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<h2>How should Daymark sit on another website?</h2>
+<p class="subtitle">Both use the same one-line embed and the same private booking flow. Click the presentation you prefer.</p>
+
+<div class="widget-choice-grid">
+  <article class="widget-choice" data-choice="floating" onclick="toggleSelect(this)">
+    <div class="host-page">
+      <div class="host-browser">
+        <div class="host-bar"><i></i><i></i><i></i></div>
+        <div class="host-nav"><span>CEDAR HOUSE</span><span class="host-links"><span>ABOUT</span><span>SERVICES</span><span>JOURNAL</span></span></div>
+        <div class="host-hero">
+          <div>
+            <span class="host-kicker">Considered spaces</span>
+            <div class="host-title">Room to feel<br>at home.</div>
+            <div class="host-copy">A sample host website keeps its own visual identity while Daymark waits quietly in the corner.</div>
+          </div>
+          <div class="host-art"></div>
+        </div>
+        <div class="host-strip"></div>
+        <div class="floating-panel">
+          <div class="dm-eyebrow">DAYMARK · BOOKING</div>
+          <div class="dm-title">Who would you<br>like to meet?</div>
+          <div class="person-row"><div class="person-chip active">Maya</div><div class="person-chip">Theo</div><div class="person-chip">Priya</div></div>
+          <div class="slot-row"><div class="slot">10:30</div><div class="slot">13:00</div><div class="slot">15:30</div></div>
+        </div>
+        <button class="daymark-fab"><span class="daymark-dot">D</span> Book an appointment</button>
+      </div>
+    </div>
+    <div class="choice-copy">
+      <div class="choice-label">Option A · Floating</div>
+      <h3>Always close, never in the way</h3>
+      <p>A compact corner button opens the booking panel over any page. Best when booking should be available site-wide.</p>
+    </div>
+  </article>
+
+  <article class="widget-choice" data-choice="inline" onclick="toggleSelect(this)">
+    <div class="host-page inline-host">
+      <div class="host-browser">
+        <div class="host-bar"><i></i><i></i><i></i></div>
+        <div class="host-nav"><span>CEDAR HOUSE</span><span class="host-links"><span>ABOUT</span><span>SERVICES</span><span>JOURNAL</span></span></div>
+        <div class="host-hero">
+          <div>
+            <span class="host-kicker">Considered spaces</span>
+            <div class="host-title">Start with a<br>conversation.</div>
+            <div class="host-copy">The booking experience becomes part of a dedicated contact or services page.</div>
+          </div>
+          <div class="host-art"></div>
+        </div>
+        <div class="inline-panel">
+          <div class="inline-rail"><strong>DAYMARK</strong><span>01 / 03</span></div>
+          <div class="inline-main">
+            <div class="inline-head"><div><div class="dm-eyebrow">BOOK THE RIGHT PERSON</div><h4>Choose your person.</h4></div><span class="mini-step">PERSON → DATE → TIME</span></div>
+            <div class="inline-grid">
+              <div class="inline-tab">PLANNING<b>Maya</b></div>
+              <div class="inline-tab">DESIGN<b>Theo</b></div>
+              <div class="inline-tab">CARE<b>Priya</b></div>
+              <div class="inline-tab">DETAILS<b>Jon</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="choice-copy">
+      <div class="choice-label">Option B · Inline</div>
+      <h3>A booking section with presence</h3>
+      <p>The full panel sits inside a page and feels intentional. Best for a dedicated contact or “book now” section.</p>
+    </div>
+  </article>
+</div>

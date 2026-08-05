@@ -1,0 +1,71 @@
+{
+  "capturedAt": "2026-08-05T15:46:02.7205991+01:00",
+  "browser": "Chrome",
+  "url": "http://localhost:3000/#widget-options",
+  "visual": {
+    "desktop": {
+      "viewport": { "width": 1280, "height": 890 },
+      "backgroundSize": "auto 76%",
+      "backgroundPosition": "30% 50%",
+      "artworkCount": 2,
+      "floatingPanelVisible": true,
+      "horizontalOverflow": false,
+      "evidence": "wordmark-fit-desktop-chrome.png"
+    },
+    "matchedDesktop": {
+      "viewport": { "width": 1775, "height": 1234 },
+      "backgroundSize": "auto 76%",
+      "backgroundPosition": "30% 50%",
+      "artworkCount": 2,
+      "horizontalOverflow": false,
+      "evidence": "wordmark-fit-desktop-1775x1234-chrome.png"
+    },
+    "mobile": {
+      "viewport": { "width": 390, "height": 844 },
+      "backgroundSize": "auto 52%",
+      "backgroundPosition": "30% 50%",
+      "artworkCount": 2,
+      "floatingPanelVisible": true,
+      "horizontalOverflow": false,
+      "evidence": [
+        "wordmark-fit-mobile-chrome.png",
+        "wordmark-fit-mobile-inline-chrome.png"
+      ]
+    }
+  },
+  "keyboard": {
+    "input": "genuine forward Tab events in Chrome",
+    "directDomFocusUsedOnTargets": false,
+    "floating": {
+      "tagName": "BUTTON",
+      "accessibleName": "Always close, never in the way",
+      "ariaPressed": "true",
+      "focusVisible": true,
+      "evidence": "keyboard-focus-floating-chrome.png"
+    },
+    "inline": {
+      "tagName": "BUTTON",
+      "accessibleName": "A booking section with presence",
+      "ariaPressed": "false",
+      "focusVisible": true,
+      "evidence": "keyboard-focus-inline-chrome.png"
+    }
+  },
+  "initialLoad": {
+    "requestCount": 129,
+    "methodCounts": { "GET": 129 },
+    "failedRequestCount": 0,
+    "fetchOrXhrRequestCount": 0,
+    "businessEndpointRequestCount": 0,
+    "mutationRequestCount": 0,
+    "consoleWarnErrorCount": 0
+  },
+  "optionInteractions": {
+    "afterInline": { "floating": "false", "inline": "true" },
+    "afterFloating": { "floating": "true", "inline": "false" },
+    "requestEventCount": 0,
+    "consoleWarnErrorCount": 0,
+    "exceptionCount": 0
+  },
+  "result": "passed"
+}

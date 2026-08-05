@@ -1,0 +1,38 @@
+{
+  "route": "/#widget-options",
+  "viewportCss": {
+    "width": 1775,
+    "height": 1234
+  },
+  "monitorCursorBeforeInteractions": 720,
+  "afterInline": {
+    "state": [
+      {
+        "name": null,
+        "pressed": "false"
+      },
+      {
+        "name": null,
+        "pressed": "true"
+      }
+    ],
+    "requests": []
+  },
+  "afterFloating": {
+    "state": [
+      {
+        "accessibleName": "Always close, never in the way",
+        "option": "floating",
+        "pressed": "true"
+      },
+      {
+        "accessibleName": "A booking section with presence",
+        "option": "inline",
+        "pressed": "false"
+      }
+    ],
+    "requests": []
+  },
+  "sensitiveEndpointRequests": [],
+  "conclusion": "zero request events after both option activations"
+}

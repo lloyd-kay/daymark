@@ -1,0 +1,804 @@
+{
+  "route": "/",
+  "viewportCss": {
+    "width": 1775,
+    "height": 1234
+  },
+  "networkEnabledBeforeReload": true,
+  "preReloadCursor": 22,
+  "postLoadCursor": 709,
+  "truncated": false,
+  "hasMore": false,
+  "requestCount": 128,
+  "requests": [
+    {
+      "sequence": 25,
+      "url": "http://localhost:3000/",
+      "method": "GET",
+      "type": "Document"
+    },
+    {
+      "sequence": 39,
+      "url": "http://localhost:3000/app/globals.css",
+      "method": "GET",
+      "type": "Stylesheet"
+    },
+    {
+      "sequence": 40,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/entry-browser",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 50,
+      "url": "http://localhost:3000/@vite/client",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 51,
+      "url": "http://localhost:3000/@react-refresh",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 58,
+      "url": "http://localhost:3000/og.png",
+      "method": "GET",
+      "type": "Image"
+    },
+    {
+      "sequence": 69,
+      "url": "http://localhost:3000/node_modules/vite/dist/client/env.mjs",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 77,
+      "url": "http://localhost:3000/@id/__x00__virtual:vinext-app-browser-entry",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 89,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/navigation-runtime.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 94,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-entry.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 99,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/record.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 104,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/headers.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 109,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-elements-wire.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 114,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-elements.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 119,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/app-router-context.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 124,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/window-next.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 129,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/hash-scroll.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 134,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/navigation-context-state.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 139,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/navigation-errors.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 144,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/default-global-error.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 149,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/app-nav-failure-handler.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 154,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/error-boundary.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 159,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/app-router-scroll-state.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 164,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/app-router-scroll.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 169,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/slot.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 174,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-rsc-cache-busting.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 179,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/instrumentation-client-state.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 184,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/instrumentation-client.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 189,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-bfcache-identity.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 194,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-action-result.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 199,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-client-reuse-manifest.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 204,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-interception-context.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 209,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-history-state.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 214,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-mpa-navigation.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 219,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-rsc-redirect.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 224,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/navigation-planner.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 229,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/navigation.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 234,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-stream.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 239,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-state.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 244,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-navigation-controller.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 249,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-hydration.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 254,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-history-controller.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 259,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-visited-response-cache.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 264,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-popstate.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 269,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-error.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 274,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-hydration-cache-publication.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 279,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-optimistic-routing.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 284,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-inline-css-client.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 289,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 294,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react-dom.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 299,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 304,
+      "url": "http://localhost:3000/node_modules/@vitejs/plugin-rsc/dist/browser.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 309,
+      "url": "http://localhost:3000/@id/__x00__virtual:vinext-app-capabilities",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 310,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/protocol-headers.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 315,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/normalize-path.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 320,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/compare.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 325,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/artifact-compatibility.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 330,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-render-dependency.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 335,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-mounted-slots-header.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 340,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/redirect-digest.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 345,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react_jsx-runtime.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 350,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/navigation-server.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 355,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/error-boundary-navigation.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 360,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/dev-error-recovery-event.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 365,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/navigation-signal.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 370,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/hash.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 375,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-rsc-render-mode.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 380,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/deployment-id.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 385,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/empty-module.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 390,
+      "url": "http://localhost:3000/node_modules/vinext/dist/routing/utils.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 395,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-bfcache-id.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 400,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/cache-proof.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 405,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/client-reuse-manifest.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 410,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/static-layout-client-reuse-proof.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 415,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/base-path.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 420,
+      "url": "http://localhost:3000/node_modules/vinext/dist/routing/route-pattern.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 425,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/number.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 430,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/url-safety.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 435,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/navigation-trace.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 440,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/operation-token.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 445,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/external-url.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 450,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/ppr-fallback-shell.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 455,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/hybrid-client-route-owner-direct.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 460,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/url-utils.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 465,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/html-limited-bots.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 470,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/readonly-url-search-params.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 475,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/pages-router-accessor.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 480,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/app-prefetch-fetch-queue.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 485,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/unrecognized-action-error.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 490,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-rsc-embedded-chunks.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 495,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/app-browser-visible-commit.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 500,
+      "url": "http://localhost:3000/node_modules/vinext/dist/server/html.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 505,
+      "url": "http://localhost:3000/node_modules/.vite/deps/chunk-CYJPkc-J.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 510,
+      "url": "http://localhost:3000/node_modules/@vitejs/plugin-rsc/dist/core/browser.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 515,
+      "url": "http://localhost:3000/node_modules/@vitejs/plugin-rsc/dist/react/browser.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 520,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-references",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 521,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/sorted-array.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 526,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/als-registry.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 531,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/internal/make-hanging-promise.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 536,
+      "url": "http://localhost:3000/node_modules/vinext/dist/routing/route-matching.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 541,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/domain-locale.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 546,
+      "url": "http://localhost:3000/node_modules/@vitejs/plugin-rsc/dist/dist-rz-Bnebz.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 551,
+      "url": "http://localhost:3000/node_modules/@vitejs/plugin-rsc/dist/shared-BViDMJTQ.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 556,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react-server-dom-webpack_client__browser.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 561,
+      "url": "http://localhost:3000/@id/__x00__vinext:async-hooks-stub",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 562,
+      "url": "http://localhost:3000/node_modules/vinext/dist/routing/route-trie.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 583,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/dev-error-overlay.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 588,
+      "url": "http://localhost:3000/node_modules/vinext/dist/utils/dev-stack-sourcemap-endpoint.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 593,
+      "url": "http://localhost:3000/node_modules/vinext/dist/client/dev-error-overlay-store.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 611,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Fvinext%2Fdist%2Fshims%2Fslot.js",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 612,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Fvinext%2Fdist%2Fshims%2Ferror-boundary.js",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 613,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Fvinext%2Fdist%2Fshims%2Fdefault-global-error.js",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 614,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Fvinext%2Fdist%2Fshims%2Flayout-segment-context.js",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 615,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Fvinext%2Fdist%2Fshims%2Fapp-router-scroll.js",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 616,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/client-in-server-package-proxy/C%3A%2FUsers%2FLloyd%2FDocuments%2FCodex%2F2026-08-04%2Fsites-plugin-sites-openai-bundled-create%2F.worktrees%2Fdaymark-calendar%2Fnode_modules%2Flucide-react%2Fdist%2Fesm%2FIcon.mjs",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 617,
+      "url": "http://localhost:3000/app/demo/DemoBookingFlow.tsx",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 618,
+      "url": "http://localhost:3000/app/home/WidgetOptionsShowcase.tsx",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 619,
+      "url": "http://localhost:3000/@id/__x00__virtual:vite-rsc/remove-duplicate-server-css",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 639,
+      "url": "http://localhost:3000/node_modules/vinext/dist/shims/layout-segment-context.js?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 654,
+      "url": "http://localhost:3000/node_modules/lucide-react/dist/esm/Icon.mjs?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 659,
+      "url": "http://localhost:3000/lib/booking/transport.ts",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 660,
+      "url": "http://localhost:3000/app/booking/BookingFlow.tsx",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 661,
+      "url": "http://localhost:3000/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=7007bb69",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 669,
+      "url": "http://localhost:3000/node_modules/lucide-react/dist/esm/defaultAttributes.mjs?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 674,
+      "url": "http://localhost:3000/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 679,
+      "url": "http://localhost:3000/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 684,
+      "url": "http://localhost:3000/node_modules/lucide-react/dist/esm/context.mjs?v=f0b2f522",
+      "method": "GET",
+      "type": "Script"
+    },
+    {
+      "sequence": 702,
+      "url": "http://localhost:3000/node_modules/.vite/deps/lucide-react.js?v=b2a81b4d",
+      "method": "GET",
+      "type": "Script"
+    }
+  ],
+  "sensitiveEndpointClassification": {
+    "pathKeywordCandidates": [
+      {
+        "sequence": 659,
+        "url": "http://localhost:3000/lib/booking/transport.ts",
+        "method": "GET",
+        "type": "Script",
+        "classification": "development source-module import; not an endpoint call"
+      },
+      {
+        "sequence": 660,
+        "url": "http://localhost:3000/app/booking/BookingFlow.tsx",
+        "method": "GET",
+        "type": "Script",
+        "classification": "development source-module import; not an endpoint call"
+      }
+    ],
+    "runtimeDataRequests": [],
+    "mutationRequests": [],
+    "conclusion": "No booking, availability, employee, staff, configuration, admin, workspace, API, or mutation endpoint calls. The only keyword matches were two GET Script imports for local development source modules."
+  }
+}

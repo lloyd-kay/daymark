@@ -1,0 +1,10 @@
+{
+  "route": "/",
+  "levels": [
+    "warn",
+    "warning",
+    "error"
+  ],
+  "entries": [],
+  "conclusion": "zero warn/error console entries after reload, option interactions, and keyboard attempts"
+}
