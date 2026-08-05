@@ -6,21 +6,28 @@ import {
 } from "../lib/booking/transport";
 
 describe("demonstration booking transport", () => {
-  it("completes the sample flow without network access", async () => {
+  it("keeps every demo transport operation in-memory with London-current dates", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-03-10T12:00:00.000Z"));
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const slots = await demoBookingTransport.loadSlots("maya-chen", "2026-08-06");
-    const booking = await demoBookingTransport.createBooking({
-      employeeId: "maya-chen",
-      startAt: slots.slots[0].startAt,
-      clientName: "Demo Visitor",
-      clientAddress: "14 Sample Street, London",
-      clientEmail: "demo@example.com",
-      clientPhone: null,
-      clientNote: "",
-    });
-    expect(booking.reference).toBe("DEMO-ONLY");
-    expect(fetchSpy).not.toHaveBeenCalled();
-    fetchSpy.mockRestore();
+    try {
+      const slots = await demoBookingTransport.loadSlots("maya-chen", "2030-03-10");
+      const booking = await demoBookingTransport.createBooking({
+        employeeId: "maya-chen",
+        startAt: slots.slots[0].startAt,
+        clientName: "Demo Visitor",
+        clientAddress: "14 Sample Street, London",
+        clientEmail: "demo@example.com",
+        clientPhone: null,
+        clientNote: "",
+      });
+      expect(booking.reference).toBe("DEMO-ONLY");
+      expect(slots.dateKeys[0]).toBe("2030-03-10");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
 

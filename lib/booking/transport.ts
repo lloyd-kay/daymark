@@ -86,33 +86,42 @@ function safeMessage(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
-const demoSlots: BookableSlot[] = [
-  {
-    dateKey: "2026-08-06",
-    startAt: "2026-08-06T09:00:00.000Z",
-    endAt: "2026-08-06T09:30:00.000Z",
-  },
-  {
-    dateKey: "2026-08-06",
-    startAt: "2026-08-06T10:00:00.000Z",
-    endAt: "2026-08-06T10:30:00.000Z",
-  },
-];
-
 export const demoBookingTransport: BookingTransport = {
   async loadSlots() {
-    return { dateKeys: ["2026-08-06"], slots: demoSlots };
+    const dateKey = londonTodayKey();
+    return { dateKeys: [dateKey], slots: demoSlotsFor(dateKey) };
   },
 
   async createBooking(input) {
-    const slot = demoSlots.find((candidate) => candidate.startAt === input.startAt) ?? demoSlots[0];
+    const startAt = new Date(input.startAt);
+    const endAt = new Date(startAt.getTime() + 30 * 60 * 1000);
     return {
       reference: "DEMO-ONLY",
       employeeName: "Maya Chen",
-      startAt: slot.startAt,
-      endAt: slot.endAt,
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
       address: input.clientAddress,
       contactSummary: input.clientEmail ? "d••••@example.com" : "•••• 0000",
     };
   },
 };
+
+function demoSlotsFor(dateKey: string): BookableSlot[] {
+  return ["09:00:00.000Z", "10:00:00.000Z"].map((time) => {
+    const startAt = `${dateKey}T${time}`;
+    const endAt = new Date(new Date(startAt).getTime() + 30 * 60 * 1000).toISOString();
+    return { dateKey, startAt, endAt };
+  });
+}
+
+function londonTodayKey(): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}

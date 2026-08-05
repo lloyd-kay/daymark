@@ -25,18 +25,20 @@ async function render(path = "/") {
   );
 }
 
-test("server-renders the Daymark booking experience", async () => {
+test("server-renders the Daymark product demonstration", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>Daymark — Private team booking<\/title>/i);
-  assert.match(html, /Book time with/i);
-  assert.match(html, /the right person/i);
-  assert.match(html, /Your details stay private/i);
-  assert.match(html, /Maya Chen/i);
-  assert.match(html, /Open team workspace/i);
+  assert.match(html, /Private booking for teams/i);
+  assert.match(html, /Scheduling without shared calendars/i);
+  assert.match(html, /Interactive demonstration/i);
+  assert.match(html, /No appointment will be created/i);
+  assert.match(html, /Floating widget/i);
+  assert.match(html, /Inline panel/i);
+  assert.match(html, /Start real booking/i);
+  assert.doesNotMatch(html, /Confirm appointment/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
@@ -102,8 +104,9 @@ test("removes starter infrastructure and keeps the editorial visual system", asy
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /LiveBookingFlow/);
-  assert.match(layout, /Daymark — Private team booking/);
+  assert.match(page, /import\s+\{\s*DemoBookingFlow\s*\}\s+from/);
+  assert.doesNotMatch(page, /LiveBookingFlow/);
+  assert.match(layout, /Private booking for teams/);
   assert.match(css, /--paper:/);
   assert.match(css, /--ink:/);
   assert.match(css, /daymark-rail/);

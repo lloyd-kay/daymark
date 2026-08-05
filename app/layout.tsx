@@ -15,8 +15,8 @@ const display = Fraunces({
   subsets: ["latin"],
 });
 
-const title = "Daymark — Private team booking";
-const description = "Book the right person without exposing the team’s calendars.";
+const title = "Daymark — Private booking for teams";
+const description = "Let clients book the right person while every employee calendar stays private.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: socialImage,
           width: 1200,
           height: 630,
-          alt: "Daymark private team booking",
+          alt: "Daymark private booking for teams",
         },
       ],
     },
