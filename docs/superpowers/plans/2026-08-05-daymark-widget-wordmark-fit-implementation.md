@@ -14,7 +14,7 @@
 - The inline artwork shows the complete wordmark unobstructed.
 - The floating booking panel remains present in its current position and naturally overlaps the corrected artwork without being hidden or moved.
 - Use the existing `public/og.png`; do not introduce or redraw an image asset.
-- Apply `background-size: auto 76%` and `background-position: 30% center` through one shared full-wordmark modifier class.
+- Apply `background-size: auto 76%` and `background-position: 30% center` through one shared full-wordmark modifier class; at or below 520 px, override only the size to `auto 52%`.
 - Desktop and mobile layouts keep their current dimensions, spacing, rounded artwork shape, and lack of horizontal overflow.
 - The two widget choice buttons retain their local-only `aria-pressed` behaviour and make no network requests.
 - Chrome must prove real forward-Tab traversal from the preceding `Start real booking` link to the floating choice button and then the inline choice button.
@@ -101,6 +101,80 @@ git commit -m "fix: fit Daymark wordmarks in widget previews"
 ```
 
 Expected: only the test, one shared modifier class in the component, and the two CSS declarations change.
+
+---
+
+### Task 1A: Add the approved narrow-screen artwork fit
+
+**Files:**
+- Create: `tests/homepage-css.test.ts`
+- Modify: `app/globals.css:2628-2635`
+
+**Interfaces:**
+- Consumes: Task 1's `.widget-host-art-full-wordmark` class and the existing `@media (max-width: 520px)` block.
+- Produces: an `auto 52%` mobile-only size override; desktop remains `auto 76%` at `30% center`.
+
+- [ ] **Step 1: Write the failing stylesheet regression test**
+
+Create `tests/homepage-css.test.ts`:
+
+```ts
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+
+describe("homepage widget artwork CSS", () => {
+  it("scales the full Daymark artwork down at the narrow breakpoint", () => {
+    const breakpointStart = styles.indexOf("@media (max-width: 520px)");
+    const breakpointEnd = styles.indexOf("\n}", breakpointStart) + 2;
+    const narrowStyles = styles.slice(breakpointStart, breakpointEnd);
+
+    expect(narrowStyles).toContain(".widget-host-art-full-wordmark { background-size: auto 52%; }");
+  });
+});
+```
+
+- [ ] **Step 2: Run the focused test and verify RED**
+
+Run:
+
+```powershell
+& '.\node_modules\.bin\vitest.cmd' run tests/homepage-css.test.ts
+```
+
+Expected: 1/1 fails because the 520 px media query does not yet include `background-size: auto 52%`.
+
+- [ ] **Step 3: Add the approved mobile override**
+
+Inside the existing `@media (max-width: 520px)` block, add:
+
+```css
+.widget-host-art-full-wordmark { background-size: auto 52%; }
+```
+
+Do not change background position, artwork dimensions, or `.floating-panel`.
+
+- [ ] **Step 4: Run focused and full unit verification**
+
+Run:
+
+```powershell
+& '.\node_modules\.bin\vitest.cmd' run tests/homepage-css.test.ts
+npm.cmd run unit
+```
+
+Expected: focused test passes 1/1; full suite passes 22 files and 148/148 tests.
+
+- [ ] **Step 5: Check and commit the responsive amendment**
+
+Run:
+
+```powershell
+git diff --check
+git add -- tests/homepage-css.test.ts app/globals.css docs/superpowers/specs/2026-08-05-daymark-inline-wordmark-fit-design.md docs/superpowers/plans/2026-08-05-daymark-widget-wordmark-fit-implementation.md
+git commit -m "fix: fit Daymark wordmarks on mobile"
+```
 
 ---
 
@@ -208,7 +282,7 @@ git diff --check
 git status --short
 ```
 
-Expected: 21 unit files and 147/147 tests pass; lint passes; the production build completes all five stages; rendered routes pass 6/6; diff check is clean.
+Expected: 22 unit files and 148/148 tests pass; lint passes; the production build completes all five stages; rendered routes pass 6/6; diff check is clean.
 
 Commit:
 

@@ -12,6 +12,7 @@ Keep the existing artwork and correct both previews:
 
 - Give both `HostHero` artwork elements a shared full-wordmark modifier class.
 - Render both artworks smaller with `background-size: auto 76%` and `background-position: 30% center` while retaining the existing no-repeat paper background, border, and rounded silhouette.
+- Below the existing 520 px breakpoint, reduce only the artwork size to `auto 52%` so all seven letters continue to fit in the narrower mobile artwork column; retain the 30% horizontal position.
 - Preserve the floating booking panel's existing size, position, stacking, content, and interaction-free preview role.
 - Do not introduce a new image, redraw the wordmark, alter the booking panels, or change selection behaviour.
 
@@ -23,6 +24,7 @@ This keeps the approved texture and coloured paper tabs while fitting the comple
 - The inline artwork shows the complete wordmark unobstructed.
 - The floating booking panel remains present in its current position and naturally overlaps the corrected artwork without being hidden or moved.
 - Desktop and mobile layouts keep their current dimensions, spacing, rounded artwork shape, and lack of horizontal overflow.
+- Desktop uses `auto 76%`; viewports at or below 520 px use `auto 52%` without changing the artwork slot or panel geometry.
 - The two widget choice buttons retain their local-only `aria-pressed` behaviour and make no network requests.
 - Chrome verifies real forward-Tab traversal through the floating and inline choice buttons, replacing the earlier in-app-browser keyboard limitation.
 - Automated regression coverage requires both artwork elements to use the shared full-wordmark modifier and confirms the floating booking panel remains present before the production change is made.
@@ -32,8 +34,9 @@ This keeps the approved texture and coloured paper tabs while fitting the comple
 Implementation follows a red-green cycle:
 
 1. Add a focused component test that expects both artwork elements to carry the full-wordmark modifier and the floating booking panel to remain present, then confirm the new modifier assertion fails.
-2. Add the minimum component and CSS change and confirm the focused test passes.
-3. Run the full unit, lint, production build, rendered-route, and diff checks.
-4. In Chrome, compare the user's supplied screenshot with fresh desktop and mobile captures, verify the smaller full-wordmark treatment in both previews and the unchanged floating panel, exercise both option states, inspect console/network activity, and complete the genuine sequential Tab-order check.
+2. Add a focused stylesheet regression test for the `auto 52%` mobile override and confirm it fails before adding the responsive rule.
+3. Add the minimum component and CSS changes and confirm both focused tests pass.
+4. Run the full unit, lint, production build, rendered-route, and diff checks.
+5. In Chrome, compare the user's supplied screenshot with fresh desktop and mobile captures, verify the smaller full-wordmark treatment in both previews and the unchanged floating panel, exercise both option states, inspect console/network activity, and complete the genuine sequential Tab-order check.
 
 No authentication, booking, administrator, persistence, widget embed, or deployment behaviour changes.

@@ -2633,6 +2633,7 @@ a {
   .widget-host-page { min-height: 330px; padding: 10px; }
   .widget-host-browser { min-height: 310px; }
   .widget-host-links { display: none; }
+  .widget-host-art-full-wordmark { background-size: auto 52%; }
   .floating-panel { width: min(205px, calc(100% - 28px)); }
   .inline-panel { grid-template-columns: 52px 1fr; margin-inline: 10px; }
   .inline-grid { grid-template-columns: repeat(2, 1fr); }
