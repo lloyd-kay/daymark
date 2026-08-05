@@ -1,0 +1,38 @@
+{
+  "url": "http://localhost:3000/#widget-options",
+  "asset": {
+    "path": "/daymark-widget-art-4x3-readable.png",
+    "naturalWidth": 1448,
+    "naturalHeight": 1086,
+    "observedImageElements": 2,
+    "previousAssetRetained": "/daymark-widget-art-4x3-textured.png"
+  },
+  "desktop": {
+    "viewport": { "width": 1280, "height": 890 },
+    "imageSlots": [
+      { "width": 196, "height": 168, "objectFit": "cover" },
+      { "width": 196, "height": 168, "objectFit": "cover" }
+    ],
+    "floatingPanel": { "visible": true, "width": 205, "height": 167 },
+    "horizontalOverflow": false
+  },
+  "mobile": {
+    "viewport": { "width": 390, "height": 844 },
+    "imageSlots": [
+      { "width": 110, "height": 168, "objectFit": "contain" },
+      { "width": 95, "height": 168, "objectFit": "contain" }
+    ],
+    "floatingPanel": { "visible": true, "width": 205, "height": 167 },
+    "horizontalOverflow": false
+  },
+  "interaction": {
+    "initialPressed": [true, false],
+    "afterInlinePressed": [false, true],
+    "restoredPressed": [true, false],
+    "urlAfterInteraction": "http://localhost:3000/#widget-options"
+  },
+  "console": {
+    "warnings": 0,
+    "errors": 0
+  }
+}
