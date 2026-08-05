@@ -127,6 +127,25 @@ describe("authentication routes", () => {
     expect(auth.signOut).toHaveBeenCalledWith("opaque-token");
   });
 
+  it("clears the browser cookie when session revocation fails", async () => {
+    auth.signOut.mockRejectedValue(new Error("private D1 failure details"));
+    const { POST } = await import("../app/api/auth/sign-out/route");
+    const response = await POST(request("/api/auth/sign-out", {}, {
+      cookie: "daymark_session=opaque-token",
+    }));
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Set-Cookie")).toContain("daymark_session=");
+    expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(await response.json()).toEqual({
+      ok: false,
+      error: "Sign out could not be completed.",
+    });
+    expect(auth.signOut).toHaveBeenCalledOnce();
+    expect(auth.signOut).toHaveBeenCalledWith("opaque-token");
+  });
+
   it("clears the browser cookie while rejecting cross-origin sign-out", async () => {
     const { POST } = await import("../app/api/auth/sign-out/route");
     const response = await POST(new Request(`${origin}/api/auth/sign-out`, {

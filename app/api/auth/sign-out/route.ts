@@ -9,9 +9,19 @@ import { noStoreJson } from "../../../../lib/http";
 export async function POST(request: Request) {
   if (!isSameOriginMutation(request)) return withClearedSession(forbidden());
   const token = sessionTokenFromRequest(request);
-  const result = token
-    ? await authService().signOut(token)
-    : { status: 200, body: { ok: true } };
+  let result = { status: 200, body: { ok: true } };
+  if (token) {
+    try {
+      result = await authService().signOut(token);
+    } catch {
+      return withClearedSession(
+        noStoreJson(
+          { ok: false, error: "Sign out could not be completed." },
+          500,
+        ),
+      );
+    }
+  }
   return withClearedSession(noStoreJson(result.body, result.status));
 }
 
