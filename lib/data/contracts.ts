@@ -17,6 +17,7 @@ export type EmployeeProfileRecord = PublicEmployee & {
 export type TeamProfile = EmployeeProfileRecord & {
   memberEmail: string | null;
   memberDisplayName: string | null;
+  hasCredential: boolean;
 };
 
 export type AuthenticatedIdentity = {
@@ -27,7 +28,7 @@ export type AuthenticatedIdentity = {
 
 export type MembershipRecord = {
   id: string;
-  oaiUserId: string;
+  oaiUserId: string | null;
   email: string;
   displayName: string;
   role: "admin" | "employee";
@@ -49,7 +50,9 @@ export type ScheduleEntry = {
   startAt: string;
   endAt: string;
   clientName: string;
-  clientEmail: string;
+  clientAddress: string;
+  clientEmail: string | null;
+  clientPhone: string | null;
   clientNote: string;
   status: "booked" | "cancelled";
 };
@@ -58,8 +61,36 @@ export type CreateBookingInput = {
   employeeId: string;
   startAt: string;
   clientName: string;
-  clientEmail: string;
+  clientAddress: string;
+  clientEmail: string | null;
+  clientPhone: string | null;
   clientNote?: string;
+};
+
+export type CredentialRecord = {
+  membershipId: string;
+  employeeProfileId: string | null;
+  displayName: string;
+  role: "admin" | "employee";
+  active: boolean;
+  email: string;
+  passwordHash: string;
+  passwordSalt: string;
+  passwordIterations: number;
+  mustChangePassword: boolean;
+  lockedUntil: string | null;
+};
+
+export type SessionActorRecord = {
+  membershipId: string;
+  employeeProfileId: string | null;
+  displayName: string;
+  email: string;
+  role: "admin" | "employee";
+  active: boolean;
+  mustChangePassword: boolean;
+  idleExpiresAt: string;
+  absoluteExpiresAt: string;
 };
 
 export type CreateBookingResult =

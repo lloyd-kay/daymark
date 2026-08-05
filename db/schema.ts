@@ -20,7 +20,7 @@ export const memberships = sqliteTable(
   "memberships",
   {
     id: text("id").primaryKey(),
-    oaiUserId: text("oai_user_id").notNull(),
+    oaiUserId: text("oai_user_id"),
     email: text("email").notNull(),
     displayName: text("display_name").notNull(),
     role: text("role").$type<TeamRole>().notNull(),
@@ -29,6 +29,9 @@ export const memberships = sqliteTable(
   },
   (table) => [
     uniqueIndex("idx_memberships_oai_user_id").on(table.oaiUserId),
+    uniqueIndex("idx_memberships_single_admin")
+      .on(table.role)
+      .where(sql`${table.role} = 'admin'`),
     check("memberships_role_check", sql`${table.role} in ('admin', 'employee')`),
   ],
 );
@@ -142,7 +145,9 @@ export const appointments = sqliteTable(
     startAt: text("start_at").notNull(),
     endAt: text("end_at").notNull(),
     clientName: text("client_name").notNull(),
-    clientEmail: text("client_email").notNull(),
+    clientAddress: text("client_address").notNull().default(""),
+    clientEmail: text("client_email"),
+    clientPhone: text("client_phone"),
     clientNote: text("client_note").notNull().default(""),
     status: text("status").$type<AppointmentStatus>().notNull().default("booked"),
     ...timestamps,
@@ -163,5 +168,73 @@ export const appointments = sqliteTable(
       sql`${table.status} in ('booked', 'cancelled')`,
     ),
     check("appointments_window_check", sql`${table.startAt} < ${table.endAt}`),
+  ],
+);
+
+export const credentials = sqliteTable(
+  "credentials",
+  {
+    id: text("id").primaryKey(),
+    membershipId: text("membership_id").notNull().references(() => memberships.id, {
+      onDelete: "cascade",
+    }),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    passwordSalt: text("password_salt").notNull(),
+    passwordIterations: integer("password_iterations").notNull(),
+    mustChangePassword: integer("must_change_password", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    lockedUntil: text("locked_until"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("idx_credentials_membership_id").on(table.membershipId),
+    uniqueIndex("idx_credentials_email").on(table.email),
+  ],
+);
+
+export const authSessions = sqliteTable(
+  "auth_sessions",
+  {
+    id: text("id").primaryKey(),
+    membershipId: text("membership_id").notNull().references(() => memberships.id, {
+      onDelete: "cascade",
+    }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: text("created_at").notNull(),
+    lastUsedAt: text("last_used_at").notNull(),
+    idleExpiresAt: text("idle_expires_at").notNull(),
+    absoluteExpiresAt: text("absolute_expires_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_auth_sessions_token_hash").on(table.tokenHash),
+    index("idx_auth_sessions_membership_expiry").on(
+      table.membershipId,
+      table.idleExpiresAt,
+      table.absoluteExpiresAt,
+    ),
+  ],
+);
+
+export const loginAttempts = sqliteTable(
+  "login_attempts",
+  {
+    id: text("id").primaryKey(),
+    emailHash: text("email_hash").notNull(),
+    fingerprintHash: text("fingerprint_hash").notNull(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    windowStartedAt: text("window_started_at").notNull(),
+    lockedUntil: text("locked_until"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_login_attempts_subject").on(
+      table.emailHash,
+      table.fingerprintHash,
+    ),
+    index("idx_login_attempts_updated").on(table.updatedAt),
   ],
 );

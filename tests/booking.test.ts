@@ -13,7 +13,9 @@ const validBooking = {
   employeeId: "maya-chen",
   startAt: "2026-08-10T08:00:00.000Z",
   clientName: "Lloyd Example",
+  clientAddress: "14 Example Street, London, N1 1AA",
   clientEmail: "lloyd@example.com",
+  clientPhone: null,
   clientNote: "Planning conversation",
 };
 
