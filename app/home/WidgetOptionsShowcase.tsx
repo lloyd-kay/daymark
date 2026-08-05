@@ -28,7 +28,7 @@ function HostHero({ inline = false }: { inline?: boolean }) {
       <div className="widget-host-art widget-host-art-full-wordmark">
         {/* The local source artwork must preserve its exact crop inside this decorative mockup. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/daymark-widget-art-4x3-readable-2x.png" alt="" />
+        <img src="/daymark-widget-art-4x3-readable-2x.png" alt="" loading="lazy" decoding="async" />
       </div>
     </div>
   );

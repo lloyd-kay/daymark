@@ -37,6 +37,8 @@ All paths below are relative to the project root and are intended to remain port
 - `qa-evidence/daymark-homepage/chrome-readable-widget-qa.json` - sharpness-pass dimensions, responsive fit, interaction states, asset observation, and console result
 - `qa-evidence/daymark-homepage/true-2x-widget-before-chrome.png` - same-viewport Chrome state with the earlier 1448 x 1086 artwork
 - `qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png` - same-viewport Chrome state with the true 2896 x 2172 artwork
+- `qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png` - 390 x 844 Chrome mobile state with the floating booking panel preserved
+- `qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png` - 390 x 844 Chrome mobile state with the complete inline wordmark visible
 - `qa-evidence/daymark-homepage/true-2x-wordmark-comparison.png` - enlarged side-by-side crop of the before and after wordmark rendering
 - `qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json` - true-density dimensions, desktop/mobile fit, interaction state, and console result
 

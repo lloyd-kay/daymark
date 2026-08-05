@@ -9,6 +9,11 @@
     "height": 2172,
     "densityIncrease": 2
   },
+  "delivery": {
+    "bytes": 4727140,
+    "loading": "lazy",
+    "decoding": "async"
+  },
   "desktop": {
     "viewport": {
       "width": 1303,
@@ -22,7 +27,11 @@
     },
     "objectFit": "cover",
     "floatingPanelWidth": 205,
-    "horizontalOverflow": false
+    "horizontalOverflow": false,
+    "screenshotPixels": {
+      "width": 1288,
+      "height": 1217
+    }
   },
   "mobile": {
     "viewport": {
@@ -33,7 +42,11 @@
     "renderedWidths": [109.6875, 94.9375],
     "objectFit": "contain",
     "floatingPanelWidth": 205,
-    "horizontalOverflow": false
+    "horizontalOverflow": false,
+    "screenshotPixels": {
+      "width": 375,
+      "height": 812
+    }
   },
   "interaction": {
     "inlinePressed": [false, true],
@@ -47,6 +60,8 @@
   "comparisonEvidence": [
     "qa-evidence/daymark-homepage/true-2x-widget-before-chrome.png",
     "qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png",
+    "qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png",
+    "qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png",
     "qa-evidence/daymark-homepage/true-2x-wordmark-comparison.png"
   ],
   "result": "passed"

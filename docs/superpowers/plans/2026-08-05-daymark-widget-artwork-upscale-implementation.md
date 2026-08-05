@@ -4,7 +4,7 @@
 
 **Goal:** Replace both widget-preview image references with a sharper, higher-density 4:3 Daymark raster while keeping the text, composition, crop, and floating panel at exactly the same apparent size and position.
 
-**Architecture:** Create one non-destructive sibling image asset from the approved textured master, then change the shared `HostHero` image source so both widget cards consume it. Preserve the existing responsive CSS and cover the change with the focused component regression plus desktop/mobile Chrome evidence.
+**Architecture:** Create one non-destructive sibling image asset from the approved readable master, using the original user artwork as a supporting visual reference, then change the shared `HostHero` image source so both widget cards consume it. Preserve the existing responsive CSS and cover the change with the focused component regression plus desktop/mobile Chrome evidence.
 
 **Tech Stack:** React 19, TypeScript, Vinext, CSS, Vitest/jsdom, built-in ImageGen editor, Chrome browser QA.
 
@@ -13,7 +13,7 @@
 - Keep `DAYMARK` and `Book the right person. Keep every calendar private.` verbatim.
 - Do not enlarge, shrink, move, re-space, recolour, or recompose either text line; apparent bounding boxes may vary by no more than two percent.
 - Preserve the cream paper texture, orange binding and stitches, green/lilac/ochre/blue folders, 4:3 framing, lighting, colour balance, and negative space.
-- Keep `public/daymark-widget-art-4x3-textured.png` untouched for rollback.
+- Keep `public/daymark-widget-art-4x3-readable.png` and `public/daymark-widget-art-4x3-textured.png` untouched for rollback.
 - Save the selected sibling as a true two-times-density asset and accept it only if it is at least 2896 x 2172 and visibly sharper at the real widget size.
 - Keep desktop `object-fit: cover`, mobile `object-fit: contain`, artwork-slot dimensions, the 205 px floating panel, widget choice behaviour, and all booking behaviour unchanged.
 - Do not deploy or publish.
@@ -28,8 +28,8 @@
 - Modify: `app/home/WidgetOptionsShowcase.tsx:28-32`
 
 **Interfaces:**
-- Consumes: approved edit target `public/daymark-widget-art-4x3-textured.png` and the shared `HostHero` component.
-- Produces: decorative `<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" />` used by both widget previews.
+- Consumes: approved edit target `public/daymark-widget-art-4x3-readable.png`, the original user artwork as a supporting visual reference, and the shared `HostHero` component.
+- Produces: decorative `<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" loading="lazy" decoding="async" />` used by both widget previews.
 
 - [ ] **Step 1: Change the focused regression to require the new asset**
 
@@ -37,7 +37,11 @@ Replace only the source expectation in `tests/homepage-showcase.test.tsx`:
 
 ```tsx
 expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable-2x.png")).toBe(true);
+expect(images.every((image) => image?.getAttribute("loading") === "lazy")).toBe(true);
+expect(images.every((image) => image?.getAttribute("decoding") === "async")).toBe(true);
 ```
+
+Also validate the full eight-byte PNG signature, the `IHDR` chunk, minimum 2896 x 2172 dimensions, exact 4:3 ratio, and a 6,000,000-byte maximum.
 
 - [ ] **Step 2: Run the focused test and verify the red state**
 
@@ -47,16 +51,16 @@ Run:
 npm.cmd run unit -- tests/homepage-showcase.test.tsx
 ```
 
-Expected: one failure in `uses the approved textured artwork in both previews without removing the floating panel` because both images still reference `/daymark-widget-art-4x3-textured.png`; the other two tests pass.
+Expected: the image-source/delivery regression and the true-density asset regression fail; the other two tests pass.
 
 - [ ] **Step 3: Generate the non-destructive high-fidelity edit**
 
-First inspect `public/daymark-widget-art-4x3-textured.png` with `view_image`, then use the built-in ImageGen editor with that file as the sole edit target and this exact prompt:
+First inspect `public/daymark-widget-art-4x3-readable.png` with `view_image`, then use the built-in ImageGen editor with that file as the edit target and the original user artwork as supporting reference, using this exact prompt:
 
 ```text
 Use case: precise-object-edit
 Asset type: 4:3 raster artwork used inside two small website widget previews
-Input image: Image 1 is the sole edit target
+Input image: Image 1 is the sole edit target; Image 2 is the original supporting reference
 Primary request: Create a higher-density, visibly sharper version of this exact artwork. Reconstruct crisp anti-aliased edges and fine-stroke contrast only for the existing navy typography while keeping its apparent size and placement unchanged.
 Text (verbatim): "DAYMARK"
 Text (verbatim): "Book the right person. Keep every calendar private."
@@ -71,7 +75,7 @@ Save the selected result from the generated-images location to:
 public/daymark-widget-art-4x3-readable-2x.png
 ```
 
-Do not overwrite `public/daymark-widget-art-4x3-textured.png`.
+Do not overwrite either prior readable or textured asset.
 
 - [ ] **Step 4: Validate the new asset before wiring it**
 
@@ -93,7 +97,7 @@ Expected: width at least 2896, height at least 2172, ratio approximately `1.3333
 Change the shared image in `app/home/WidgetOptionsShowcase.tsx` to:
 
 ```tsx
-<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" />
+<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" loading="lazy" decoding="async" />
 ```
 
 Do not change `app/globals.css`.
@@ -106,7 +110,7 @@ Run:
 npm.cmd run unit -- tests/homepage-showcase.test.tsx
 ```
 
-Expected: 3 tests pass, 0 fail.
+Expected: 4 tests pass, 0 fail.
 
 - [ ] **Step 7: Commit the asset and source change**
 
@@ -118,10 +122,10 @@ git commit -m "feat: sharpen Daymark widget artwork"
 ### Task 2: Verify the sharpness fix in Chrome and record evidence
 
 **Files:**
-- Create: `qa-evidence/daymark-homepage/readable-widget-desktop-chrome.png`
-- Create: `qa-evidence/daymark-homepage/readable-widget-mobile-floating-chrome.png`
-- Create: `qa-evidence/daymark-homepage/readable-widget-mobile-inline-chrome.png`
-- Create: `qa-evidence/daymark-homepage/chrome-readable-widget-qa.json`
+- Create: `qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png`
+- Create: `qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png`
+- Create: `qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png`
+- Create: `qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json`
 - Modify: `design-qa.md`
 - Modify: `qa-evidence/daymark-homepage/README.md`
 
@@ -129,9 +133,9 @@ git commit -m "feat: sharpen Daymark widget artwork"
 - Consumes: `/daymark-widget-art-4x3-readable-2x.png` from Task 1 and the local preview at `http://localhost:3000/#widget-options`.
 - Produces: durable desktop/mobile visual evidence and a compact machine-readable QA record.
 
-- [ ] **Step 1: Inspect the desktop implementation at 1280 x 890**
+- [ ] **Step 1: Inspect the desktop implementation at the available Chrome desktop viewport**
 
-In the already selected Chrome browser, open `http://localhost:3000/#widget-options`, set the viewport to 1280 x 890, and verify in the rendered page:
+In the already selected Chrome browser, open `http://localhost:3000/#widget-options`, use the available 1303 x 1231 desktop viewport, and verify in the rendered page:
 
 ```json
 {
@@ -144,7 +148,7 @@ In the already selected Chrome browser, open `http://localhost:3000/#widget-opti
 }
 ```
 
-Capture the same-state page as `qa-evidence/daymark-homepage/readable-widget-desktop-chrome.png`.
+Capture the same-state page as `qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png`.
 
 - [ ] **Step 2: Inspect both mobile cards at 390 x 844**
 
@@ -163,8 +167,8 @@ Set the viewport to 390 x 844. Capture the floating and inline cards separately 
 Save the captures as:
 
 ```text
-qa-evidence/daymark-homepage/readable-widget-mobile-floating-chrome.png
-qa-evidence/daymark-homepage/readable-widget-mobile-inline-chrome.png
+qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png
+qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png
 ```
 
 - [ ] **Step 3: Compare the source, user report, and implementation together**
@@ -172,9 +176,9 @@ qa-evidence/daymark-homepage/readable-widget-mobile-inline-chrome.png
 Open these three images in one comparison input:
 
 ```text
-public/daymark-widget-art-4x3-textured.png
+public/daymark-widget-art-4x3-readable.png
 C:/Users/Lloyd/AppData/Local/Temp/codex-clipboard-e62092a1-5b77-401b-b1a2-40e9b923aacd.png
-qa-evidence/daymark-homepage/readable-widget-desktop-chrome.png
+qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png
 ```
 
 Confirm the text size and composition are unchanged while the letter edges are visibly crisper in the implementation. If the difference is not visible at the same viewport, reject the asset and return to Task 1 Step 3 for one targeted sharpness iteration.
@@ -185,7 +189,7 @@ Activate the inline option, confirm `aria-pressed` becomes `[false, true]`, rest
 
 - [ ] **Step 5: Write the QA record and update evidence documentation**
 
-Create `qa-evidence/daymark-homepage/chrome-readable-widget-qa.json` with the observed natural dimensions, desktop/mobile slot sizes, object-fit values, overflow state, panel geometry, selection states, and console counts. Update `design-qa.md` so the final line remains exactly:
+Create `qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json` with the observed natural dimensions, desktop/mobile slot sizes, object-fit values, overflow state, panel geometry, selection states, delivery settings, and console counts. Update `design-qa.md` so the final line remains exactly:
 
 ```text
 final result: passed
@@ -196,7 +200,7 @@ Add all four new evidence files to `qa-evidence/daymark-homepage/README.md`.
 - [ ] **Step 6: Commit the QA evidence**
 
 ```powershell
-git add design-qa.md qa-evidence/daymark-homepage/README.md qa-evidence/daymark-homepage/readable-widget-desktop-chrome.png qa-evidence/daymark-homepage/readable-widget-mobile-floating-chrome.png qa-evidence/daymark-homepage/readable-widget-mobile-inline-chrome.png qa-evidence/daymark-homepage/chrome-readable-widget-qa.json
+git add design-qa.md qa-evidence/daymark-homepage/README.md qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json
 git commit -m "test: verify sharper Daymark artwork in Chrome"
 ```
 

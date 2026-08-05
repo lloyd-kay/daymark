@@ -2,7 +2,7 @@
 
 ## Context
 
-The two homepage widget previews use `public/daymark-widget-art-4x3-textured.png`, a 1448 x 1086 raster displayed inside artwork slots approximately 200 x 168 px on desktop. The composition, text scale, stronger paper texture, coloured folders, orange binding, and floating booking-panel overlap are approved. The remaining issue is that the `DAYMARK` wordmark and the tagline appear soft when the artwork is reduced inside the widget preview.
+The two homepage widget previews use `public/daymark-widget-art-4x3-readable.png`, a 1448 x 1086 raster displayed inside artwork slots approximately 200 x 168 px on desktop. The composition, text scale, stronger paper texture, coloured folders, orange binding, and floating booking-panel overlap are approved. The remaining issue is that the `DAYMARK` wordmark and the tagline appear soft when the artwork is reduced inside the widget preview.
 
 This is a sharpness problem, not a sizing request. The visible size and placement of both text lines must remain unchanged.
 
@@ -14,14 +14,15 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
 
 ## Chosen design
 
-- Use the built-in image editor with `public/daymark-widget-art-4x3-textured.png` as the edit target.
+- Use the built-in image editor with `public/daymark-widget-art-4x3-readable.png` as the edit target and the original user artwork as supporting visual reference.
 - Preserve the exact apparent size, baseline, spacing, navy colour, and position of:
   - `DAYMARK`
   - `Book the right person. Keep every calendar private.`
 - Reconstruct only typography edge clarity and fine contrast; do not add, remove, enlarge, shrink, or move any text.
 - Preserve the cream paper texture, orange binding, stitch details, green/lilac/ochre/blue folders, rounded shapes, lighting, colour balance, 4:3 framing, and all negative space.
-- Save the selected result non-destructively as `public/daymark-widget-art-4x3-readable-2x.png`. The existing approved and sharpened assets remain untouched for rollback.
+- Save the selected result non-destructively as `public/daymark-widget-art-4x3-readable-2x.png`. The existing readable and textured assets remain untouched for rollback.
 - Target a true two-times-density 4:3 master. Accept only a result that is at least 2896 x 2172 pixels and visibly sharper at the actual widget display size; do not substitute a same-size, smaller, or compositionally altered output.
+- Keep the final PNG at or below 6,000,000 bytes and defer loading/decoding so the higher-density master does not impose an unnecessary initial-page cost.
 - Update both widget image elements to use the new sibling asset. Retain the current desktop `object-fit: cover` and mobile `object-fit: contain` rules.
 - Do not change the artwork slot dimensions, crop behaviour, floating panel, widget copy, option selection, or any booking functionality.
 
@@ -30,6 +31,7 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
 - The wordmark and tagline occupy the same apparent bounding boxes as the approved current artwork, within a two-percent visual tolerance.
 - Both text lines remain verbatim, with no changed, missing, or malformed characters.
 - The selected asset has natural dimensions of at least 2896 x 2172 pixels; a 1448 x 1086 sharpened export does not satisfy the upscale requirement.
+- The selected asset is a valid 4:3 PNG no larger than 6,000,000 bytes, and both decorative widget images use `loading="lazy"` and `decoding="async"`.
 - Letter edges and fine strokes appear visibly crisper in a same-viewport comparison at 1280 x 890.
 - The inline preview retains the complete unobstructed `DAYMARK` wordmark.
 - The floating preview retains its existing 205 px booking panel in the same position and stacking order.
@@ -41,7 +43,7 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
 
 Implementation follows a red-green cycle:
 
-1. Update the focused component regression to require both widget image elements to reference the new readable asset and confirm it fails before the source change.
+1. Update the focused component regression to require both widget image elements to reference the new readable asset with deferred delivery, and validate the PNG signature, IHDR, true 2x minimum dimensions, exact 4:3 ratio, and file-size ceiling. Confirm it fails before the implementation change.
 2. Generate the sibling high-fidelity asset with the built-in image editor and inspect it at original resolution for exact text, unchanged scale, and preserved composition.
 3. Apply the new asset path and confirm the focused regression passes.
 4. Run the full unit suite, lint, production build, rendered-route checks, and diff checks.
