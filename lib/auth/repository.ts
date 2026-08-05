@@ -6,7 +6,10 @@ import {
   isNull,
   lte,
   or,
+  sql,
 } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   authSessions,
   credentials,
@@ -37,6 +40,36 @@ export function loginLockUntil(failedAttempts: number, now: Date): string | null
   return failedAttempts >= 5
     ? new Date(now.getTime() + LOGIN_WINDOW_MS).toISOString()
     : null;
+}
+
+export function subjectAttemptShouldReset(
+  record: { windowStartedAt: string; lockedUntil: string | null },
+  now: Date,
+): boolean {
+  if (record.lockedUntil && Date.parse(record.lockedUntil) > now.getTime()) {
+    return false;
+  }
+  return Date.parse(record.windowStartedAt) + LOGIN_WINDOW_MS <= now.getTime()
+    || Boolean(record.lockedUntil);
+}
+
+export function atomicFailureIncrement(column: AnySQLiteColumn): SQL<number> {
+  return sql<number>`${column} + 1`;
+}
+
+export function staffPasswordResetIsAllowed(
+  record: {
+    role: "admin" | "employee";
+    membershipActive: boolean;
+    profileActive: boolean | null;
+    profileMembershipId: string | null;
+  },
+  targetMembershipId: string,
+): boolean {
+  return record.role === "employee"
+    && record.membershipActive
+    && record.profileActive === true
+    && record.profileMembershipId === targetMembershipId;
 }
 
 export function sessionIsUsable(
@@ -139,33 +172,13 @@ export async function findCredentialByEmail(
     )
     .limit(1);
 
-  let accountRetryAt = row?.lockedUntil ?? null;
-  if (row?.lockedUntil && Date.parse(row.lockedUntil) <= now.getTime()) {
-    await db
-      .update(credentials)
-      .set({ failedAttempts: 0, lockedUntil: null, updatedAt: now.toISOString() })
-      .where(eq(credentials.membershipId, row.membershipId));
-    row.failedAttempts = 0;
-    row.lockedUntil = null;
-    accountRetryAt = null;
-  }
-
-  let subjectRetryAt = attempt?.lockedUntil ?? null;
-  if (
-    attempt
-    && (Date.parse(attempt.windowStartedAt) + LOGIN_WINDOW_MS <= now.getTime()
-      || (attempt.lockedUntil && Date.parse(attempt.lockedUntil) <= now.getTime()))
-  ) {
-    await db
-      .delete(loginAttempts)
-      .where(
-        and(
-          eq(loginAttempts.emailHash, emailHash),
-          eq(loginAttempts.fingerprintHash, fingerprintHash),
-        ),
-      );
-    subjectRetryAt = null;
-  }
+  const accountRetryAt = row?.lockedUntil
+    && Date.parse(row.lockedUntil) > now.getTime()
+    ? row.lockedUntil
+    : null;
+  const subjectRetryAt = attempt && !subjectAttemptShouldReset(attempt, now)
+    ? attempt.lockedUntil
+    : null;
 
   const credential = row
     ? {
@@ -192,69 +205,78 @@ export async function recordFailedLogin(
   now = new Date(),
 ): Promise<string | null> {
   const db = await database();
-  const [attempt] = await db
-    .select({
-      id: loginAttempts.id,
-      failedAttempts: loginAttempts.failedAttempts,
-      windowStartedAt: loginAttempts.windowStartedAt,
-    })
-    .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.emailHash, emailHash),
-        eq(loginAttempts.fingerprintHash, fingerprintHash),
-      ),
-    )
-    .limit(1);
-  const inWindow = attempt
-    && Date.parse(attempt.windowStartedAt) + LOGIN_WINDOW_MS > now.getTime();
-  const subjectFailures = inWindow ? attempt.failedAttempts + 1 : 1;
-  const subjectLock = loginLockUntil(subjectFailures, now);
+  const timestamp = now.toISOString();
+  const windowCutoff = new Date(now.getTime() - LOGIN_WINDOW_MS).toISOString();
+  const lockUntil = new Date(now.getTime() + LOGIN_WINDOW_MS).toISOString();
+  const subjectIncrement = atomicFailureIncrement(loginAttempts.failedAttempts);
   const subjectWrite = db
     .insert(loginAttempts)
     .values({
-      id: attempt?.id ?? crypto.randomUUID(),
+      id: crypto.randomUUID(),
       emailHash,
       fingerprintHash,
-      failedAttempts: subjectFailures,
-      windowStartedAt: inWindow ? attempt.windowStartedAt : now.toISOString(),
-      lockedUntil: subjectLock,
-      updatedAt: now.toISOString(),
+      failedAttempts: 1,
+      windowStartedAt: timestamp,
+      lockedUntil: null,
+      updatedAt: timestamp,
     })
     .onConflictDoUpdate({
       target: [loginAttempts.emailHash, loginAttempts.fingerprintHash],
       set: {
-        failedAttempts: subjectFailures,
-        windowStartedAt: inWindow ? attempt.windowStartedAt : now.toISOString(),
-        lockedUntil: subjectLock,
-        updatedAt: now.toISOString(),
+        failedAttempts: sql<number>`case
+          when ${loginAttempts.lockedUntil} > ${timestamp} then ${subjectIncrement}
+          when ${loginAttempts.windowStartedAt} <= ${windowCutoff} then 1
+          else ${subjectIncrement}
+        end`,
+        windowStartedAt: sql<string>`case
+          when ${loginAttempts.lockedUntil} > ${timestamp} then ${loginAttempts.windowStartedAt}
+          when ${loginAttempts.windowStartedAt} <= ${windowCutoff} then ${timestamp}
+          else ${loginAttempts.windowStartedAt}
+        end`,
+        lockedUntil: sql<string | null>`case
+          when ${loginAttempts.lockedUntil} > ${timestamp} then ${loginAttempts.lockedUntil}
+          when ${loginAttempts.windowStartedAt} <= ${windowCutoff} then null
+          when ${subjectIncrement} >= 5 then ${lockUntil}
+          else null
+        end`,
+        updatedAt: timestamp,
       },
-    });
+    })
+    .returning({ lockedUntil: loginAttempts.lockedUntil });
 
   if (!membershipId) {
-    await subjectWrite;
-    return subjectLock;
+    const [subject] = await subjectWrite;
+    return subject?.lockedUntil ?? null;
   }
 
-  const [credential] = await db
-    .select({ failedAttempts: credentials.failedAttempts })
-    .from(credentials)
+  const accountIncrement = atomicFailureIncrement(credentials.failedAttempts);
+  const accountWrite = db
+    .update(credentials)
+    .set({
+      failedAttempts: sql<number>`case
+        when ${credentials.lockedUntil} is not null
+          and ${credentials.lockedUntil} <= ${timestamp} then 1
+        else ${accountIncrement}
+      end`,
+      lockedUntil: sql<string | null>`case
+        when ${credentials.lockedUntil} > ${timestamp} then ${credentials.lockedUntil}
+        when ${credentials.lockedUntil} is not null
+          and ${credentials.lockedUntil} <= ${timestamp} then null
+        when ${accountIncrement} >= 5 then ${lockUntil}
+        else null
+      end`,
+      updatedAt: timestamp,
+    })
     .where(eq(credentials.membershipId, membershipId))
-    .limit(1);
-  const accountFailures = (credential?.failedAttempts ?? 0) + 1;
-  const accountLock = loginLockUntil(accountFailures, now);
-  await db.batch([
+    .returning({ lockedUntil: credentials.lockedUntil });
+  const [subjectRows, accountRows] = await db.batch([
     subjectWrite,
-    db
-      .update(credentials)
-      .set({
-        failedAttempts: accountFailures,
-        lockedUntil: accountLock,
-        updatedAt: now.toISOString(),
-      })
-      .where(eq(credentials.membershipId, membershipId)),
+    accountWrite,
   ]);
-  return laterRetry(accountLock, subjectLock);
+  return laterRetry(
+    accountRows[0]?.lockedUntil ?? null,
+    subjectRows[0]?.lockedUntil ?? null,
+  );
 }
 
 export async function clearFailedLogins(
@@ -479,11 +501,22 @@ export async function replaceStaffPasswordVerifier(
     )
     .limit(1);
   const [target] = await db
-    .select({ membershipId: credentials.membershipId })
+    .select({
+      role: memberships.role,
+      membershipActive: memberships.active,
+      profileActive: employeeProfiles.active,
+      profileMembershipId: employeeProfiles.membershipId,
+    })
     .from(credentials)
+    .innerJoin(memberships, eq(memberships.id, credentials.membershipId))
+    .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
     .where(eq(credentials.membershipId, targetMembershipId))
     .limit(1);
-  if (!administrator || !target) return false;
+  if (
+    !administrator
+    || !target
+    || !staffPasswordResetIsAllowed(target, targetMembershipId)
+  ) return false;
 
   await db.batch([
     db

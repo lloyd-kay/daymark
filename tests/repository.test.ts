@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { sql } from "drizzle-orm";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import { loginAttempts } from "../db/schema";
 import {
   PUBLIC_PROFILE_SEEDS,
   invitationIsUsable,
@@ -8,9 +11,12 @@ import {
   toPublicEmployee,
 } from "../lib/data/repository";
 import {
+  atomicFailureIncrement,
   loginLockUntil,
   nextIdleExpiry,
   sessionIsUsable,
+  staffPasswordResetIsAllowed,
+  subjectAttemptShouldReset,
 } from "../lib/auth/repository";
 
 describe("public employee projection", () => {
@@ -129,6 +135,54 @@ describe("authentication persistence projections", () => {
   it("locks on the fifth failure for exactly 15 minutes", () => {
     expect(loginLockUntil(4, now)).toBeNull();
     expect(loginLockUntil(5, now)).toBe("2026-08-05T12:15:00.000Z");
+  });
+
+  it("keeps a subject locked after its original attempt window ends", () => {
+    const shouldReset = subjectAttemptShouldReset(
+      {
+        windowStartedAt: "2026-08-05T11:45:00.000Z",
+        lockedUntil: "2026-08-05T12:14:00.000Z",
+      },
+      now,
+    );
+
+    expect(shouldReset).toBe(false);
+  });
+
+  it("generates a database-side increment for concurrent failures", () => {
+    const increment = atomicFailureIncrement(loginAttempts.failedAttempts);
+    const query = new SQLiteSyncDialect().sqlToQuery(sql`select ${increment}`);
+    expect(query).toEqual({
+      sql: "select \"login_attempts\".\"failed_attempts\" + 1",
+      params: [],
+    });
+  });
+
+  it("allows staff password resets only for active linked employees", () => {
+    expect(staffPasswordResetIsAllowed({
+      role: "employee",
+      membershipActive: false,
+      profileActive: true,
+      profileMembershipId: "membership-maya",
+    }, "membership-maya")).toBe(false);
+    expect(staffPasswordResetIsAllowed({
+      role: "employee",
+      membershipActive: true,
+      profileActive: false,
+      profileMembershipId: "membership-maya",
+    }, "membership-maya")).toBe(false);
+    expect(staffPasswordResetIsAllowed({
+      role: "employee",
+      membershipActive: true,
+      profileActive: true,
+      profileMembershipId: null,
+    }, "membership-maya")).toBe(false);
+    expect(staffPasswordResetIsAllowed({
+      role: "employee",
+      membershipActive: true,
+      profileActive: true,
+      profileMembershipId: "membership-maya",
+    }, "membership-maya")).toBe(true);
   });
 
   it("rejects revoked, idle-expired, and absolute-expired sessions", () => {
