@@ -7,6 +7,11 @@ import {
   sha256,
   toPublicEmployee,
 } from "../lib/data/repository";
+import {
+  loginLockUntil,
+  nextIdleExpiry,
+  sessionIsUsable,
+} from "../lib/auth/repository";
 
 describe("public employee projection", () => {
   it("keeps only fields that are safe for anonymous clients", () => {
@@ -106,5 +111,35 @@ describe("initial roster", () => {
       "Priya Shah",
       "Jon Bell",
     ]);
+  });
+});
+
+describe("authentication persistence projections", () => {
+  const now = new Date("2026-08-05T12:00:00.000Z");
+
+  it("caps the rolling 12-hour idle expiry at the absolute expiry", () => {
+    expect(nextIdleExpiry(now, "2026-08-06T06:00:00.000Z")).toBe(
+      "2026-08-06T00:00:00.000Z",
+    );
+    expect(nextIdleExpiry(now, "2026-08-05T20:00:00.000Z")).toBe(
+      "2026-08-05T20:00:00.000Z",
+    );
+  });
+
+  it("locks on the fifth failure for exactly 15 minutes", () => {
+    expect(loginLockUntil(4, now)).toBeNull();
+    expect(loginLockUntil(5, now)).toBe("2026-08-05T12:15:00.000Z");
+  });
+
+  it("rejects revoked, idle-expired, and absolute-expired sessions", () => {
+    const usable = {
+      revokedAt: null,
+      idleExpiresAt: "2026-08-05T13:00:00.000Z",
+      absoluteExpiresAt: "2026-08-12T12:00:00.000Z",
+    };
+    expect(sessionIsUsable(usable, now)).toBe(true);
+    expect(sessionIsUsable({ ...usable, revokedAt: now.toISOString() }, now)).toBe(false);
+    expect(sessionIsUsable({ ...usable, idleExpiresAt: now.toISOString() }, now)).toBe(false);
+    expect(sessionIsUsable({ ...usable, absoluteExpiresAt: now.toISOString() }, now)).toBe(false);
   });
 });
