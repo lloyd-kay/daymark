@@ -105,6 +105,7 @@
 
       launcher.addEventListener("click", openPanel);
       closeButton.addEventListener("click", closePanel);
+      document.addEventListener("daymark:widget-activate", receiveActivation);
       document.addEventListener("keydown", trapKeyboard);
     }
 
@@ -139,6 +140,9 @@
 
     function openPanel() {
       if (!launcher || !closeButton) return;
+      document.dispatchEvent(new CustomEvent("daymark:widget-activate", {
+        detail: { channel: channel },
+      }));
       panelOpen = true;
       wrapper.hidden = false;
       launcher.setAttribute("aria-expanded", "true");
@@ -147,15 +151,28 @@
       });
     }
 
-    function closePanel() {
-      if (!launcher) return;
+    function closePanel(restoreFocus) {
+      if (!launcher || !panelOpen) return;
       panelOpen = false;
       wrapper.hidden = true;
       launcher.setAttribute("aria-expanded", "false");
       if (iframe.contentWindow) {
         iframe.contentWindow.postMessage({ type: "daymark:reset", channel: channel }, origin);
       }
-      launcher.focus();
+      if (restoreFocus !== false) launcher.focus();
+    }
+
+    function receiveActivation(event) {
+      var detail = event.detail;
+      if (
+        !panelOpen ||
+        !detail ||
+        typeof detail !== "object" ||
+        Object.keys(detail).length !== 1 ||
+        typeof detail.channel !== "string" ||
+        detail.channel === channel
+      ) return;
+      closePanel(false);
     }
 
     function trapKeyboard(event) {
@@ -175,10 +192,7 @@
       if (!controls.length) return;
       var first = controls[0];
       var last = controls[controls.length - 1];
-      if (document.activeElement === launcher && event.shiftKey) {
-        event.preventDefault();
-        iframe.focus();
-      } else if (controls.indexOf(document.activeElement) === -1) {
+      if (controls.indexOf(document.activeElement) === -1) {
         event.preventDefault();
         (event.shiftKey ? last : first).focus();
       } else if (event.shiftKey && document.activeElement === first) {

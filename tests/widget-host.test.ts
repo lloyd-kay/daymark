@@ -112,6 +112,14 @@ describe("Daymark host script", () => {
       cancelable: true,
     }));
     expect(widget.document.activeElement).toBe(launcher);
+
+    launcher.dispatchEvent(new widget.window.KeyboardEvent("keydown", {
+      key: "Tab",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(widget.document.activeElement).toBe(link);
   });
 
   it("defers head initialization until body exists and falls back to valid body placement", () => {
@@ -149,6 +157,53 @@ describe("Daymark host script", () => {
     );
     expect(shared.iframes[0].style.height).toBe("680px");
     expect(shared.iframes[1].style.height).toBe("710px");
+  });
+
+  it("keeps only the most recently opened floating widget active", () => {
+    const shared = runMultipleWidgets("floating");
+    const [firstLauncher, secondLauncher] = shared.launchers;
+    const [firstPanel, secondPanel] = shared.panels;
+    const [firstIframe, secondIframe] = shared.iframes;
+    const firstReset = vi.spyOn(firstIframe.contentWindow!, "postMessage");
+    const secondReset = vi.spyOn(secondIframe.contentWindow!, "postMessage");
+
+    firstLauncher.click();
+    expect(firstPanel.hidden).toBe(false);
+    expect(secondPanel.hidden).toBe(true);
+
+    secondLauncher.click();
+    expect(firstPanel.hidden).toBe(true);
+    expect(firstLauncher.getAttribute("aria-expanded")).toBe("false");
+    expect(secondPanel.hidden).toBe(false);
+    expect(secondLauncher.getAttribute("aria-expanded")).toBe("true");
+    expect(firstReset).toHaveBeenCalledTimes(1);
+    expect(firstReset).toHaveBeenLastCalledWith(
+      { type: "daymark:reset", channel: "first-channel" },
+      shared.origin,
+    );
+
+    const inactiveFrameFocus = vi.spyOn(firstIframe, "focus");
+    secondLauncher.focus();
+    secondLauncher.dispatchEvent(new shared.window.KeyboardEvent("keydown", {
+      key: "Tab",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(inactiveFrameFocus).not.toHaveBeenCalled();
+    expect(shared.window.document.activeElement).toBe(secondIframe);
+    expect(firstPanel.hidden).toBe(true);
+
+    shared.window.document.dispatchEvent(new shared.window.KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    }));
+    expect(firstPanel.hidden).toBe(true);
+    expect(secondPanel.hidden).toBe(true);
+    expect(firstReset).toHaveBeenCalledTimes(1);
+    expect(secondReset).toHaveBeenCalledTimes(1);
+    expect(shared.window.document.activeElement).toBe(secondLauncher);
   });
 });
 
@@ -240,7 +295,7 @@ function post(
   widget.window.dispatchEvent(new widget.window.MessageEvent("message", { data, origin, source }));
 }
 
-function runMultipleWidgets() {
+function runMultipleWidgets(mode: "floating" | "inline" = "inline") {
   const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
     runScripts: "outside-only",
     url: "https://host.example/page",
@@ -261,7 +316,7 @@ function runMultipleWidgets() {
   for (const employee of ["maya-chen", "theo-brooks"]) {
     const script = window.document.createElement("script");
     script.src = "https://widgets.daymark.test/daymark-widget.js";
-    script.dataset.mode = "inline";
+    script.dataset.mode = mode;
     script.dataset.employee = employee;
     window.document.body.appendChild(script);
     Object.defineProperty(window.document, "currentScript", { configurable: true, value: script });
@@ -272,5 +327,7 @@ function runMultipleWidgets() {
     window,
     origin: "https://widgets.daymark.test",
     iframes: [...window.document.querySelectorAll("iframe")],
+    launchers: [...window.document.querySelectorAll<HTMLButtonElement>(".daymark-widget__launcher")],
+    panels: [...window.document.querySelectorAll<HTMLDivElement>(".daymark-widget__panel")],
   };
 }
