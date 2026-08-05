@@ -50,13 +50,13 @@ export default function Home() {
         </ol>
       </section>
 
-      <section className="demo-section" id="demo" aria-labelledby="demo-title">
+      <div className="demo-section" id="demo">
         <div className="demo-heading">
           <div><p className="eyebrow">A safe place to try it</p><h2 id="demo-title">Interactive demonstration</h2></div>
           <p className="demo-notice"><ShieldCheck size={18} aria-hidden="true" /> No appointment will be created.</p>
         </div>
         <DemoBookingFlow />
-      </section>
+      </div>
 
       <section className="widget-options" id="widget-options" aria-labelledby="widget-title">
         <div className="widget-heading">

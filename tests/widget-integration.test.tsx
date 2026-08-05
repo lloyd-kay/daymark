@@ -4,6 +4,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingFlow } from "../app/booking/BookingFlow";
+import { DemoBookingFlow } from "../app/demo/DemoBookingFlow";
 import { EmbedBridge } from "../app/embed/EmbedBridge";
 import type { BookingTransport } from "../lib/booking/transport";
 import type { PublicEmployee } from "../lib/data/contracts";
@@ -150,6 +151,48 @@ describe("BookingFlow embed lifecycle", () => {
     expect(standalone.container.textContent).toContain("Your time is marked.");
     await act(async () => standalone.root.unmount());
     window.removeEventListener("daymark:complete", complete);
+  });
+});
+
+describe("DemoBookingFlow", () => {
+  it("completes a non-Maya demonstration without a network request or widget event", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const complete = vi.fn();
+    window.addEventListener("daymark:complete", complete);
+    let view: Awaited<ReturnType<typeof render>> | undefined;
+
+    try {
+      view = await render(createElement(DemoBookingFlow));
+      const theo = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".person-tab"))
+        .find((button) => button.textContent?.includes("Theo Brooks"));
+      expect(theo).toBeDefined();
+      await click(theo!);
+      await click(view.container.querySelector<HTMLButtonElement>(".date-card:not([disabled])")!);
+      await click(view.container.querySelector<HTMLButtonElement>(".time-tabs button")!);
+      await change(view.container.querySelector<HTMLInputElement>("input[name='name']")!, "Alex Morgan");
+      await change(view.container.querySelector<HTMLInputElement>("input[name='address']")!, "14 Sample Street, London");
+      await act(async () => {
+        view!.container.querySelector<HTMLFormElement>("form")!.dispatchEvent(
+          new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+        );
+        await Promise.resolve();
+      });
+
+      const text = view.container.textContent ?? "";
+      expect(text).toContain("Demonstration complete");
+      expect(text).toContain("No appointment was created.");
+      expect(text).toContain("Theo Brooks");
+      expect(text).toContain("Demo reference");
+      expect(text).toContain("DEMO-ONLY");
+      expect(text).not.toContain("Appointment confirmed");
+      expect(text).not.toContain("Your time is marked.");
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+    } finally {
+      if (view) await act(async () => view!.root.unmount());
+      window.removeEventListener("daymark:complete", complete);
+      fetchSpy.mockRestore();
+    }
   });
 });
 

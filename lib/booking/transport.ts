@@ -97,13 +97,20 @@ export const demoBookingTransport: BookingTransport = {
     const endAt = new Date(startAt.getTime() + 30 * 60 * 1000);
     return {
       reference: "DEMO-ONLY",
-      employeeName: "Maya Chen",
+      employeeName: DEMO_EMPLOYEE_NAMES[input.employeeId] ?? "Daymark demonstration",
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
       address: input.clientAddress,
       contactSummary: input.clientEmail ? "d••••@example.com" : "•••• 0000",
     };
   },
+};
+
+const DEMO_EMPLOYEE_NAMES: Record<string, string> = {
+  "maya-chen": "Maya Chen",
+  "theo-brooks": "Theo Brooks",
+  "priya-shah": "Priya Shah",
+  "jon-bell": "Jon Bell",
 };
 
 function demoSlotsFor(dateKey: string): BookableSlot[] {

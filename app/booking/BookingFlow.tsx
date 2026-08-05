@@ -457,7 +457,27 @@ export function BookingFlow({
             </>
           ) : null}
 
-          {step === "confirmed" && confirmation ? (
+          {step === "confirmed" && confirmation && demonstration ? (
+            <div className="confirmation-card demonstration-card">
+              <CheckCircle2 size={34} aria-hidden="true" />
+              <p className="eyebrow">Demonstration complete</p>
+              <h3 ref={stageHeading} tabIndex={-1}>No appointment was created.</h3>
+              <p>
+                You explored a booking with <strong>{confirmation.employeeName}</strong> on{" "}
+                <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
+              </p>
+              <p>This is a local example only. Nothing was added to a calendar or sent to the team.</p>
+              <div className="reference-slip">
+                <small>Demo reference</small>
+                <strong>{confirmation.reference}</strong>
+              </div>
+              <button type="button" onClick={reset}>
+                <RotateCcw size={16} aria-hidden="true" /> Try another demonstration
+              </button>
+            </div>
+          ) : null}
+
+          {step === "confirmed" && confirmation && !demonstration ? (
             <div className="confirmation-card">
               <CheckCircle2 size={34} aria-hidden="true" />
               <p className="eyebrow">Appointment confirmed</p>

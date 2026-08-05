@@ -29,6 +29,23 @@ describe("demonstration booking transport", () => {
       vi.useRealTimers();
     }
   });
+
+  it("labels the selected fixed demo employee and uses a safe fallback for unknown ids", async () => {
+    const slots = await demoBookingTransport.loadSlots("theo-brooks", "2026-08-06");
+    const input = {
+      startAt: slots.slots[0].startAt,
+      clientName: "Demo Visitor",
+      clientAddress: "14 Sample Street, London",
+      clientEmail: "demo@example.com",
+      clientPhone: null,
+      clientNote: "",
+    };
+
+    await expect(demoBookingTransport.createBooking({ ...input, employeeId: "theo-brooks" }))
+      .resolves.toMatchObject({ employeeName: "Theo Brooks", reference: "DEMO-ONLY" });
+    await expect(demoBookingTransport.createBooking({ ...input, employeeId: "unknown" }))
+      .resolves.toMatchObject({ employeeName: "Daymark demonstration", reference: "DEMO-ONLY" });
+  });
 });
 
 describe("live booking transport", () => {
