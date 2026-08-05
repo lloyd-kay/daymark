@@ -1,0 +1,127 @@
+{
+  "route": "/#widget-options",
+  "viewportCss": {
+    "width": 1775,
+    "height": 1234
+  },
+  "startControl": {
+    "accessibleName": "Widget options",
+    "element": "a",
+    "href": "#widget-options",
+    "focusVisible": true
+  },
+  "input": {
+    "surface": "Codex in-app browser",
+    "api": "tab.cua.keypress",
+    "keys": [
+      "TAB"
+    ],
+    "direction": "forward"
+  },
+  "before": {
+    "accessibleName": "Widget options",
+    "focusVisible": true,
+    "href": "#widget-options",
+    "tag": "A"
+  },
+  "after": {
+    "accessibleName": "Widget options",
+    "focusVisible": true,
+    "href": "#widget-options",
+    "tag": "A"
+  },
+  "result": "blocked",
+  "reason": "The genuine forward Tab event did not advance focus from the preceding focusable link, so floating and inline option traversal and the required target screenshots could not be captured without prohibited direct focus().",
+  "locatorPressAttempt": {
+    "startControl": "hero Start real booking link",
+    "api": "locator.press('Tab') followed by locator(':focus').press('Tab')",
+    "iterations": 12,
+    "sequence": [
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      },
+      {
+        "accessibleName": "Start real booking",
+        "focusVisible": true,
+        "href": "/book",
+        "pressed": null,
+        "tag": "A"
+      }
+    ],
+    "result": "blocked; focus remained on the preceding link for every real Tab press"
+  }
+}
