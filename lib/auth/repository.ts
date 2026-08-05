@@ -484,7 +484,7 @@ export async function insertStaffCredential(
 
 export async function replaceStaffPasswordVerifier(
   administratorMembershipId: string,
-  targetMembershipId: string,
+  employeeProfileId: string,
   verifier: PasswordVerifier,
   now = new Date(),
 ): Promise<boolean> {
@@ -502,6 +502,7 @@ export async function replaceStaffPasswordVerifier(
     .limit(1);
   const [target] = await db
     .select({
+      membershipId: memberships.id,
       role: memberships.role,
       membershipActive: memberships.active,
       profileActive: employeeProfiles.active,
@@ -510,12 +511,12 @@ export async function replaceStaffPasswordVerifier(
     .from(credentials)
     .innerJoin(memberships, eq(memberships.id, credentials.membershipId))
     .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
-    .where(eq(credentials.membershipId, targetMembershipId))
+    .where(eq(employeeProfiles.id, employeeProfileId))
     .limit(1);
   if (
     !administrator
     || !target
-    || !staffPasswordResetIsAllowed(target, targetMembershipId)
+    || !staffPasswordResetIsAllowed(target, target.membershipId)
   ) return false;
 
   await db.batch([
@@ -530,18 +531,78 @@ export async function replaceStaffPasswordVerifier(
         lockedUntil: null,
         updatedAt: now.toISOString(),
       })
-      .where(eq(credentials.membershipId, targetMembershipId)),
+      .where(eq(credentials.membershipId, target.membershipId)),
     db
       .update(authSessions)
       .set({ revokedAt: now.toISOString() })
       .where(
         and(
-          eq(authSessions.membershipId, targetMembershipId),
+          eq(authSessions.membershipId, target.membershipId),
           isNull(authSessions.revokedAt),
         ),
       ),
   ]);
   return true;
+}
+
+export async function setStaffActiveState(
+  administratorMembershipId: string,
+  employeeProfileId: string,
+  active: boolean,
+): Promise<{ membershipId: string } | null> {
+  const db = await database();
+  const [administrator] = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.id, administratorMembershipId),
+        eq(memberships.role, "admin"),
+        eq(memberships.active, true),
+      ),
+    )
+    .limit(1);
+  const [target] = await db
+    .select({
+      membershipId: memberships.id,
+      role: memberships.role,
+      profileMembershipId: employeeProfiles.membershipId,
+    })
+    .from(employeeProfiles)
+    .innerJoin(memberships, eq(memberships.id, employeeProfiles.membershipId))
+    .where(eq(employeeProfiles.id, employeeProfileId))
+    .limit(1);
+  if (
+    !administrator
+    || !target
+    || target.role !== "employee"
+    || target.profileMembershipId !== target.membershipId
+  ) {
+    return null;
+  }
+
+  const timestamp = new Date().toISOString();
+  await db.batch([
+    db
+      .update(memberships)
+      .set({ active, updatedAt: timestamp })
+      .where(
+        and(
+          eq(memberships.id, target.membershipId),
+          eq(memberships.role, "employee"),
+        ),
+      ),
+    db
+      .update(employeeProfiles)
+      .set({ active, updatedAt: timestamp })
+      .where(
+        and(
+          eq(employeeProfiles.id, employeeProfileId),
+          eq(employeeProfiles.membershipId, target.membershipId),
+        ),
+      ),
+  ]);
+  return { membershipId: target.membershipId };
 }
 
 type AuthDatabase = Awaited<ReturnType<typeof database>>;

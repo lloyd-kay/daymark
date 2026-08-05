@@ -7,6 +7,7 @@ import {
   PUBLIC_PROFILE_SEEDS,
   expiredAppointmentsPredicate,
   profileIdsForScope,
+  projectTeamProfile,
   projectScheduleEntry,
   retentionCutoffIso,
   sha256,
@@ -162,6 +163,56 @@ describe("initial roster", () => {
       "Priya Shah",
       "Jon Bell",
     ]);
+  });
+});
+
+describe("protected team projection", () => {
+  it("exposes credential presence and email without credential secrets", () => {
+    const profile = projectTeamProfile({
+      id: "maya-chen",
+      membershipId: "membership-maya",
+      publicName: "Maya Chen",
+      title: "Client partner",
+      bio: "Thoughtful planning.",
+      accent: "coral",
+      active: true,
+      sortOrder: 0,
+      memberEmail: "maya@example.com",
+      memberDisplayName: "Maya Chen",
+      credentialId: "credential-maya",
+      passwordHash: "must-never-leave-the-repository",
+    });
+
+    expect(profile).toEqual({
+      id: "maya-chen",
+      membershipId: "membership-maya",
+      publicName: "Maya Chen",
+      title: "Client partner",
+      bio: "Thoughtful planning.",
+      accent: "coral",
+      active: true,
+      sortOrder: 0,
+      memberEmail: "maya@example.com",
+      memberDisplayName: "Maya Chen",
+      hasCredential: true,
+    });
+    expect(JSON.stringify(profile)).not.toMatch(/password|credential-maya/i);
+  });
+
+  it("marks an unlinked profile as having no credential", () => {
+    expect(projectTeamProfile({
+      id: "theo-brooks",
+      membershipId: null,
+      publicName: "Theo Brooks",
+      title: "Operations specialist",
+      bio: "Practical sessions.",
+      accent: "sage",
+      active: true,
+      sortOrder: 1,
+      memberEmail: null,
+      memberDisplayName: null,
+      credentialId: null,
+    }).hasCredential).toBe(false);
   });
 });
 

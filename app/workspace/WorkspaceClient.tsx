@@ -6,9 +6,8 @@ import {
   CalendarDays,
   Check,
   Clock3,
-  Copy,
+  Code2,
   Eye,
-  KeyRound,
   LockKeyhole,
   LogOut,
   Plus,
@@ -25,8 +24,10 @@ import type {
   ScheduleEntry,
   TeamProfile,
 } from "../../lib/data/contracts";
+import { EmbedPanel } from "./EmbedPanel";
+import { TeamAccessPanel } from "./TeamAccessPanel";
 
-type WorkspaceView = "schedule" | "availability" | "team";
+type WorkspaceView = "schedule" | "availability" | "team" | "embed";
 
 const WEEKDAYS = [
   [1, "Mon"],
@@ -79,7 +80,6 @@ export function WorkspaceClient({
   const [blockStart, setBlockStart] = useState("");
   const [blockEnd, setBlockEnd] = useState("");
   const [blockNote, setBlockNote] = useState("");
-  const [inviteCodes, setInviteCodes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -243,57 +243,6 @@ export function WorkspaceClient({
     setLoading(false);
   }
 
-  async function invite(profile: TeamProfile) {
-    if (!window.confirm(`Create a single-use invitation for ${profile.publicName}?`)) return;
-    setLoading(true);
-    const response = await fetch("/api/workspace/team", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "invite",
-        employeeProfileId: profile.id,
-        confirm: true,
-      }),
-    });
-    const body = (await response.json()) as {
-      invitation?: { code: string };
-      error?: string;
-    };
-    if (response.ok && body.invitation) {
-      setInviteCodes((current) => ({ ...current, [profile.id]: body.invitation!.code }));
-      setMessage("Invitation created. It can be used once and expires in seven days.");
-    } else {
-      setMessage(body.error ?? "An invitation could not be created.");
-    }
-    setLoading(false);
-  }
-
-  async function toggleProfile(profile: TeamProfile) {
-    const nextActive = !profile.active;
-    if (!window.confirm(`${nextActive ? "Activate" : "Deactivate"} ${profile.publicName}?`)) return;
-    setLoading(true);
-    const response = await fetch("/api/workspace/team", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "set-active",
-        employeeProfileId: profile.id,
-        active: nextActive,
-        confirm: true,
-      }),
-    });
-    const body = (await response.json()) as { error?: string };
-    if (response.ok) {
-      setProfiles((current) =>
-        current.map((item) => (item.id === profile.id ? { ...item, active: nextActive } : item)),
-      );
-      setMessage(`${profile.publicName} is now ${nextActive ? "active" : "inactive"}.`);
-    } else {
-      setMessage(body.error ?? "The account could not be changed.");
-    }
-    setLoading(false);
-  }
-
   return (
     <main className="workspace-shell">
       <header className="workspace-header">
@@ -312,9 +261,14 @@ export function WorkspaceClient({
             <Settings2 size={16} /> Availability
           </button>
           {actor.role === "admin" ? (
-            <button className={view === "team" ? "is-active" : ""} onClick={() => setView("team")}>
-              <UsersRound size={16} /> Team
-            </button>
+            <>
+              <button className={view === "team" ? "is-active" : ""} onClick={() => setView("team")}>
+                <UsersRound size={16} /> Team
+              </button>
+              <button className={view === "embed" ? "is-active" : ""} onClick={() => setView("embed")}>
+                <Code2 size={16} /> Embed
+              </button>
+            </>
           ) : null}
         </nav>
         <div className="workspace-user">
@@ -541,51 +495,11 @@ export function WorkspaceClient({
           ) : null}
 
           {view === "team" && actor.role === "admin" ? (
-            <div className="team-view">
-              <div className="team-heading">
-                <div>
-                  <p className="eyebrow">Administrator desk</p>
-                  <h2>Four calendars. One clear view.</h2>
-                </div>
-                <span><Eye size={16} /> You can view all appointment details</span>
-              </div>
-              <div className="team-cards">
-                {profiles.map((profile, index) => (
-                  <article className="team-card" data-accent={profile.accent} key={profile.id}>
-                    <span className="team-number">0{index + 1}</span>
-                    <div className="avatar-stamp">{initials(profile.publicName)}</div>
-                    <div className="team-copy">
-                      <small>{profile.title}</small>
-                      <h3>{profile.publicName}</h3>
-                      <p>{profile.memberEmail ?? "Not enrolled yet"}</p>
-                    </div>
-                    <span className={profile.active ? "status-chip is-active" : "status-chip"}>
-                      {profile.active ? "Active" : "Inactive"}
-                    </span>
-                    <div className="team-actions">
-                      <button onClick={() => openAvailability(profile.id)}><Settings2 size={14} /> Availability</button>
-                      {!profile.membershipId ? (
-                        <button onClick={() => invite(profile)}><KeyRound size={14} /> Create invite</button>
-                      ) : null}
-                      <button onClick={() => toggleProfile(profile)}>
-                        {profile.active ? <LockKeyhole size={14} /> : <Check size={14} />}
-                        {profile.active ? "Deactivate" : "Activate"}
-                      </button>
-                    </div>
-                    {inviteCodes[profile.id] ? (
-                      <div className="invite-slip">
-                        <small>Single-use code</small>
-                        <strong>{inviteCodes[profile.id]}</strong>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(inviteCodes[profile.id])}
-                          aria-label="Copy invitation code"
-                        ><Copy size={14} /></button>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            </div>
+            <TeamAccessPanel profiles={profiles} onProfilesChange={setProfiles} />
+          ) : null}
+
+          {view === "embed" && actor.role === "admin" ? (
+            <EmbedPanel profiles={profiles} />
           ) : null}
         </section>
       </div>
@@ -660,8 +574,4 @@ function minutesToTime(minutes: number) {
 function timeToMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
-}
-
-function initials(name: string) {
-  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }

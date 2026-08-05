@@ -10,6 +10,7 @@ import {
   appointments,
   availabilityRules,
   blockedPeriods,
+  credentials,
   employeeProfiles,
   invitations,
   memberships,
@@ -155,7 +156,7 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
 export async function listTeamProfiles(): Promise<TeamProfile[]> {
   await ensureSeedData();
   const db = await database();
-  return db
+  const rows = await db
     .select({
       id: employeeProfiles.id,
       membershipId: employeeProfiles.membershipId,
@@ -165,12 +166,36 @@ export async function listTeamProfiles(): Promise<TeamProfile[]> {
       accent: employeeProfiles.accent,
       active: employeeProfiles.active,
       sortOrder: employeeProfiles.sortOrder,
-      memberEmail: memberships.email,
+      memberEmail: credentials.email,
       memberDisplayName: memberships.displayName,
+      credentialId: credentials.id,
     })
     .from(employeeProfiles)
     .leftJoin(memberships, eq(memberships.id, employeeProfiles.membershipId))
+    .leftJoin(credentials, eq(credentials.membershipId, memberships.id))
     .orderBy(asc(employeeProfiles.sortOrder));
+  return rows.map(projectTeamProfile);
+}
+
+type TeamProfileProjection = Omit<TeamProfile, "hasCredential"> & {
+  credentialId: string | null;
+  [key: string]: unknown;
+};
+
+export function projectTeamProfile(row: TeamProfileProjection): TeamProfile {
+  return {
+    id: row.id,
+    membershipId: row.membershipId,
+    publicName: row.publicName,
+    title: row.title,
+    bio: row.bio,
+    accent: row.accent,
+    active: row.active,
+    sortOrder: row.sortOrder,
+    memberEmail: row.memberEmail,
+    memberDisplayName: row.memberDisplayName,
+    hasCredential: Boolean(row.credentialId),
+  };
 }
 
 export async function listPublicSlots(

@@ -1,5 +1,6 @@
 import { actorCanAccessProfile } from "./auth/membership";
 import type { WorkspaceActor } from "./auth/membership";
+import { normalizeEmail } from "./auth/service";
 import type { AvailabilityRule, TimeRange } from "./scheduling/types";
 
 type WorkspaceDependencies = {
@@ -28,11 +29,15 @@ type WorkspaceDependencies = {
     range: TimeRange & { note?: string },
   ) => Promise<boolean>;
   listTeamProfiles: () => Promise<unknown>;
-  createInvitation: (
+  createStaffAccount: (
+    adminMembershipId: string,
+    input: { employeeProfileId: string; email: string; displayName: string },
+  ) => Promise<{ temporaryPassword: string } | null>;
+  resetStaffPassword: (
     adminMembershipId: string,
     employeeProfileId: string,
-  ) => Promise<unknown>;
-  setEmployeeActive: (
+  ) => Promise<{ temporaryPassword: string } | null>;
+  setStaffActive: (
     adminMembershipId: string,
     employeeProfileId: string,
     active: boolean,
@@ -156,24 +161,37 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       if (actor.role !== "admin") return forbidden();
       if (!raw || typeof raw !== "object") return badRequest("Check the team action.");
       const body = raw as Record<string, unknown>;
-      if (typeof body.employeeProfileId !== "string" || !body.employeeProfileId) {
+      const employeeProfileId = parseEmployeeProfileId(body.employeeProfileId);
+      if (!employeeProfileId) {
         return badRequest("Choose a team member.");
       }
-      if (body.action === "invite") {
-        if (body.confirm !== true) return badRequest("Confirm the invitation.");
-        const invitation = await dependencies.createInvitation(
+      if (body.action === "create-account") {
+        if (body.confirm !== true) return badRequest("Confirm account creation.");
+        const input = parseStaffAccountInput(employeeProfileId, body);
+        if (!input) return badRequest("Check the staff account details.");
+        const account = await dependencies.createStaffAccount(
           actor.membershipId,
-          body.employeeProfileId,
+          input,
         );
-        return invitation
-          ? { status: 200, body: { ok: true, invitation } }
-          : badRequest("An invitation could not be created.");
+        return account
+          ? { status: 201, body: { temporaryPassword: account.temporaryPassword } }
+          : badRequest("The staff account could not be created.");
+      }
+      if (body.action === "reset-password") {
+        if (body.confirm !== true) return badRequest("Confirm the password reset.");
+        const reset = await dependencies.resetStaffPassword(
+          actor.membershipId,
+          employeeProfileId,
+        );
+        return reset
+          ? { status: 200, body: { temporaryPassword: reset.temporaryPassword } }
+          : badRequest("The temporary password could not be reset.");
       }
       if (body.action === "set-active" && typeof body.active === "boolean") {
         if (body.confirm !== true) return badRequest("Confirm the account change.");
-        const changed = await dependencies.setEmployeeActive(
+        const changed = await dependencies.setStaffActive(
           actor.membershipId,
-          body.employeeProfileId,
+          employeeProfileId,
           body.active,
         );
         return changed
@@ -183,6 +201,37 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       return badRequest("Check the team action.");
     },
   };
+}
+
+const EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
+
+function parseEmployeeProfileId(value: unknown): string | null {
+  return typeof value === "string"
+    && value !== "all"
+    && EMPLOYEE_PROFILE_ID.test(value)
+    ? value
+    : null;
+}
+
+function parseStaffAccountInput(
+  employeeProfileId: string,
+  body: Record<string, unknown>,
+) {
+  if (typeof body.email !== "string" || typeof body.displayName !== "string") {
+    return null;
+  }
+  const email = normalizeEmail(body.email);
+  const displayName = body.displayName.trim();
+  if (
+    email.length < 3
+    || email.length > 254
+    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    || displayName.length < 1
+    || displayName.length > 80
+  ) {
+    return null;
+  }
+  return { employeeProfileId, email, displayName };
 }
 
 async function readyActor(dependencies: WorkspaceDependencies): Promise<

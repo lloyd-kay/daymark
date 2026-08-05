@@ -1,13 +1,16 @@
 import { getWorkspaceActor } from "./auth/membership";
 import {
+  createStaffAccount,
+  resetStaffPassword,
+  setStaffActive,
+} from "./auth/staff-accounts";
+import {
   addBlockedPeriod,
   cancelAppointment,
-  createInvitation,
   getEmployeeAvailability,
   listSchedule,
   listTeamProfiles,
   replaceAvailabilityRules,
-  setEmployeeActive,
 } from "./data/repository";
 import { createWorkspaceService } from "./workspace-service";
 
@@ -20,7 +23,8 @@ export function workspaceService() {
     replaceAvailabilityRules,
     addBlockedPeriod,
     listTeamProfiles,
-    createInvitation,
-    setEmployeeActive,
+    createStaffAccount,
+    resetStaffPassword,
+    setStaffActive,
   });
 }

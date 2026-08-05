@@ -29,11 +29,13 @@ function dependencies(actor: WorkspaceActor | null) {
     replaceAvailabilityRules: vi.fn().mockResolvedValue(true),
     addBlockedPeriod: vi.fn().mockResolvedValue(true),
     listTeamProfiles: vi.fn().mockResolvedValue([]),
-    createInvitation: vi.fn().mockResolvedValue({
-      code: "DAYMARK-ABC123",
-      expiresAt: "2026-08-12T12:00:00.000Z",
+    createStaffAccount: vi.fn().mockResolvedValue({
+      temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
     }),
-    setEmployeeActive: vi.fn().mockResolvedValue(true),
+    resetStaffPassword: vi.fn().mockResolvedValue({
+      temporaryPassword: "VWXYZ-23456-789AB-CDEFG",
+    }),
+    setStaffActive: vi.fn().mockResolvedValue(true),
   };
 }
 
@@ -132,30 +134,136 @@ describe("workspace mutations", () => {
     expect(deps.cancelAppointment).not.toHaveBeenCalled();
   });
 
-  it("allows only administrators to create invitations", async () => {
+  it("allows only administrators to create a staff account", async () => {
     const employeeDeps = dependencies(employee);
-    const employeeResult = await createWorkspaceService(employeeDeps).teamAction({
-      action: "invite",
-      employeeProfileId: "maya-chen",
+    const denied = await createWorkspaceService(employeeDeps).teamAction({
+      action: "create-account",
+      employeeProfileId: "theo-brooks",
+      email: "theo@example.com",
+      displayName: "Theo Brooks",
       confirm: true,
     });
-    expect(employeeResult.status).toBe(403);
-    expect(employeeDeps.createInvitation).not.toHaveBeenCalled();
+    expect(denied.status).toBe(403);
+    expect(employeeDeps.createStaffAccount).not.toHaveBeenCalled();
 
     const adminDeps = dependencies(admin);
-    const adminResult = await createWorkspaceService(adminDeps).teamAction({
-      action: "invite",
-      employeeProfileId: "maya-chen",
+    const created = await createWorkspaceService(adminDeps).teamAction({
+      action: "create-account",
+      employeeProfileId: "theo-brooks",
+      email: "theo@example.com",
+      displayName: "Theo Brooks",
       confirm: true,
     });
-    expect(adminResult.status).toBe(200);
-    expect(adminDeps.createInvitation).toHaveBeenCalledWith(
+    expect(created.status).toBe(201);
+    expect(created.body.temporaryPassword).toMatch(/^[A-HJ-NP-Z2-9-]+$/);
+    expect(adminDeps.createStaffAccount).toHaveBeenCalledWith(
       "membership-admin",
-      "maya-chen",
+      {
+        employeeProfileId: "theo-brooks",
+        email: "theo@example.com",
+        displayName: "Theo Brooks",
+      },
     );
   });
 
-  it("requires confirmation before an administrator deactivates a profile", async () => {
+  it("requires explicit confirmation before resetting a staff password", async () => {
+    const deps = dependencies(admin);
+    const service = createWorkspaceService(deps);
+
+    const result = await service.teamAction({
+      action: "reset-password",
+      employeeProfileId: "maya-chen",
+      confirm: false,
+    });
+
+    expect(result.status).toBe(400);
+    expect(deps.resetStaffPassword).not.toHaveBeenCalled();
+  });
+
+  it("prevents employees from resetting a staff password", async () => {
+    const deps = dependencies(employee);
+    const result = await createWorkspaceService(deps).teamAction({
+      action: "reset-password",
+      employeeProfileId: "maya-chen",
+      confirm: true,
+    });
+
+    expect(result.status).toBe(403);
+    expect(deps.resetStaffPassword).not.toHaveBeenCalled();
+  });
+
+  it("returns a temporary password only from successful create and reset responses", async () => {
+    const deps = dependencies(admin);
+    deps.listTeamProfiles.mockResolvedValue([
+      {
+        id: "maya-chen",
+        memberEmail: "maya@example.com",
+        hasCredential: true,
+      },
+    ]);
+    const service = createWorkspaceService(deps);
+
+    const reset = await service.teamAction({
+      action: "reset-password",
+      employeeProfileId: "maya-chen",
+      confirm: true,
+    });
+    const team = await service.team();
+
+    expect(reset).toEqual({
+      status: 200,
+      body: { temporaryPassword: "VWXYZ-23456-789AB-CDEFG" },
+    });
+    expect(JSON.stringify(team.body)).not.toMatch(/password/i);
+  });
+
+  it("validates account identifiers, normalized email, and display name", async () => {
+    const deps = dependencies(admin);
+    const service = createWorkspaceService(deps);
+
+    for (const body of [
+      {
+        action: "create-account",
+        employeeProfileId: "../maya",
+        email: "maya@example.com",
+        displayName: "Maya Chen",
+        confirm: true,
+      },
+      {
+        action: "create-account",
+        employeeProfileId: "maya-chen",
+        email: "not-an-email",
+        displayName: "Maya Chen",
+        confirm: true,
+      },
+      {
+        action: "create-account",
+        employeeProfileId: "maya-chen",
+        email: "maya@example.com",
+        displayName: " ",
+        confirm: true,
+      },
+    ]) {
+      const result = await service.teamAction(body);
+      expect(result.status).toBe(400);
+    }
+    expect(deps.createStaffAccount).not.toHaveBeenCalled();
+
+    await service.teamAction({
+      action: "create-account",
+      employeeProfileId: "maya-chen",
+      email: "  MAYA@EXAMPLE.COM ",
+      displayName: "  Maya Chen  ",
+      confirm: true,
+    });
+    expect(deps.createStaffAccount).toHaveBeenCalledWith("membership-admin", {
+      employeeProfileId: "maya-chen",
+      email: "maya@example.com",
+      displayName: "Maya Chen",
+    });
+  });
+
+  it("requires confirmation before an administrator changes staff active state", async () => {
     const deps = dependencies(admin);
     const service = createWorkspaceService(deps);
 
@@ -167,6 +275,23 @@ describe("workspace mutations", () => {
     });
 
     expect(result.status).toBe(400);
-    expect(deps.setEmployeeActive).not.toHaveBeenCalled();
+    expect(deps.setStaffActive).not.toHaveBeenCalled();
+  });
+
+  it("routes confirmed deactivation through the staff lifecycle", async () => {
+    const deps = dependencies(admin);
+    const result = await createWorkspaceService(deps).teamAction({
+      action: "set-active",
+      employeeProfileId: "maya-chen",
+      active: false,
+      confirm: true,
+    });
+
+    expect(result.status).toBe(200);
+    expect(deps.setStaffActive).toHaveBeenCalledWith(
+      "membership-admin",
+      "maya-chen",
+      false,
+    );
   });
 });
