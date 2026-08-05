@@ -12,7 +12,10 @@ import {
   UserRound,
 } from "lucide-react";
 import { FormEvent, forwardRef, useMemo, useRef, useState } from "react";
-import type { BookingTransport } from "../../lib/booking/transport";
+import {
+  isBookingConflict,
+  type BookingTransport,
+} from "../../lib/booking/transport";
 import type { PublicEmployee } from "../../lib/data/contracts";
 import type { BookableSlot } from "../../lib/scheduling/types";
 
@@ -147,6 +150,22 @@ export function BookingFlow({
       setConfirmation(booking);
       setStep("confirmed");
     } catch (caught) {
+      if (isBookingConflict(caught)) {
+        const refreshed = await recoverBookingConflict(
+          transport,
+          draft.employee.id,
+          todayKey(),
+        ).catch(() => null);
+        if (refreshed) {
+          setDateKeys(refreshed.dateKeys);
+          setSlots(refreshed.slots);
+          setDraft((current) => ({ ...current, slot: refreshed.slot }));
+          setStep(refreshed.nextStep);
+        } else {
+          setDraft((current) => ({ ...current, slot: null }));
+          setStep("time");
+        }
+      }
       setError(
         caught instanceof Error
           ? caught.message
@@ -478,6 +497,24 @@ export function BookingFlow({
       </aside>
     </section>
   );
+}
+
+export async function recoverBookingConflict(
+  transport: BookingTransport,
+  employeeId: string,
+  from: string,
+): Promise<{
+  dateKeys: string[];
+  slots: BookableSlot[];
+  nextStep: "time";
+  slot: null;
+}> {
+  const availability = await transport.loadSlots(employeeId, from);
+  return {
+    ...availability,
+    nextStep: "time",
+    slot: null,
+  };
 }
 
 const StageTitle = forwardRef<

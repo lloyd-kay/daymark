@@ -98,6 +98,10 @@ export function retentionCutoffIso(now: Date): string {
   return new Date(now.getTime() - THIRTY_DAYS_MS).toISOString();
 }
 
+export function expiredAppointmentsPredicate(now: Date) {
+  return lt(appointments.endAt, retentionCutoffIso(now));
+}
+
 export async function sha256(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -127,7 +131,7 @@ export async function purgeExpiredAppointments(
   const db = await database();
   const result = await db
     .delete(appointments)
-    .where(lt(appointments.endAt, retentionCutoffIso(now)));
+    .where(expiredAppointmentsPredicate(now));
   return { deleted: Number(result.meta?.changes ?? 0) };
 }
 

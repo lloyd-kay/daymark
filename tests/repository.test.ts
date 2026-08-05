@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
-import { loginAttempts } from "../db/schema";
+import { appointments, loginAttempts } from "../db/schema";
 import {
   PUBLIC_PROFILE_SEEDS,
+  expiredAppointmentsPredicate,
   profileIdsForScope,
   retentionCutoffIso,
   sha256,
@@ -68,6 +69,19 @@ describe("privacy retention", () => {
     expect(retentionCutoffIso(new Date("2026-08-05T12:00:00.000Z"))).toBe(
       "2026-07-06T12:00:00.000Z",
     );
+  });
+
+  it("deletes complete expired appointment rows at the 30-day cutoff", () => {
+    const cutoff = new Date("2026-08-05T12:00:00.000Z");
+    const query = new SQLiteSyncDialect().sqlToQuery(
+      sql`delete from ${appointments} where ${expiredAppointmentsPredicate(cutoff)}`,
+    );
+
+    expect(query).toEqual({
+      sql: "delete from \"appointments\" where \"appointments\".\"end_at\" < ?",
+      params: ["2026-07-06T12:00:00.000Z"],
+      typings: ["none"],
+    });
   });
 });
 

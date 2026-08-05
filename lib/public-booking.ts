@@ -97,7 +97,10 @@ export function createPublicBookingService(
         body: {
           ok: true,
           booking: {
-            ...result.booking,
+            reference: result.booking.reference,
+            employeeName: result.booking.employeeName,
+            startAt: result.booking.startAt,
+            endAt: result.booking.endAt,
             address: parsed.data.clientAddress,
             contactSummary: maskContact(
               parsed.data.clientEmail,
@@ -135,7 +138,13 @@ function parseBookingInput(
     return { ok: false, error: "Enter the appointment address." };
   }
   const clientEmail = optionalString(input.clientEmail);
+  if (clientEmail === undefined) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
   const clientPhone = optionalString(input.clientPhone);
+  if (clientPhone === undefined) {
+    return { ok: false, error: "Enter a valid phone number." };
+  }
   if (!clientEmail && !clientPhone) {
     return { ok: false, error: "Enter an email address or phone number." };
   }
@@ -167,8 +176,9 @@ function parseBookingInput(
   };
 }
 
-function optionalString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+function optionalString(value: unknown): string | null | undefined {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return undefined;
   const normalized = value.trim();
   return normalized || null;
 }
