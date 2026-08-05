@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { FormEvent, forwardRef, useMemo, useRef, useState } from "react";
+import type { BookingTransport } from "../../lib/booking/transport";
 import type { PublicEmployee } from "../../lib/data/contracts";
 import type { BookableSlot } from "../../lib/scheduling/types";
 
@@ -22,7 +23,9 @@ type BookingDraft = {
   dateKey: string | null;
   slot: BookableSlot | null;
   clientName: string;
+  clientAddress: string;
   clientEmail: string;
+  clientPhone: string;
   clientNote: string;
 };
 
@@ -31,6 +34,8 @@ type Confirmation = {
   employeeName: string;
   startAt: string;
   endAt: string;
+  address: string;
+  contactSummary: string;
 };
 
 const STEP_LABELS: Array<{ step: Exclude<BookingStep, "confirmed">; label: string }> = [
@@ -42,8 +47,16 @@ const STEP_LABELS: Array<{ step: Exclude<BookingStep, "confirmed">; label: strin
 
 export function BookingFlow({
   initialEmployees,
+  transport,
+  initialEmployeeId,
+  embedded = false,
+  demonstration = false,
 }: {
   initialEmployees: PublicEmployee[];
+  transport: BookingTransport;
+  initialEmployeeId?: string;
+  embedded?: boolean;
+  demonstration?: boolean;
 }) {
   const [step, setStep] = useState<BookingStep>("person");
   const [draft, setDraft] = useState<BookingDraft>({
@@ -51,7 +64,9 @@ export function BookingFlow({
     dateKey: null,
     slot: null,
     clientName: "",
+    clientAddress: "",
     clientEmail: "",
+    clientPhone: "",
     clientNote: "",
   });
   const [dateKeys, setDateKeys] = useState<string[]>(() => nextDateKeys(14));
@@ -68,6 +83,9 @@ export function BookingFlow({
   );
   const dateParts = formatDateParts(selectedDate);
   const currentStep = step === "confirmed" ? 4 : STEP_LABELS.findIndex((item) => item.step === step);
+  const displayedEmployees = initialEmployeeId
+    ? initialEmployees.filter((employee) => employee.id === initialEmployeeId)
+    : initialEmployees;
 
   async function chooseEmployee(employee: PublicEmployee) {
     setDraft((current) => ({
@@ -80,17 +98,8 @@ export function BookingFlow({
     setError("");
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/public/slots?employeeId=${encodeURIComponent(employee.id)}&from=${todayKey()}`,
-        { cache: "no-store" },
-      );
-      const payload = (await response.json()) as {
-        error?: string;
-        dateKeys?: string[];
-        slots?: BookableSlot[];
-      };
-      if (!response.ok) throw new Error(payload.error ?? "Availability could not be loaded.");
-      const keys = payload.dateKeys ?? nextDateKeys(14);
+      const payload = await transport.loadSlots(employee.id, todayKey());
+      const keys = payload.dateKeys.length ? payload.dateKeys : nextDateKeys(14);
       setDateKeys(keys);
       setSlots(payload.slots ?? []);
       setDraft((current) => ({ ...current, dateKey: keys[0] ?? null }));
@@ -126,30 +135,16 @@ export function BookingFlow({
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/public/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          employeeId: draft.employee.id,
-          startAt: draft.slot.startAt,
-          clientName: draft.clientName,
-          clientEmail: draft.clientEmail,
-          clientNote: draft.clientNote,
-        }),
+      const booking = await transport.createBooking({
+        employeeId: draft.employee.id,
+        startAt: draft.slot.startAt,
+        clientName: draft.clientName,
+        clientAddress: draft.clientAddress,
+        clientEmail: draft.clientEmail || null,
+        clientPhone: draft.clientPhone || null,
+        clientNote: draft.clientNote,
       });
-      const payload = (await response.json()) as {
-        error?: string;
-        booking?: Confirmation;
-      };
-      if (!response.ok || !payload.booking) {
-        if (response.status === 409) {
-          await refreshSlots(draft.employee.id);
-          setDraft((current) => ({ ...current, slot: null }));
-          setStep("time");
-        }
-        throw new Error(payload.error ?? "The booking could not be completed.");
-      }
-      setConfirmation(payload.booking);
+      setConfirmation(booking);
       setStep("confirmed");
     } catch (caught) {
       setError(
@@ -161,15 +156,6 @@ export function BookingFlow({
       setLoading(false);
       focusStage();
     }
-  }
-
-  async function refreshSlots(employeeId: string) {
-    const response = await fetch(
-      `/api/public/slots?employeeId=${encodeURIComponent(employeeId)}&from=${todayKey()}`,
-      { cache: "no-store" },
-    );
-    const payload = (await response.json()) as { slots?: BookableSlot[] };
-    if (response.ok) setSlots(payload.slots ?? []);
   }
 
   function goBack() {
@@ -193,7 +179,9 @@ export function BookingFlow({
       dateKey: null,
       slot: null,
       clientName: "",
+      clientAddress: "",
       clientEmail: "",
+      clientPhone: "",
       clientNote: "",
     });
     setConfirmation(null);
@@ -207,7 +195,7 @@ export function BookingFlow({
   }
 
   return (
-    <section className="booking-studio" id="book" aria-labelledby="booking-title">
+    <section className={embedded ? "booking-studio is-embedded" : "booking-studio"} id="book" aria-labelledby="booking-title">
       <aside className="daymark-rail" aria-label={`Active date: ${dateParts.full}`}>
         <span className="rail-kicker">Daymark</span>
         <strong>{dateParts.day}</strong>
@@ -257,7 +245,7 @@ export function BookingFlow({
                 note="Each person controls their own availability. No one else on the team can see it."
               />
               <div className="people-list">
-                {initialEmployees.map((employee, index) => (
+                {displayedEmployees.map((employee, index) => (
                   <button
                     className="person-tab"
                     data-accent={employee.accent}
@@ -367,19 +355,51 @@ export function BookingFlow({
                     placeholder="e.g. Alex Morgan"
                   />
                 </label>
+                <label className="form-wide">
+                  <span>Appointment address</span>
+                  <input
+                    name="address"
+                    autoComplete="street-address"
+                    required
+                    maxLength={240}
+                    value={draft.clientAddress}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, clientAddress: event.target.value }))
+                    }
+                    placeholder="14 Example Street, London, N1 1AA"
+                  />
+                </label>
+                <p className="form-wide contact-help" id="contact-help">
+                  Add an email address or phone number so we can contact you about this appointment.
+                </p>
                 <label>
-                  <span>Email address</span>
+                  <span>Email address <small>Optional</small></span>
                   <input
                     name="email"
                     type="email"
                     autoComplete="email"
-                    required
                     maxLength={254}
+                    aria-describedby="contact-help"
                     value={draft.clientEmail}
                     onChange={(event) =>
                       setDraft((current) => ({ ...current, clientEmail: event.target.value }))
                     }
                     placeholder="alex@example.com"
+                  />
+                </label>
+                <label>
+                  <span>Phone number <small>Optional</small></span>
+                  <input
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    maxLength={25}
+                    aria-describedby="contact-help"
+                    value={draft.clientPhone}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, clientPhone: event.target.value }))
+                    }
+                    placeholder="+44 20 7946 0000"
                   />
                 </label>
                 <label className="form-wide">
@@ -396,7 +416,7 @@ export function BookingFlow({
                   />
                 </label>
                 <button className="confirm-button" type="submit" disabled={loading}>
-                  {loading ? "Holding your time…" : "Confirm appointment"}
+                  {loading ? "Holding your time…" : demonstration ? "Complete demonstration" : "Confirm appointment"}
                   <ArrowRight size={18} aria-hidden="true" />
                 </button>
               </form>
@@ -412,6 +432,7 @@ export function BookingFlow({
                 You’re meeting <strong>{confirmation.employeeName}</strong> on{" "}
                 <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
               </p>
+              <p>{confirmation.address} · {confirmation.contactSummary}</p>
               <div className="reference-slip">
                 <small>Booking reference</small>
                 <strong>{confirmation.reference}</strong>

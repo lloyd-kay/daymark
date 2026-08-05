@@ -98,6 +98,20 @@ describe("booking creation", () => {
     expect(deps.createBooking).not.toHaveBeenCalled();
   });
 
+  it("requires an address and at least one contact method", async () => {
+    const service = createPublicBookingService(dependencies());
+    const noAddress = await service.book(
+      { ...validBooking, clientAddress: "" },
+      new Date("2026-08-05T12:00:00.000Z"),
+    );
+    const noContact = await service.book(
+      { ...validBooking, clientEmail: null, clientPhone: null },
+      new Date("2026-08-05T12:00:00.000Z"),
+    );
+    expect(noAddress.body.error).toBe("Enter the appointment address.");
+    expect(noContact.body.error).toBe("Enter an email address or phone number.");
+  });
+
   it("rejects a past timestamp before querying storage", async () => {
     const deps = dependencies();
     const service = createPublicBookingService(deps);
@@ -127,8 +141,22 @@ describe("booking creation", () => {
         employeeName: "Maya Chen",
         startAt: "2026-08-10T08:00:00.000Z",
         endAt: "2026-08-10T08:30:00.000Z",
+        address: "14 Example Street, London, N1 1AA",
+        contactSummary: "l••••@example.com",
       },
     });
+  });
+
+  it("masks the confirmation contact", async () => {
+    const result = await createPublicBookingService(dependencies()).book(
+      validBooking,
+      new Date("2026-08-05T12:00:00.000Z"),
+    );
+    expect(result.body.booking).toMatchObject({
+      address: "14 Example Street, London, N1 1AA",
+      contactSummary: "l••••@example.com",
+    });
+    expect(JSON.stringify(result.body)).not.toContain("lloyd@example.com");
   });
 
   it("maps a simultaneous claim to a friendly 409 conflict", async () => {

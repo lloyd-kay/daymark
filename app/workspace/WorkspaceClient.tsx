@@ -417,7 +417,8 @@ export function WorkspaceClient({
                                 <time>{formatTime(entry.startAt)}</time>
                                 {actor.role === "admin" ? <small>{entry.employeeName}</small> : null}
                                 <strong>{entry.clientName}</strong>
-                                <span>{entry.clientEmail}</span>
+                                <span>{entry.clientAddress}</span>
+                                <span>{entry.clientEmail ?? entry.clientPhone}</span>
                                 {entry.clientNote ? <p>{entry.clientNote}</p> : null}
                                 {entry.status === "booked" ? (
                                   <button onClick={() => cancel(entry)} aria-label={`Cancel appointment with ${entry.clientName}`}>

@@ -1,5 +1,5 @@
 import { ArrowUpRight, CalendarRange, LockKeyhole } from "lucide-react";
-import { BookingFlow } from "./booking/BookingFlow";
+import { LiveBookingFlow } from "./booking/LiveBookingFlow";
 import {
   PUBLIC_PROFILE_SEEDS,
   toPublicEmployee,
@@ -50,7 +50,7 @@ export default function Home() {
         </div>
       </section>
 
-      <BookingFlow initialEmployees={employees} />
+      <LiveBookingFlow initialEmployees={employees} embedded />
 
       <footer className="site-footer">
         <p>Daymark keeps calendars private and appointments clear.</p>

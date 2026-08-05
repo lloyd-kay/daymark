@@ -92,7 +92,20 @@ export function createPublicBookingService(
           },
         };
       }
-      return { status: 201, body: result };
+      return {
+        status: 201,
+        body: {
+          ok: true,
+          booking: {
+            ...result.booking,
+            address: parsed.data.clientAddress,
+            contactSummary: maskContact(
+              parsed.data.clientEmail,
+              parsed.data.clientPhone,
+            ),
+          },
+        },
+      };
     },
   };
 }
@@ -114,12 +127,27 @@ function parseBookingInput(
   if (typeof input.clientName !== "string" || !inLength(input.clientName, 1, 80)) {
     return { ok: false, error: "Enter your name." };
   }
+  if (typeof input.clientAddress !== "string") {
+    return { ok: false, error: "Enter the appointment address." };
+  }
+  const clientAddress = input.clientAddress.trim().replace(/\s+/g, " ");
+  if (!inLength(clientAddress, 1, 240)) {
+    return { ok: false, error: "Enter the appointment address." };
+  }
+  const clientEmail = optionalString(input.clientEmail);
+  const clientPhone = optionalString(input.clientPhone);
+  if (!clientEmail && !clientPhone) {
+    return { ok: false, error: "Enter an email address or phone number." };
+  }
   if (
-    typeof input.clientEmail !== "string" ||
-    !inLength(input.clientEmail, 3, 254) ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.clientEmail.trim())
+    clientEmail &&
+    (!inLength(clientEmail, 3, 254) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail))
   ) {
     return { ok: false, error: "Enter a valid email address." };
+  }
+  if (clientPhone && !/^[+\d][\d\s().-]{6,24}$/.test(clientPhone)) {
+    return { ok: false, error: "Enter a valid phone number." };
   }
   const note = typeof input.clientNote === "string" ? input.clientNote.trim() : "";
   if (note.length > 500) {
@@ -131,10 +159,27 @@ function parseBookingInput(
       employeeId: input.employeeId,
       startAt: input.startAt,
       clientName: input.clientName.trim(),
-      clientEmail: input.clientEmail.trim(),
+      clientAddress,
+      clientEmail,
+      clientPhone,
       clientNote: note,
     },
   };
+}
+
+function optionalString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized || null;
+}
+
+export function maskContact(email: string | null, phone: string | null): string {
+  if (email) {
+    const [local, domain] = email.split("@");
+    return `${local.slice(0, 1)}${"•".repeat(Math.max(4, local.length - 1))}@${domain}`;
+  }
+  const digits = phone?.replace(/\D/g, "") ?? "";
+  return `•••• ${digits.slice(-4)}`;
 }
 
 function validEmployeeId(value: unknown): value is string {

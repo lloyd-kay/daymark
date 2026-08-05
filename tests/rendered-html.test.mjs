@@ -40,6 +40,15 @@ test("server-renders the Daymark booking experience", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
+test("server-renders the standalone live booking route", async () => {
+  const response = await render("/book");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /A clear path to a good conversation/i);
+  assert.match(html, /Maya Chen/i);
+});
+
 test("redirects the team workspace to staff sign-in", async () => {
   const response = await render("/workspace");
   assert.equal(response.status, 307);
@@ -67,7 +76,7 @@ test("removes starter infrastructure and keeps the editorial visual system", asy
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /BookingFlow/);
+  assert.match(page, /LiveBookingFlow/);
   assert.match(layout, /Daymark — Private team booking/);
   assert.match(css, /--paper:/);
   assert.match(css, /--ink:/);

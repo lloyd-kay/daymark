@@ -263,7 +263,9 @@ export async function createBooking(
       startAt: slot.startAt,
       endAt: slot.endAt,
       clientName: input.clientName,
+      clientAddress: input.clientAddress,
       clientEmail: input.clientEmail,
+      clientPhone: input.clientPhone,
       clientNote: input.clientNote ?? "",
       status: "booked",
     });
@@ -352,7 +354,9 @@ export async function listSchedule(
       startAt: appointments.startAt,
       endAt: appointments.endAt,
       clientName: appointments.clientName,
+      clientAddress: appointments.clientAddress,
       clientEmail: appointments.clientEmail,
+      clientPhone: appointments.clientPhone,
       clientNote: appointments.clientNote,
       status: appointments.status,
     })
