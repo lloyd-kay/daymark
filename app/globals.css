@@ -2406,7 +2406,58 @@ a {
 .product-nav a { color: var(--ink); font-size: 0.72rem; font-weight: 750; text-decoration: none; }
 .product-nav a:hover, .product-nav a:focus-visible, .widget-setup a:hover, .widget-setup a:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
 .product-hero { grid-template-columns: minmax(0, 1fr) 220px; }
-.product-hero h1 { max-width: 850px; font-size: clamp(3.8rem, 8.8vw, 8.9rem); line-height: 0.82; }
+.product-hero h1 {
+  max-width: 900px;
+  display: grid;
+  justify-items: start;
+  gap: clamp(0.4rem, 0.8vw, 0.75rem);
+  font-size: clamp(3.35rem, 7.3vw, 7.7rem);
+  line-height: 0.88;
+}
+
+.product-hero h1 .product-title-line {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: fit-content;
+  margin: 0;
+  color: var(--ink);
+  font-style: normal;
+}
+
+.product-title-line:nth-child(2) { margin-left: clamp(0rem, 3.2vw, 3rem); }
+.product-title-line:nth-child(3) { margin-left: clamp(0rem, 7.2vw, 6.2rem); }
+
+.product-hero h1 .product-title-paper {
+  position: relative;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  padding: 0.03em 0.14em 0.1em;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  color: var(--ink);
+  box-shadow: 0.055em 0.06em 0 var(--ink);
+  font-style: normal;
+}
+
+.product-title-line::before,
+.product-title-line::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  border: 1px solid var(--ink);
+  pointer-events: none;
+}
+
+.product-title-line::before { inset: -0.08em -0.2em 0.08em 0.16em; transform: rotate(-0.8deg); }
+.product-title-line::after { inset: 0.09em 0.14em -0.13em -0.16em; transform: rotate(0.65deg); }
+.title-line-coral::before { background: var(--coral); }
+.title-line-coral::after { background: var(--sage); }
+.title-line-lilac::before { background: var(--lilac); }
+.title-line-lilac::after { background: var(--ochre); }
+.title-line-sky::before { background: var(--sky); }
+.title-line-sky::after { background: var(--coral); }
 .product-hero .hero-summary, .product-hero .hero-action { margin-left: 0; }
 .hero-actions { flex-wrap: wrap; }
 .hero-secondary { padding: 11px 0; }
@@ -2452,6 +2503,13 @@ a {
   .product-nav { justify-content: space-between; gap: 10px; padding-top: 13px; border-top: 1px solid var(--rule); }
   .product-nav a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 0.78rem; }
   .product-hero { grid-template-columns: 1fr; }
+  .product-hero h1 {
+    font-size: clamp(2.75rem, 13vw, 4.6rem);
+    gap: 0.45rem;
+  }
+  .product-title-line:nth-child(2),
+  .product-title-line:nth-child(3) { margin-left: 0; }
+  .product-hero h1 .product-title-paper { padding-inline: 0.1em; }
   .product-stamp { width: min(100%, 250px); min-height: 170px; margin-left: auto; }
   .privacy-promises { grid-template-columns: 1fr; }
   .privacy-tab:nth-child(2), .privacy-tab:nth-child(3) { margin-left: 0; }

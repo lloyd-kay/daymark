@@ -24,7 +24,17 @@ export default function Home() {
       <section className="hero product-hero" aria-labelledby="product-title">
         <div className="hero-copy">
           <p className="eyebrow">Private team scheduling</p>
-          <h1 id="product-title">Scheduling without shared calendars</h1>
+          <h1 id="product-title" aria-label="Scheduling without shared calendars.">
+            <span className="product-title-line title-line-coral" aria-hidden="true">
+              <span className="product-title-paper">Scheduling</span>
+            </span>
+            <span className="product-title-line title-line-lilac" aria-hidden="true">
+              <span className="product-title-paper">without shared</span>
+            </span>
+            <span className="product-title-line title-line-sky" aria-hidden="true">
+              <span className="product-title-paper">calendars.</span>
+            </span>
+          </h1>
           <p className="hero-summary">Let clients choose the right person and a clear time to meet, while every employee’s working calendar remains private to them.</p>
           <div className="hero-actions">
             <a className="hero-action" href="#demo">Try the demonstration <ArrowDown size={16} aria-hidden="true" /></a>

@@ -31,8 +31,10 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /Private booking for teams/i);
-  assert.match(html, /Scheduling without shared calendars/i);
+  assert.match(html, /Scheduling without shared calendars\./i);
+  assert.match(html, /product-title-line title-line-coral/);
+  assert.match(html, /product-title-line title-line-lilac/);
+  assert.match(html, /product-title-line title-line-sky/);
   assert.match(html, /Interactive demonstration/i);
   assert.match(html, /No appointment will be created/i);
   assert.match(html, /Floating widget/i);
