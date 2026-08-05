@@ -227,12 +227,8 @@ afterEach(async () => {
 });
 
 describe("WidgetOptionsShowcase", () => {
-  it("restores both previews and changes only local accessible selection state", async () => {
-    const container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-    await act(async () => root?.render(createElement(WidgetOptionsShowcase)));
-
+  it("renders both restored Cedar House presentations", async () => {
+    const container = await renderShowcase();
     expect(container.textContent).toContain("Always close, never in the way");
     expect(container.textContent).toContain("A booking section with presence");
     expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(2);
@@ -240,7 +236,10 @@ describe("WidgetOptionsShowcase", () => {
     expect(container.textContent).toContain("Theo");
     expect(container.textContent).toContain("Priya");
     expect(container.textContent).toContain("Jon");
+  });
 
+  it("changes only local accessible selection state", async () => {
+    const container = await renderShowcase();
     const controls = Array.from(container.querySelectorAll<HTMLButtonElement>(".widget-choice-select"));
     expect(controls).toHaveLength(2);
     expect(controls[0].getAttribute("aria-pressed")).toBe("true");
@@ -253,6 +252,14 @@ describe("WidgetOptionsShowcase", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+async function renderShowcase() {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+  await act(async () => root?.render(createElement(WidgetOptionsShowcase)));
+  return container;
+}
 ```
 
 - [ ] **Step 2: Run the focused unit test and confirm it fails**
