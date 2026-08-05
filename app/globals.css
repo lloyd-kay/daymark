@@ -2546,6 +2546,10 @@ a {
 .widget-host-hero > div > strong { display: block; margin: 8px 0 9px; font-family: var(--font-display), Georgia, serif; font-size: clamp(1.45rem, 2.25vw, 2rem); font-weight: 520; line-height: 0.98; }
 .widget-host-hero p { max-width: 210px; margin: 0; color: var(--ink-soft); font-size: 0.56rem; line-height: 1.55; }
 .widget-host-art { min-height: 170px; border: 1px solid var(--rule); border-radius: 90px 90px 12px 12px; background: var(--paper-deep) url("/og.png") 72% center / cover no-repeat; }
+.widget-host-art-full-wordmark {
+  background-size: auto 76%;
+  background-position: 30% center;
+}
 .widget-host-strip { height: 42px; margin: 0 20px; border-top: 1px solid var(--rule); }
 
 .floating-panel {

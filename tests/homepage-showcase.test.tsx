@@ -32,6 +32,15 @@ describe("WidgetOptionsShowcase", () => {
     expect(container.textContent).toContain("Jon");
   });
 
+  it("fits the full Daymark artwork in both previews without removing the floating panel", async () => {
+    const container = await renderShowcase();
+    const artwork = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art"));
+
+    expect(artwork).toHaveLength(2);
+    expect(artwork.every((element) => element.classList.contains("widget-host-art-full-wordmark"))).toBe(true);
+    expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
+  });
+
   it("changes only local accessible selection state", async () => {
     const container = await renderShowcase();
     const controls = Array.from(container.querySelectorAll<HTMLButtonElement>(".widget-choice-select"));
