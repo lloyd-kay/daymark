@@ -1,0 +1,110 @@
+{
+  "url": "http://localhost:3000/#widget-options",
+  "assets": {
+    "background": {
+      "path": "/daymark-widget-art-4x3-background-2x.png",
+      "naturalWidth": 2896,
+      "naturalHeight": 2172,
+      "bytes": 4675881,
+      "observedImageElements": 2,
+      "loading": "lazy",
+      "decoding": "async"
+    },
+    "fonts": {
+      "wordmark": {
+        "path": "/fonts/libre-bodoni-latin-400.woff2",
+        "bytes": 15656,
+        "family": "Daymark Bodoni",
+        "observedByChrome": true
+      },
+      "tagline": {
+        "path": "/fonts/dm-sans-latin-variable.woff2",
+        "bytes": 36980,
+        "family": "Daymark Sans",
+        "observedByChrome": true
+      }
+    },
+    "previousArtworkRetained": [
+      "/daymark-widget-art-4x3-readable.png",
+      "/daymark-widget-art-4x3-readable-2x.png",
+      "/daymark-widget-art-4x3-textured.png"
+    ]
+  },
+  "liveTypography": {
+    "wordmark": "DAYMARK",
+    "tagline": "Book the right person. Keep every calendar private.",
+    "overlayCount": 2,
+    "wordmarkFont": "Daymark Bodoni",
+    "taglineFont": "Daymark Sans"
+  },
+  "desktop": {
+    "requestedViewport": {
+      "width": 1303,
+      "height": 1231
+    },
+    "contentViewport": {
+      "width": 1288,
+      "height": 1231,
+      "devicePixelRatio": 1
+    },
+    "artSlots": [
+      { "width": 202.640625, "height": 170 },
+      { "width": 202.640625, "height": 170 }
+    ],
+    "intrinsicCanvases": [
+      { "width": 224, "height": 168 },
+      { "width": 224, "height": 168 }
+    ],
+    "wordmarkRect": { "width": 140.0625, "height": 25.53125, "fontSize": 29.68 },
+    "taglineRect": { "width": 139.9375, "height": 6.15625, "fontSize": 6.16 },
+    "floatingPanel": { "width": 205, "height": 167.125, "visible": true },
+    "horizontalOverflow": false,
+    "screenshotPixels": { "width": 1288, "height": 1217 }
+  },
+  "mobile": {
+    "requestedViewport": { "width": 390, "height": 844 },
+    "contentViewport": { "width": 375, "height": 844, "devicePixelRatio": 1 },
+    "artSlots": [
+      { "width": 111.6875, "height": 170 },
+      { "width": 96.9375, "height": 170 }
+    ],
+    "intrinsicCanvases": [
+      { "width": 109.6875, "height": 82.265625 },
+      { "width": 94.9375, "height": 71.203125 }
+    ],
+    "wordmarkRects": [
+      { "width": 68.578125, "height": 12.484375 },
+      { "width": 59.328125, "height": 10.8125 }
+    ],
+    "inlineWordmarkFontSize": 12.5792,
+    "taglineFontSizes": [3.01641, 2.61078],
+    "taglineRects": [
+      { "width": 68.359375, "height": 3.015625 },
+      { "width": 59.296875, "height": 2.609375 }
+    ],
+    "floatingPanel": { "width": 205, "height": 167.125, "visible": true },
+    "horizontalOverflow": false,
+    "screenshotPixels": { "width": 375, "height": 812 }
+  },
+  "interaction": {
+    "initialPressed": [true, false],
+    "afterInlinePressed": [false, true],
+    "urlUnchanged": true
+  },
+  "observedPageAssets": [
+    "http://localhost:3000/daymark-widget-art-4x3-background-2x.png",
+    "http://localhost:3000/fonts/libre-bodoni-latin-400.woff2",
+    "http://localhost:3000/fonts/dm-sans-latin-variable.woff2"
+  ],
+  "console": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "comparisonEvidence": [
+    "qa-evidence/daymark-homepage/live-wordmark-reference-comparison.png",
+    "qa-evidence/daymark-homepage/live-wordmark-desktop-chrome.png",
+    "qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png",
+    "qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png"
+  ],
+  "result": "passed"
+}

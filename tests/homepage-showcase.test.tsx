@@ -34,22 +34,30 @@ describe("WidgetOptionsShowcase", () => {
     expect(container.textContent).toContain("Jon");
   });
 
-  it("uses the true 2x artwork in both previews without removing the floating panel", async () => {
+  it("uses a text-free background with live typography in both previews", async () => {
     const container = await renderShowcase();
     const artwork = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art"));
     const images = artwork.map((element) => element.querySelector<HTMLImageElement>("img"));
+    const canvases = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-canvas"));
+    const wordmarks = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-wordmark"));
+    const taglines = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-tagline"));
 
     expect(artwork).toHaveLength(2);
     expect(artwork.every((element) => element.classList.contains("widget-host-art-full-wordmark"))).toBe(true);
-    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable-2x.png")).toBe(true);
+    expect(canvases).toHaveLength(2);
+    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-background-2x.png")).toBe(true);
     expect(images.every((image) => image?.getAttribute("alt") === "")).toBe(true);
     expect(images.every((image) => image?.getAttribute("loading") === "lazy")).toBe(true);
     expect(images.every((image) => image?.getAttribute("decoding") === "async")).toBe(true);
+    expect(wordmarks).toHaveLength(2);
+    expect(wordmarks.every((wordmark) => wordmark.textContent === "DAYMARK")).toBe(true);
+    expect(taglines).toHaveLength(2);
+    expect(taglines.every((tagline) => tagline.textContent === "Book the right person. Keep every calendar private.")).toBe(true);
     expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
   });
 
-  it("ships the widget artwork at a true two-times pixel density", () => {
-    const artworkPath = resolve(process.cwd(), "public/daymark-widget-art-4x3-readable-2x.png");
+  it("ships the text-free background at a true two-times pixel density", () => {
+    const artworkPath = resolve(process.cwd(), "public/daymark-widget-art-4x3-background-2x.png");
     const artworkExists = existsSync(artworkPath);
 
     expect(artworkExists).toBe(true);
@@ -66,6 +74,23 @@ describe("WidgetOptionsShowcase", () => {
     expect(height).toBeGreaterThanOrEqual(2172);
     expect(width * 3).toBe(height * 4);
     expect(png.byteLength).toBeLessThanOrEqual(6_000_000);
+  });
+
+  it("self-hosts the live Daymark wordmark font", () => {
+    const wordmarkFontPath = resolve(process.cwd(), "public/fonts/libre-bodoni-latin-400.woff2");
+    const taglineFontPath = resolve(process.cwd(), "public/fonts/dm-sans-latin-variable.woff2");
+    const stylesheet = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+
+    expect(existsSync(wordmarkFontPath)).toBe(true);
+    expect(existsSync(taglineFontPath)).toBe(true);
+    expect(stylesheet).toContain('@font-face');
+    expect(stylesheet).toContain('font-family: "Daymark Bodoni"');
+    expect(stylesheet).toContain('url("/fonts/libre-bodoni-latin-400.woff2")');
+    expect(stylesheet).toContain('font-family: "Daymark Sans"');
+    expect(stylesheet).toContain('url("/fonts/dm-sans-latin-variable.woff2")');
+    expect(stylesheet).toMatch(/\.widget-host-art-wordmark\s*\{[^}]*font-family:\s*"Daymark Bodoni"/s);
+    expect(stylesheet).toMatch(/\.widget-host-art-tagline\s*\{[^}]*font-family:\s*"Daymark Sans"/s);
+    expect(stylesheet).toMatch(/\.widget-host-art-tagline\s*\{[^}]*font-size:\s*2\.75cqw;/s);
   });
 
   it("changes only local accessible selection state", async () => {

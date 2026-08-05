@@ -41,5 +41,10 @@ All paths below are relative to the project root and are intended to remain port
 - `qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png` - 390 x 844 Chrome mobile state with the complete inline wordmark visible
 - `qa-evidence/daymark-homepage/true-2x-wordmark-comparison.png` - enlarged side-by-side crop of the before and after wordmark rendering
 - `qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json` - true-density dimensions, desktop/mobile fit, interaction state, and console result
+- `qa-evidence/daymark-homepage/live-wordmark-reference-comparison.png` - the user-reported raster lettering beside the corrected live-type Chrome rendering
+- `qa-evidence/daymark-homepage/live-wordmark-desktop-chrome.png` - final desktop widget section with the floating panel preserved and the inline wordmark unobstructed
+- `qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png` - final 390 x 844 floating-card state with the booking panel unchanged
+- `qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png` - final 390 x 844 inline-card state with the full live Daymark wordmark visible
+- `qa-evidence/daymark-homepage/chrome-live-wordmark-qa.json` - self-hosted font observation, live overlay geometry, responsive fit, interaction state, and console result
 
 The older `keyboard-traversal.json` and `keyboard-traversal-blocked.png` remain as historical evidence of the in-app-browser limitation. The final Chrome run supersedes that tooling blocker without using direct DOM focus on either target.

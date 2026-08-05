@@ -6,7 +6,7 @@
 
 **Architecture:** Generate one text-free 4:3 sibling background, then combine that image and two decorative live text layers inside a shared intrinsic canvas in `HostHero`. CSS maps the canvas to the existing desktop cover and mobile contain geometry so the source-derived text coordinates stay aligned in both layouts.
 
-**Tech Stack:** React 19, TypeScript, Vinext, CSS, next/font/google, Vitest/jsdom, built-in ImageGen editor, Chrome browser QA.
+**Tech Stack:** React 19, TypeScript, Vinext, CSS, self-hosted Google Font files, Vitest/jsdom, built-in ImageGen editor, Chrome browser QA.
 
 ## Global Constraints
 
@@ -29,17 +29,17 @@
 - Consumes: `public/daymark-widget-art-4x3-readable-2x.png` as the sole edit target.
 - Produces: `/daymark-widget-art-4x3-background-2x.png`, a 2896 x 2172 decorative background with the two text lines removed.
 
-- [ ] **Step 1: Add the failing asset and markup regression**
+- [x] **Step 1: Add the failing asset and markup regression**
 
 Require both previews to use `/daymark-widget-art-4x3-background-2x.png`, and require two `.widget-host-art-wordmark` and two `.widget-host-art-tagline` elements with exact text. Validate the new PNG signature, IHDR, exact 4:3 ratio, and minimum 2896 x 2172 dimensions.
 
-- [ ] **Step 2: Run the focused regression and verify red**
+- [x] **Step 2: Run the focused regression and verify red**
 
 Run `npm.cmd run unit -- --run tests/homepage-showcase.test.tsx`.
 
 Expected: the background/live-text test and background-asset test fail because neither exists yet; the remaining widget tests pass.
 
-- [ ] **Step 3: Generate the non-destructive edit**
+- [x] **Step 3: Generate the non-destructive edit**
 
 Use the built-in image editor with the existing 2x asset as Image 1 and this prompt:
 
@@ -55,7 +55,7 @@ Constraints: no text anywhere; change no object other than removing the two text
 
 If the built-in result is smaller than 2896 x 2172, export it to exactly 2896 x 2172 with high-quality Lanczos scaling. Save it as the new sibling path and do not overwrite any earlier asset.
 
-- [ ] **Step 4: Inspect and validate the background**
+- [x] **Step 4: Inspect and validate the background**
 
 Open the original and edited assets at original detail. Reject the edit if text remains, the paper patch is visible, or any binding/folder detail moves. Confirm exact dimensions and 4:3 ratio.
 
@@ -71,19 +71,19 @@ Open the original and edited assets at original detail. Reject the edit if text 
 - Consumes: `/daymark-widget-art-4x3-background-2x.png`.
 - Produces: `.widget-host-art-canvas`, `.widget-host-art-wordmark`, and `.widget-host-art-tagline` in each preview.
 
-- [ ] **Step 1: Import Libre Bodoni**
+- [x] **Step 1: Self-host Libre Bodoni and DM Sans**
 
-Add `Libre_Bodoni` to the existing `next/font/google` import, expose it as `--font-wordmark`, and include the variable on `<body>`.
+Bundle the Latin Libre Bodoni and DM Sans font files under `public/fonts` and register them with `@font-face`. This replaces the original `next/font/google` plan because Chrome showed that the Vinext development font loader emitted the class name without the Libre Bodoni variable rule.
 
-- [ ] **Step 2: Add minimal live-text markup**
+- [x] **Step 2: Add minimal live-text markup**
 
 Inside the art cutout, add one intrinsic canvas containing the decorative background image, `DAYMARK`, and the exact tagline. Keep the image `alt=""`, `loading="lazy"`, and `decoding="async"`.
 
-- [ ] **Step 3: Map the intrinsic canvas to the current crop**
+- [x] **Step 3: Map the intrinsic canvas to the current crop**
 
 Give the canvas a 4:3 aspect ratio. Fill by height on desktop and by width below 520 px. Position live text using source-derived percentages, use Libre Bodoni for the wordmark and DM Sans for the tagline, and keep both lines solid navy and unwrapped.
 
-- [ ] **Step 4: Run the focused regression and verify green**
+- [x] **Step 4: Run the focused regression and verify green**
 
 Run `npm.cmd run unit -- --run tests/homepage-showcase.test.tsx`.
 
@@ -103,21 +103,20 @@ Expected: all focused tests pass.
 - Consumes: the implemented live wordmark preview at `http://localhost:3000/#widget-options`.
 - Produces: same-state desktop/mobile Chrome evidence and a final QA record.
 
-- [ ] **Step 1: Compare desktop at the same state**
+- [x] **Step 1: Compare desktop at the same state**
 
 Capture the current reference and the live-text implementation at the 1303 x 1231 viewport. Confirm the same cutout, folder position, text position/scale, panel overlap, and option selection.
 
-- [ ] **Step 2: Verify both mobile cards**
+- [x] **Step 2: Verify both mobile cards**
 
 At 390 x 844, capture the floating and inline cards. Confirm the wordmark remains complete, the panel remains 205 px wide, and there is no horizontal overflow.
 
-- [ ] **Step 3: Verify interaction and console state**
+- [x] **Step 3: Verify interaction and console state**
 
 Toggle inline then restore floating. Require `[false, true]` then `[true, false]`, unchanged URL, and zero warnings/errors.
 
-- [ ] **Step 4: Run the full gate**
+- [x] **Step 4: Run the full gate**
 
 Run the full unit suite, lint, Vinext production build, `node --test tests/rendered-html.test.mjs`, and `git diff --check`.
 
 Expected: all commands exit 0, all 21 unit files and 6 rendered-route checks pass, and the worktree is clean after commit.
-

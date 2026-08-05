@@ -2,42 +2,45 @@
 
 ## Scope and result
 
-- selected artwork: `public/daymark-widget-art-4x3-readable-2x.png` (2896 x 2172)
-- rollback artwork: `public/daymark-widget-art-4x3-readable.png` and `public/daymark-widget-art-4x3-textured.png` remain untouched
-- desktop implementation: `qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png` is a 1288 x 1217 content capture from the 1303 x 1231 Chrome viewport
-- mobile implementation: `qa-evidence/daymark-homepage/true-2x-widget-mobile-floating-chrome.png` and `qa-evidence/daymark-homepage/true-2x-widget-mobile-inline-chrome.png` are 375 x 812 content captures from the 390 x 844 Chrome viewport
-- browser record: `qa-evidence/daymark-homepage/chrome-true-2x-widget-qa.json`
-- comparison state: floating option selected, inline option unselected, floating booking panel visible
-- P0-P2 findings: none after the typography-edge sharpness and delivery-optimization pass
+- selected background: `public/daymark-widget-art-4x3-background-2x.png` (2896 x 2172, 4,675,881 bytes)
+- live wordmark font: `public/fonts/libre-bodoni-latin-400.woff2`
+- live tagline font: `public/fonts/dm-sans-latin-variable.woff2`
+- rollback artwork: `public/daymark-widget-art-4x3-readable.png`, `public/daymark-widget-art-4x3-readable-2x.png`, and `public/daymark-widget-art-4x3-textured.png` remain untouched
+- desktop evidence: `qa-evidence/daymark-homepage/live-wordmark-desktop-chrome.png`
+- mobile evidence: `qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png` and `qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png`
+- reference comparison: `qa-evidence/daymark-homepage/live-wordmark-reference-comparison.png`
+- browser record: `qa-evidence/daymark-homepage/chrome-live-wordmark-qa.json`
+- P0-P2 findings: none after the live-type and responsive-scale pass
 
 ## Same-state visual comparison
 
-The earlier 1448 x 1086 implementation and the fresh 2896 x 2172 Chrome implementation were captured at the same viewport and placed side by side. The new sibling asset is a true two-times-density master while preserving the original text size, baseline, placement, Cedar House composition, rounded artwork cutout, widget option order, selected state, blue section, spacing, controls, and paper-based visual language. Neither text line was enlarged.
+The supplied pixelated widget screenshot and the corrected Chrome rendering were placed together in one comparison image. The paper grain, orange binding, folder colours, artwork crop, Cedar House framing, option order, blue section, controls, and selected state remain aligned with the approved source.
 
-At the desktop review viewport, both image elements use `object-fit: cover` inside approximately 200 x 168 px artwork slots. The textured cream paper and coloured folder tabs fill the cutouts cleanly. The inline preview displays the complete `DAYMARK` name unobstructed. The floating preview keeps the 205 px booking panel in its original position over the artwork, as requested.
+The raster background no longer contains the tiny `DAYMARK` or tagline pixels. Chrome now draws one live Libre Bodoni wordmark and one live DM Sans tagline over the same intrinsic 4:3 coordinate plane in each widget preview. At the 1303 x 1231 desktop viewport, that plane renders at 224 x 168 px; the wordmark is 140.0625 x 25.53125 px and the tagline is 139.9375 x 6.15625 px. The inline copy is unobstructed, while the floating copy remains naturally covered by the unchanged booking panel.
 
-At 390 x 844, the cards stack in the approved order and both image elements switch to `object-fit: contain`; the rendered artwork measures approximately 110 x 168 px in the floating card and 95 x 168 px in the inline card. This keeps the complete inline `DAYMARK` name visible instead of clipping it on the narrower card. The floating panel remains present and usable, and `scrollWidth === clientWidth`.
+At 390 x 844, the cards stack in the approved order and the 4:3 planes fit by width. The complete wordmark remains visible in both cards, the tagline scales proportionally instead of being enlarged or clipped, the 205 px floating panel remains present, and `scrollWidth === clientWidth`.
 
 ## Required fidelity surfaces
 
-- typography and copy: passed; hierarchy and approved copy remain complete and legible
-- spacing and layout: passed; desktop columns and mobile stacking retain their existing geometry
-- colours and visual tokens: passed; the stronger cream paper texture and all Daymark folder colours carry through accurately
-- image fidelity: passed; both previews load the true 2896 x 2172 sibling at its natural dimensions, while the prior textured and sharpened masters remain recoverable
-- image delivery: passed; the same-resolution PNG is palette-optimized to 4,727,140 bytes and both decorative images use lazy loading with asynchronous decoding
-- typography scale and copy: passed; both text lines retain their approved apparent size and exact wording
-- crop quality: passed; desktop fills the cutout, while mobile preserves the complete wordmark
+- typography and copy: passed; both previews contain the exact live `DAYMARK` and `Book the right person. Keep every calendar private.` strings
+- typography delivery: passed; Chrome observed both self-hosted WOFF2 files as loaded font resources
+- spacing and layout: passed; the 170 px art cutout, desktop columns, mobile stacking, option order, and controls retain their existing geometry
+- colours and visual tokens: passed; the cream paper, coral binding, sage, lilac, ochre, and sky folder palette remains intact
+- image fidelity: passed; both previews load the text-free 2896 x 2172 sibling while all earlier artwork stays recoverable
+- image delivery: passed; both decorative images remain lazy-loaded with asynchronous decoding
+- crop quality: passed; desktop fills the cutout and mobile preserves the complete wordmark without horizontal overflow
 - floating panel preservation: passed; the panel remains visible at 205 px wide and was not moved or hidden
+- interaction: passed; initial pressed state is `[true, false]`, inline activation is `[false, true]`, the URL remains unchanged, and the unit regression records no fetch call
+- console: passed; Chrome recorded zero warnings and zero errors
+- publishing: not performed
 
-## Chrome interaction and browser evidence
+## Verification
 
-- default option state: floating `aria-pressed=true`, inline `aria-pressed=false`
-- inline activation: floating changed to `false`, inline changed to `true`
-- restored state: floating returned to `true`, inline returned to `false`
-- observed page assets: `daymark-widget-art-4x3-readable-2x.png` was loaded once and referenced by both widget image elements
-- console: Vite debug messages and the React development notice only; zero warnings or errors
-- horizontal overflow: none at the 1303 x 1231 desktop viewport or the 390 x 844 mobile viewport
-
-The earlier keyboard and network evidence remains valid in `qa-evidence/daymark-homepage/chrome-wordmark-qa.json`; this pass specifically verifies the genuine two-times pixel dimensions, unchanged apparent text size, responsive fit, preserved overlay, and unchanged choice interaction.
+- focused red-green regression: passed; missing local font assets failed before implementation and all 5 focused widget tests passed afterward
+- full unit suite: 21 files and 149 tests passed
+- lint: passed with zero errors
+- Vinext production build: passed across all five build stages
+- rendered-route checks: 6 passed, 0 failed
+- whitespace validation: `git diff --check` exited 0
 
 final result: passed
