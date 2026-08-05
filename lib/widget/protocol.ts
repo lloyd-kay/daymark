@@ -63,6 +63,19 @@ export function framePolicyHeaders(pathname: string): Headers {
   return headers;
 }
 
+export function applyFramePolicy(response: Response, pathname: string): Response {
+  const headers = new Headers(response.headers);
+  if (pathname === "/embed") headers.delete("x-frame-options");
+  framePolicyHeaders(pathname).forEach((value, name) => {
+    headers.set(name, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

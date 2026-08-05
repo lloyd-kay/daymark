@@ -21,6 +21,7 @@ export default async function EmbedPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
+  if (Array.isArray(query.employee)) notFound();
   const employee = singleValue(query.employee) ?? "all";
   const channel = singleValue(query.channel);
   const config = normalizeWidgetConfig({ mode: "inline", employee });

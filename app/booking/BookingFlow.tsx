@@ -11,7 +11,15 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { FormEvent, forwardRef, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   isBookingConflict,
   type BookingTransport,
@@ -78,6 +86,34 @@ export function BookingFlow({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const stageHeading = useRef<HTMLHeadingElement>(null);
+
+  const focusStage = useCallback(() => {
+    window.setTimeout(() => stageHeading.current?.focus(), 0);
+  }, []);
+
+  const reset = useCallback(() => {
+    setStep("person");
+    setDraft({
+      employee: null,
+      dateKey: null,
+      slot: null,
+      clientName: "",
+      clientAddress: "",
+      clientEmail: "",
+      clientPhone: "",
+      clientNote: "",
+    });
+    setConfirmation(null);
+    setError("");
+    setSlots([]);
+    focusStage();
+  }, [focusStage]);
+
+  useEffect(() => {
+    if (!embedded) return;
+    window.addEventListener("daymark:reset", reset);
+    return () => window.removeEventListener("daymark:reset", reset);
+  }, [embedded, reset]);
 
   const selectedDate = draft.dateKey ?? dateKeys[0] ?? todayKey();
   const slotsForDate = useMemo(
@@ -149,6 +185,7 @@ export function BookingFlow({
       });
       setConfirmation(booking);
       setStep("confirmed");
+      if (embedded) window.dispatchEvent(new Event("daymark:complete"));
     } catch (caught) {
       if (isBookingConflict(caught)) {
         const refreshed = await recoverBookingConflict(
@@ -189,28 +226,6 @@ export function BookingFlow({
       setError("");
       focusStage();
     }
-  }
-
-  function reset() {
-    setStep("person");
-    setDraft({
-      employee: null,
-      dateKey: null,
-      slot: null,
-      clientName: "",
-      clientAddress: "",
-      clientEmail: "",
-      clientPhone: "",
-      clientNote: "",
-    });
-    setConfirmation(null);
-    setError("");
-    setSlots([]);
-    focusStage();
-  }
-
-  function focusStage() {
-    window.setTimeout(() => stageHeading.current?.focus(), 0);
   }
 
   return (

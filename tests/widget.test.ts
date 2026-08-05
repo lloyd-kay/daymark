@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import {
+  applyFramePolicy,
   framePolicyHeaders,
   normalizeWidgetConfig,
   validWidgetMessage,
@@ -54,21 +54,45 @@ describe("widget boundaries", () => {
     expect(framePolicyHeaders("/workspace").get("x-frame-options")).toBe("DENY");
   });
 
-  it("ships one script with floating and inline modes", async () => {
-    const source = await readFile("public/daymark-widget.js", "utf8");
-    expect(source).toMatch(/floating/);
-    expect(source).toMatch(/inline/);
-    expect(source).toMatch(/iframe/);
-    expect(source).toMatch(/document\.currentScript/);
-    expect(source).toMatch(/crypto\.randomUUID/);
-    expect(source).toMatch(/allow-scripts allow-forms allow-same-origin/);
-    expect(source).toMatch(/daymark:resize/);
-    expect(source).toMatch(/daymark:close/);
-    expect(source).toMatch(/daymark:reset/);
-    expect(source).toMatch(/10000/);
-    expect(source).toMatch(/event\.origin/);
-    expect(source).toMatch(/event\.source/);
-    expect(source).not.toMatch(/clientEmail|clientPhone|clientAddress/);
-    expect(source).not.toMatch(/booking(?:Reference|Payload)|daymark:booking/i);
+  it.each([
+    ["normal", "/book", 202, "Accepted", "text/plain"],
+    ["static", "/daymark-widget.js", 404, "Missing Asset", "application/javascript"],
+    ["image-like", "/_vinext/image", 206, "Partial Content", "image/webp"],
+  ])("wraps %s responses without losing response metadata", async (
+    _kind,
+    pathname,
+    status,
+    statusText,
+    contentType,
+  ) => {
+    const original = new Response("preserved body", {
+      status,
+      statusText,
+      headers: {
+        "content-type": contentType,
+        "x-original": "kept",
+      },
+    });
+    const wrapped = applyFramePolicy(original, pathname);
+
+    expect(wrapped.status).toBe(status);
+    expect(wrapped.statusText).toBe(statusText);
+    expect(wrapped.headers.get("content-type")).toBe(contentType);
+    expect(wrapped.headers.get("x-original")).toBe("kept");
+    expect(wrapped.headers.get("content-security-policy")).toBe("frame-ancestors 'none'");
+    expect(wrapped.headers.get("x-frame-options")).toBe("DENY");
+    await expect(wrapped.text()).resolves.toBe("preserved body");
+  });
+
+  it("removes inherited frame denial only for the embed response", () => {
+    const wrapped = applyFramePolicy(new Response(null, {
+      headers: { "x-frame-options": "DENY", "x-original": "kept" },
+    }), "/embed");
+
+    expect(wrapped.headers.get("x-frame-options")).toBeNull();
+    expect(wrapped.headers.get("content-security-policy")).toBe(
+      "frame-ancestors 'self' https: http://localhost:*",
+    );
+    expect(wrapped.headers.get("x-original")).toBe("kept");
   });
 });

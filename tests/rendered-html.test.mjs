@@ -68,6 +68,11 @@ test("server-renders the embeddable booking route with framing limited to embeds
 
   const unsafeResponse = await render("/embed?employee=%3Cscript%3E&channel=test-channel-7f3a");
   assert.equal(unsafeResponse.status, 404);
+
+  const repeatedEmployeeResponse = await render(
+    "/embed?employee=maya-chen&employee=theo-brooks&channel=test-channel-7f3a",
+  );
+  assert.equal(repeatedEmployeeResponse.status, 404);
 });
 
 test("redirects the team workspace to staff sign-in", async () => {

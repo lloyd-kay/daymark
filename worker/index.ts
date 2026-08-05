@@ -1,7 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { framePolicyHeaders } from "../lib/widget/protocol";
+import { applyFramePolicy } from "../lib/widget/protocol";
 
 interface Env {
   ASSETS: Fetcher;
@@ -39,25 +39,12 @@ const worker = {
           return result.response();
         },
       }, allowedWidths);
-      return withFramePolicy(response, url.pathname);
+      return applyFramePolicy(response, url.pathname);
     }
 
     const response = await handler.fetch(request, env, ctx);
-    return withFramePolicy(response, url.pathname);
+    return applyFramePolicy(response, url.pathname);
   },
 };
-
-function withFramePolicy(response: Response, pathname: string): Response {
-  const headers = new Headers(response.headers);
-  if (pathname === "/embed") headers.delete("x-frame-options");
-  framePolicyHeaders(pathname).forEach((value, name) => {
-    headers.set(name, value);
-  });
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-}
 
 export default worker;

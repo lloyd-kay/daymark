@@ -27,8 +27,7 @@ export function EmbedBridge({ channel }: { channel: string }) {
 
     function receiveReset(event: MessageEvent<unknown>) {
       if (
-        !parentOrigin ||
-        event.origin !== parentOrigin ||
+        (parentOrigin !== null && event.origin !== parentOrigin) ||
         event.source !== window.parent ||
         !isResetMessage(event.data, channel)
       ) {
@@ -37,15 +36,21 @@ export function EmbedBridge({ channel }: { channel: string }) {
       window.dispatchEvent(new Event("daymark:reset"));
     }
 
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") postClose();
+    }
+
     const observer = new ResizeObserver(postResize);
     observer.observe(root);
     window.addEventListener("daymark:complete", postClose);
+    window.addEventListener("keydown", closeOnEscape);
     window.addEventListener("message", receiveReset);
     postResize();
 
     return () => {
       observer.disconnect();
       window.removeEventListener("daymark:complete", postClose);
+      window.removeEventListener("keydown", closeOnEscape);
       window.removeEventListener("message", receiveReset);
     };
   }, [channel]);
