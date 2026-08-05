@@ -15,7 +15,7 @@ import {
   memberships,
 } from "../../db/schema";
 import { computeBookableSlots, toLondonDateKey } from "../scheduling/slots";
-import type { AvailabilityRule, TimeRange } from "../scheduling/types";
+import type { AvailabilityRule, BookableSlot, TimeRange } from "../scheduling/types";
 import type {
   CreateBookingInput,
   CreateBookingResult,
@@ -260,19 +260,9 @@ export async function createBooking(
   const reference = randomReference();
   const db = await database();
   try {
-    await db.insert(appointments).values({
-      id: crypto.randomUUID(),
-      publicReference: reference,
-      employeeProfileId: input.employeeId,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
-      clientName: input.clientName,
-      clientAddress: input.clientAddress,
-      clientEmail: input.clientEmail,
-      clientPhone: input.clientPhone,
-      clientNote: input.clientNote ?? "",
-      status: "booked",
-    });
+    await db.insert(appointments).values(
+      appointmentInsertValues(input, slot, reference, crypto.randomUUID()),
+    );
   } catch (error) {
     if (isUniqueConstraint(error)) return { ok: false, reason: "slot-taken" };
     throw error;
@@ -286,6 +276,27 @@ export async function createBooking(
       startAt: slot.startAt,
       endAt: slot.endAt,
     },
+  };
+}
+
+export function appointmentInsertValues(
+  input: CreateBookingInput,
+  slot: Pick<BookableSlot, "startAt" | "endAt">,
+  reference: string,
+  id: string,
+) {
+  return {
+    id,
+    publicReference: reference,
+    employeeProfileId: input.employeeId,
+    startAt: slot.startAt,
+    endAt: slot.endAt,
+    clientName: input.clientName,
+    clientAddress: input.clientAddress,
+    clientEmail: input.clientEmail,
+    clientPhone: input.clientPhone,
+    clientNote: input.clientNote ?? "",
+    status: "booked" as const,
   };
 }
 
@@ -348,7 +359,7 @@ export async function listSchedule(
   const allowedIds = profileIdsForScope(scope, requestedIds);
   if (allowedIds.length === 0) return [];
 
-  return db
+  const entries = await db
     .select({
       id: appointments.id,
       reference: appointments.publicReference,
@@ -377,6 +388,25 @@ export async function listSchedule(
       ),
     )
     .orderBy(asc(appointments.startAt));
+  return entries.map(projectScheduleEntry);
+}
+
+export function projectScheduleEntry(entry: ScheduleEntry): ScheduleEntry {
+  return {
+    id: entry.id,
+    reference: entry.reference,
+    employeeProfileId: entry.employeeProfileId,
+    employeeName: entry.employeeName,
+    accent: entry.accent,
+    startAt: entry.startAt,
+    endAt: entry.endAt,
+    clientName: entry.clientName,
+    clientAddress: entry.clientAddress,
+    clientEmail: entry.clientEmail,
+    clientPhone: entry.clientPhone,
+    clientNote: entry.clientNote,
+    status: entry.status,
+  };
 }
 
 export async function getEmployeeAvailability(

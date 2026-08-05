@@ -3,13 +3,16 @@ import { sql } from "drizzle-orm";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { appointments, loginAttempts } from "../db/schema";
 import {
+  appointmentInsertValues,
   PUBLIC_PROFILE_SEEDS,
   expiredAppointmentsPredicate,
   profileIdsForScope,
+  projectScheduleEntry,
   retentionCutoffIso,
   sha256,
   toPublicEmployee,
 } from "../lib/data/repository";
+import type { CreateBookingInput, ScheduleEntry } from "../lib/data/contracts";
 import {
   atomicFailureIncrement,
   loginLockUntil,
@@ -82,6 +85,61 @@ describe("privacy retention", () => {
       params: ["2026-07-06T12:00:00.000Z"],
       typings: ["none"],
     });
+  });
+});
+
+describe("appointment persistence and protected schedule projection", () => {
+  const booking: CreateBookingInput = {
+    employeeId: "maya-chen",
+    startAt: "2026-08-10T08:00:00.000Z",
+    clientName: "Lloyd Example",
+    clientAddress: "14 Example Street, London, N1 1AA",
+    clientEmail: "lloyd@example.com",
+    clientPhone: "+44 20 7946 0958",
+    clientNote: "Planning conversation",
+  };
+
+  it("keeps address, email, and phone together in the appointment insert values", () => {
+    const values = appointmentInsertValues(
+      booking,
+      {
+        dateKey: "2026-08-10",
+        startAt: booking.startAt,
+        endAt: "2026-08-10T08:30:00.000Z",
+      },
+      "DM-7K4P2Q",
+      "appointment-1",
+    );
+
+    expect(values).toMatchObject({
+      id: "appointment-1",
+      publicReference: "DM-7K4P2Q",
+      employeeProfileId: "maya-chen",
+      clientAddress: "14 Example Street, London, N1 1AA",
+      clientEmail: "lloyd@example.com",
+      clientPhone: "+44 20 7946 0958",
+      clientNote: "Planning conversation",
+    });
+  });
+
+  it("preserves both protected contact methods in a schedule entry", () => {
+    const row: ScheduleEntry = {
+      id: "appointment-1",
+      reference: "DM-7K4P2Q",
+      employeeProfileId: "maya-chen",
+      employeeName: "Maya Chen",
+      accent: "coral",
+      startAt: booking.startAt,
+      endAt: "2026-08-10T08:30:00.000Z",
+      clientName: "Lloyd Example",
+      clientAddress: "14 Example Street, London, N1 1AA",
+      clientEmail: "lloyd@example.com",
+      clientPhone: "+44 20 7946 0958",
+      clientNote: "Planning conversation",
+      status: "booked",
+    };
+
+    expect(projectScheduleEntry(row)).toEqual(row);
   });
 });
 
