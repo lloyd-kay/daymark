@@ -34,7 +34,7 @@
 - Consumes: `HostHero({ inline?: boolean })` and the existing `.widget-host-art`, `.floating-panel`, and `.widget-choice-select` classes.
 - Produces: the shared `.widget-host-art-full-wordmark` class on both artwork elements; no new public API.
 
-- [ ] **Step 1: Write the failing component regression test**
+- [x] **Step 1: Write the failing component regression test**
 
 Add this test inside the existing `describe("WidgetOptionsShowcase", ...)` block:
 
@@ -49,7 +49,7 @@ it("fits the full Daymark artwork in both previews without removing the floating
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -59,7 +59,7 @@ Run:
 
 Expected: the new test fails because the artwork elements do not yet contain `widget-host-art-full-wordmark`; the existing two tests pass.
 
-- [ ] **Step 3: Add the minimum shared modifier**
+- [x] **Step 3: Add the minimum shared modifier**
 
 Change the `HostHero` artwork markup to:
 
@@ -78,7 +78,7 @@ Immediately after the existing `.widget-host-art` rule, add:
 
 Do not change `.floating-panel` or any selection logic.
 
-- [ ] **Step 4: Run focused and full unit verification**
+- [x] **Step 4: Run focused and full unit verification**
 
 Run:
 
@@ -89,7 +89,7 @@ npm.cmd run unit
 
 Expected: focused file passes 3/3; the full unit suite passes 147/147.
 
-- [ ] **Step 5: Check the production diff and commit**
+- [x] **Step 5: Check the production diff and commit**
 
 Run:
 
@@ -114,7 +114,7 @@ Expected: only the test, one shared modifier class in the component, and the two
 - Consumes: Task 1's `.widget-host-art-full-wordmark` class and the existing `@media (max-width: 520px)` block.
 - Produces: an `auto 52%` mobile-only size override; desktop remains `auto 76%` at `30% center`.
 
-- [ ] **Step 1: Write the failing stylesheet regression test**
+- [x] **Step 1: Write the failing stylesheet regression test**
 
 Create `tests/homepage-css.test.ts`:
 
@@ -135,7 +135,7 @@ describe("homepage widget artwork CSS", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -145,7 +145,7 @@ Run:
 
 Expected: 1/1 fails because the 520 px media query does not yet include `background-size: auto 52%`.
 
-- [ ] **Step 3: Add the approved mobile override**
+- [x] **Step 3: Add the approved mobile override**
 
 Inside the existing `@media (max-width: 520px)` block, add:
 
@@ -155,7 +155,7 @@ Inside the existing `@media (max-width: 520px)` block, add:
 
 Do not change background position, artwork dimensions, or `.floating-panel`.
 
-- [ ] **Step 4: Run focused and full unit verification**
+- [x] **Step 4: Run focused and full unit verification**
 
 Run:
 
@@ -166,7 +166,7 @@ npm.cmd run unit
 
 Expected: focused test passes 1/1; full suite passes 22 files and 148/148 tests.
 
-- [ ] **Step 5: Check and commit the responsive amendment**
+- [x] **Step 5: Check and commit the responsive amendment**
 
 Run:
 
@@ -183,7 +183,9 @@ git commit -m "fix: fit Daymark wordmarks on mobile"
 **Files:**
 - Create: `qa-evidence/daymark-homepage/wordmark-crop-user-report.png`
 - Create: `qa-evidence/daymark-homepage/wordmark-fit-desktop-chrome.png`
+- Create: `qa-evidence/daymark-homepage/wordmark-fit-desktop-1775x1234-chrome.png`
 - Create: `qa-evidence/daymark-homepage/wordmark-fit-mobile-chrome.png`
+- Create: `qa-evidence/daymark-homepage/wordmark-fit-mobile-inline-chrome.png`
 - Create: `qa-evidence/daymark-homepage/keyboard-focus-floating-chrome.png`
 - Create: `qa-evidence/daymark-homepage/keyboard-focus-inline-chrome.png`
 - Create: `qa-evidence/daymark-homepage/chrome-wordmark-qa.json`
@@ -193,7 +195,7 @@ git commit -m "fix: fit Daymark wordmarks on mobile"
 - Consumes: the Task 1 `.widget-host-art-full-wordmark` implementation and the two existing `.widget-choice-select` buttons.
 - Produces: portable Chrome evidence and a truthful `design-qa.md` final result.
 
-- [ ] **Step 1: Preserve the user's source screenshot**
+- [x] **Step 1: Preserve the user's source screenshot**
 
 Copy the exact source image without modifying it:
 
@@ -203,7 +205,7 @@ Copy-Item -LiteralPath 'C:\Users\Lloyd\AppData\Local\Temp\codex-clipboard-5ed647
 
 Expected: the tracked copy exists and opens successfully.
 
-- [ ] **Step 2: Capture and compare desktop Chrome state**
+- [x] **Step 2: Capture and compare desktop Chrome state**
 
 Use only the explicitly approved Chrome Browser. Open `http://localhost:3000/#widget-options`, set a 1280 x 890 viewport, reload, and wait for `load`.
 
@@ -219,11 +221,11 @@ Record these computed values for both `.widget-host-art` elements:
 
 Capture `wordmark-fit-desktop-chrome.png`. Open it in the same comparison input as `wordmark-crop-user-report.png`. Verify the smaller image in both previews, the complete unobstructed inline `DAYMARK`, the unchanged floating panel, and unclipped cards, controls, and copy.
 
-- [ ] **Step 3: Capture and compare mobile Chrome state**
+- [x] **Step 3: Capture and compare mobile Chrome state**
 
 Set a 390 x 844 viewport, reload, and capture `wordmark-fit-mobile-chrome.png` at the widget section. Record `scrollWidth === clientWidth`. Verify the cards stack floating then inline, both artwork slots retain their rounded silhouette, the inline wordmark is complete, and the floating panel remains present.
 
-- [ ] **Step 4: Prove sequential keyboard traversal in Chrome**
+- [x] **Step 4: Prove sequential keyboard traversal in Chrome**
 
 Return to 1280 x 890. Use the unique `.hero-secondary` link named `Start real booking` as the preceding focus point, then send a genuine forward `Tab` key event in Chrome.
 
@@ -251,13 +253,13 @@ Capture `keyboard-focus-floating-chrome.png`, send one more genuine forward `Tab
 
 Capture `keyboard-focus-inline-chrome.png`. Do not use direct DOM `focus()` on either target button as traversal evidence.
 
-- [ ] **Step 5: Verify option behaviour, network boundary, and console**
+- [x] **Step 5: Verify option behaviour, network boundary, and console**
 
 Start Chrome network monitoring before reloading `/`, classify every initial request, then click inline and floating. Record methods, URLs, resource types, `aria-pressed` changes, and console warn/error entries in `chrome-wordmark-qa.json`.
 
 Expected: zero booking, availability, employee, configuration, or mutation endpoint requests; inline changes states to floating `false` and inline `true`; floating restores `true` and `false`; console has zero warnings, errors, or hydration messages.
 
-- [ ] **Step 6: Update the design QA record**
+- [x] **Step 6: Update the design QA record**
 
 Update `design-qa.md` with relative evidence paths, the desktop/mobile comparison, computed artwork values, sequential Chrome focus results, initial-load and interaction network results, and console results.
 
@@ -269,7 +271,7 @@ final result: passed
 
 Use `passed` only if every visual and keyboard criterion succeeds. Otherwise end with `final result: blocked` and report the failing criterion.
 
-- [ ] **Step 7: Run final verification and commit QA evidence**
+- [x] **Step 7: Run final verification and commit QA evidence**
 
 Run:
 

@@ -19,7 +19,13 @@ All paths below are relative to the project root and are intended to remain port
 - `qa-evidence/daymark-homepage/initial-load-network.json` - every reload request with URL, method, and type, plus endpoint classification
 - `qa-evidence/daymark-homepage/widget-option-network.json` - inline/floating states and request events after each activation
 - `qa-evidence/daymark-homepage/browser-console-warn-error.json` - warn/error console record
-- `qa-evidence/daymark-homepage/keyboard-traversal.json` - genuine Tab attempt and unchanged active element
-- `qa-evidence/daymark-homepage/keyboard-traversal-blocked.png` - accepted viewport captured after the failed traversal attempt
+- `qa-evidence/daymark-homepage/chrome-wordmark-qa.json` - final Chrome visual metrics, keyboard states, network boundary, console result, and option states
+- `qa-evidence/daymark-homepage/wordmark-crop-user-report.png` - exact user report that showed the cropped wordmark
+- `qa-evidence/daymark-homepage/wordmark-fit-desktop-chrome.png` - final 1280 x 890 desktop widget comparison
+- `qa-evidence/daymark-homepage/wordmark-fit-desktop-1775x1234-chrome.png` - final viewport-matched desktop widget comparison
+- `qa-evidence/daymark-homepage/wordmark-fit-mobile-chrome.png` - final 390 x 844 floating-card view
+- `qa-evidence/daymark-homepage/wordmark-fit-mobile-inline-chrome.png` - final 390 x 844 inline-card view with complete wordmark
+- `qa-evidence/daymark-homepage/keyboard-focus-floating-chrome.png` - genuine Chrome forward-Tab focus on the floating choice
+- `qa-evidence/daymark-homepage/keyboard-focus-inline-chrome.png` - the next genuine Chrome forward-Tab focus on the inline choice
 
-The requested `keyboard-focus-floating.png` and `keyboard-focus-inline.png` are intentionally absent. The in-app browser did not advance focus from the preceding link, and direct DOM focus would not be valid evidence.
+The older `keyboard-traversal.json` and `keyboard-traversal-blocked.png` remain as historical evidence of the in-app-browser limitation. The final Chrome run supersedes that tooling blocker without using direct DOM focus on either target.
