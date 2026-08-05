@@ -1,7 +1,8 @@
-import type {
-  AuthenticatedIdentity,
-  MembershipRecord,
-} from "../data/contracts";
+import { headers } from "vinext/shims/headers";
+import type { SessionActorRecord } from "../data/contracts";
+import { hashOpaqueValue } from "./password";
+import { sessionTokenFromRequest } from "./request-security";
+import { findSessionActor } from "./repository";
 
 export type WorkspaceActor = {
   membershipId: string;
@@ -9,6 +10,7 @@ export type WorkspaceActor = {
   role: "admin" | "employee";
   email: string;
   displayName: string;
+  mustChangePassword: boolean;
 };
 
 export class WorkspaceAuthError extends Error {
@@ -22,24 +24,17 @@ export class WorkspaceAuthError extends Error {
 }
 
 export function resolveWorkspaceActor(
-  identity: AuthenticatedIdentity | null,
-  membership: MembershipRecord | null,
+  membership: SessionActorRecord | null,
 ): WorkspaceActor | null {
-  if (
-    !identity ||
-    !membership ||
-    !membership.active ||
-    membership.oaiUserId !== identity.userId
-  ) {
-    return null;
-  }
+  if (!membership?.active) return null;
 
   return {
-    membershipId: membership.id,
+    membershipId: membership.membershipId,
     employeeProfileId: membership.employeeProfileId,
     role: membership.role,
-    email: identity.email,
-    displayName: identity.displayName,
+    email: membership.email,
+    displayName: membership.displayName,
+    mustChangePassword: membership.mustChangePassword,
   };
 }
 
@@ -62,20 +57,17 @@ export function requireRole(
   return actor;
 }
 
-export async function getWorkspaceActor(): Promise<WorkspaceActor | null> {
-  const [{ getChatGPTUser }, { getMembershipByOaiUserId }] = await Promise.all([
-    import("../../app/chatgpt-auth"),
-    import("../data/repository"),
-  ]);
-  const user = await getChatGPTUser();
-  if (!user) return null;
-  const identity = {
-    userId: user.userId,
-    email: user.email,
-    displayName: user.displayName,
-  };
-  const membership = await getMembershipByOaiUserId(user.userId);
-  return resolveWorkspaceActor(identity, membership);
+export async function getWorkspaceActor(
+  request?: Request,
+): Promise<WorkspaceActor | null> {
+  const token = request
+    ? sessionTokenFromRequest(request)
+    : sessionTokenFromRequest(
+        new Request("https://daymark.invalid", { headers: await headers() }),
+      );
+  if (!token) return null;
+  const tokenHash = await hashOpaqueValue(token);
+  return resolveWorkspaceActor(await findSessionActor(tokenHash));
 }
 
 export async function requireEmployeeActor(): Promise<WorkspaceActor> {

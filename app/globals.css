@@ -1032,7 +1032,8 @@ a {
 }
 
 .workspace-welcome,
-.enrol-card {
+.enrol-card,
+.auth-card {
   width: min(720px, calc(100% - 32px));
   margin: clamp(4rem, 10vw, 9rem) auto;
   padding: clamp(2rem, 5vw, 4rem);
@@ -1046,7 +1047,8 @@ a {
 }
 
 .workspace-welcome h1,
-.enrol-card h1 {
+.enrol-card h1,
+.auth-card h1 {
   max-width: 600px;
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
@@ -1070,7 +1072,8 @@ a {
 }
 
 .welcome-copy,
-.enrol-card > p:not(.eyebrow):not(.enrol-error) {
+.enrol-card > p:not(.eyebrow):not(.enrol-error),
+.auth-card > p:not(.eyebrow):not(.enrol-error) {
   max-width: 570px;
   color: #344842;
   line-height: 1.65;
@@ -1119,16 +1122,24 @@ a {
   font-weight: 700;
 }
 
-.enrol-card {
+.enrol-card,
+.auth-card {
   background: #f1dfb5;
 }
 
-.enrol-card form {
+.enrol-card form,
+.auth-card form {
   margin-top: 28px;
 }
 
+.auth-card form {
+  display: grid;
+  gap: 8px;
+}
+
 .enrol-card form > label,
-.enrol-card form > div {
+.enrol-card form > div,
+.auth-card label {
   display: flex;
 }
 
@@ -1140,13 +1151,19 @@ a {
   font-weight: 800;
 }
 
-.enrol-card input {
+.enrol-card input,
+.auth-card input {
   min-width: 0;
   flex: 1;
   padding: 14px;
   border: 1px solid var(--ink);
   border-right: 0;
   background: var(--paper-light);
+}
+
+.auth-card input {
+  border-right: 1px solid var(--ink);
+  margin-bottom: 8px;
 }
 
 .enrol-card form button {
@@ -1158,6 +1175,28 @@ a {
   background: var(--ink);
   color: var(--paper-light);
   cursor: pointer;
+}
+
+.auth-card .workspace-primary {
+  margin-top: 10px;
+}
+
+.auth-view-switch {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.auth-view-switch button {
+  padding: 9px 12px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.auth-view-switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper-light);
 }
 
 .enrol-error {
@@ -1227,13 +1266,17 @@ a {
   font-size: 0.78rem;
 }
 
-.workspace-user > a {
+.workspace-user > a,
+.workspace-user > button {
   width: 35px;
   height: 35px;
   display: grid;
   place-items: center;
   border: 1px solid var(--ink);
   border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .workspace-main {

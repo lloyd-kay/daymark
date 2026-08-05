@@ -5,70 +5,52 @@ import {
   requireRole,
   resolveWorkspaceActor,
 } from "../lib/auth/membership";
-import type {
-  AuthenticatedIdentity,
-  MembershipRecord,
-} from "../lib/data/contracts";
+import type { SessionActorRecord } from "../lib/data/contracts";
 
-const identity: AuthenticatedIdentity = {
-  userId: "oai-user-1",
+const sessionActor: SessionActorRecord = {
+  membershipId: "membership-maya",
+  employeeProfileId: "maya-chen",
+  role: "employee",
   email: "maya@example.com",
   displayName: "Maya Chen",
-};
-
-const employeeMembership: MembershipRecord = {
-  id: "membership-maya",
-  oaiUserId: identity.userId,
-  email: identity.email,
-  displayName: identity.displayName,
-  role: "employee",
   active: true,
-  employeeProfileId: "maya-chen",
+  mustChangePassword: false,
+  idleExpiresAt: "2026-08-06T00:00:00.000Z",
+  absoluteExpiresAt: "2026-08-12T12:00:00.000Z",
 };
 
 describe("workspace actor resolution", () => {
-  it("returns no actor for anonymous and unenrolled identities", () => {
-    expect(resolveWorkspaceActor(null, employeeMembership)).toBeNull();
-    expect(resolveWorkspaceActor(identity, null)).toBeNull();
+  it("returns no actor without a session membership", () => {
+    expect(resolveWorkspaceActor(null)).toBeNull();
   });
 
   it("returns no actor for an inactive membership", () => {
-    expect(
-      resolveWorkspaceActor(identity, { ...employeeMembership, active: false }),
-    ).toBeNull();
-  });
-
-  it("rejects a membership belonging to another authenticated identity", () => {
-    expect(
-      resolveWorkspaceActor(identity, {
-        ...employeeMembership,
-        oaiUserId: "different-user",
-      }),
-    ).toBeNull();
+    expect(resolveWorkspaceActor({ ...sessionActor, active: false })).toBeNull();
   });
 
   it("maps an active membership to a minimal workspace actor", () => {
-    expect(resolveWorkspaceActor(identity, employeeMembership)).toEqual({
+    expect(resolveWorkspaceActor(sessionActor)).toEqual({
       membershipId: "membership-maya",
       employeeProfileId: "maya-chen",
       role: "employee",
       email: "maya@example.com",
       displayName: "Maya Chen",
+      mustChangePassword: false,
     });
   });
 });
 
 describe("profile authorization", () => {
   it("allows an employee to access only their own profile", () => {
-    const actor = resolveWorkspaceActor(identity, employeeMembership)!;
+    const actor = resolveWorkspaceActor(sessionActor)!;
 
     expect(actorCanAccessProfile(actor, "maya-chen")).toBe(true);
     expect(actorCanAccessProfile(actor, "theo-brooks")).toBe(false);
   });
 
   it("allows an administrator to access every profile", () => {
-    const actor = resolveWorkspaceActor(identity, {
-      ...employeeMembership,
+    const actor = resolveWorkspaceActor({
+      ...sessionActor,
       role: "admin",
       employeeProfileId: null,
     })!;
@@ -80,14 +62,14 @@ describe("profile authorization", () => {
 
 describe("role guards", () => {
   it("rejects an employee from an administrator-only operation", () => {
-    const actor = resolveWorkspaceActor(identity, employeeMembership)!;
+    const actor = resolveWorkspaceActor(sessionActor)!;
 
     expect(() => requireRole(actor, "admin")).toThrowError(WorkspaceAuthError);
   });
 
   it("accepts an administrator for an employee-capable operation", () => {
-    const actor = resolveWorkspaceActor(identity, {
-      ...employeeMembership,
+    const actor = resolveWorkspaceActor({
+      ...sessionActor,
       role: "admin",
       employeeProfileId: null,
     })!;

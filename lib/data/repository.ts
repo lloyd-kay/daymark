@@ -17,12 +17,10 @@ import {
 import { computeBookableSlots, toLondonDateKey } from "../scheduling/slots";
 import type { AvailabilityRule, TimeRange } from "../scheduling/types";
 import type {
-  AuthenticatedIdentity,
   CreateBookingInput,
   CreateBookingResult,
   EmployeeAvailability,
   EmployeeProfileRecord,
-  MembershipRecord,
   PublicEmployee,
   PublicSlotResult,
   ScheduleEntry,
@@ -98,13 +96,6 @@ export function profileIdsForScope(
 
 export function retentionCutoffIso(now: Date): string {
   return new Date(now.getTime() - THIRTY_DAYS_MS).toISOString();
-}
-
-export function invitationIsUsable(
-  invitation: { expiresAt: string; redeemedAt: string | null },
-  now: Date,
-): boolean {
-  return invitation.redeemedAt === null && Date.parse(invitation.expiresAt) > now.getTime();
 }
 
 export async function sha256(value: string): Promise<string> {
@@ -290,121 +281,6 @@ export async function createBooking(
       endAt: slot.endAt,
     },
   };
-}
-
-export async function getMembershipByOaiUserId(
-  userId: string,
-): Promise<MembershipRecord | null> {
-  const db = await database();
-  const [row] = await db
-    .select({
-      id: memberships.id,
-      oaiUserId: memberships.oaiUserId,
-      email: memberships.email,
-      displayName: memberships.displayName,
-      role: memberships.role,
-      active: memberships.active,
-      employeeProfileId: employeeProfiles.id,
-    })
-    .from(memberships)
-    .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
-    .where(eq(memberships.oaiUserId, userId))
-    .limit(1);
-  return row ?? null;
-}
-
-export async function administratorExists(): Promise<boolean> {
-  const db = await database();
-  const [row] = await db
-    .select({ id: memberships.id })
-    .from(memberships)
-    .where(and(eq(memberships.role, "admin"), eq(memberships.active, true)))
-    .limit(1);
-  return Boolean(row);
-}
-
-export async function claimAdministrator(
-  identity: AuthenticatedIdentity,
-  code: string,
-  expectedCode: string,
-): Promise<MembershipRecord | null> {
-  if (!expectedCode || (await sha256(code)) !== (await sha256(expectedCode))) {
-    return null;
-  }
-  if (await administratorExists()) return null;
-
-  const db = await database();
-  const id = crypto.randomUUID();
-  try {
-    await db.insert(memberships).values({
-      id,
-      oaiUserId: identity.userId,
-      email: identity.email,
-      displayName: identity.displayName,
-      role: "admin",
-      active: true,
-    });
-  } catch (error) {
-    if (isUniqueConstraint(error)) return null;
-    throw error;
-  }
-  return getMembershipByOaiUserId(identity.userId);
-}
-
-export async function redeemInvitation(
-  identity: AuthenticatedIdentity,
-  code: string,
-  now = new Date(),
-): Promise<MembershipRecord | null> {
-  const db = await database();
-  const codeHash = await sha256(code.trim().toUpperCase());
-  const [invitation] = await db
-    .select({
-      id: invitations.id,
-      employeeProfileId: invitations.employeeProfileId,
-      expiresAt: invitations.expiresAt,
-      redeemedAt: invitations.redeemedAt,
-    })
-    .from(invitations)
-    .where(eq(invitations.codeHash, codeHash))
-    .limit(1);
-  if (!invitation || !invitationIsUsable(invitation, now)) return null;
-
-  const membershipId = crypto.randomUUID();
-  try {
-    await db.batch([
-      db.insert(memberships).values({
-        id: membershipId,
-        oaiUserId: identity.userId,
-        email: identity.email,
-        displayName: identity.displayName,
-        role: "employee",
-        active: true,
-      }),
-      db
-        .update(employeeProfiles)
-        .set({ membershipId, updatedAt: now.toISOString() })
-        .where(
-          and(
-            eq(employeeProfiles.id, invitation.employeeProfileId),
-            eq(employeeProfiles.active, true),
-          ),
-        ),
-      db
-        .update(invitations)
-        .set({ redeemedAt: now.toISOString() })
-        .where(
-          and(
-            eq(invitations.id, invitation.id),
-            gt(invitations.expiresAt, now.toISOString()),
-          ),
-        ),
-    ]);
-  } catch (error) {
-    if (isUniqueConstraint(error)) return null;
-    throw error;
-  }
-  return getMembershipByOaiUserId(identity.userId);
 }
 
 export async function createInvitation(

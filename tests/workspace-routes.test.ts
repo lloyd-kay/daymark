@@ -8,6 +8,7 @@ const employee: WorkspaceActor = {
   role: "employee",
   email: "maya@example.com",
   displayName: "Maya Chen",
+  mustChangePassword: false,
 };
 
 const admin: WorkspaceActor = {
@@ -16,6 +17,7 @@ const admin: WorkspaceActor = {
   role: "admin",
   email: "admin@example.com",
   displayName: "Admin User",
+  mustChangePassword: false,
 };
 
 function dependencies(actor: WorkspaceActor | null) {
@@ -46,6 +48,22 @@ describe("workspace schedule authorization", () => {
     });
 
     expect(result.status).toBe(401);
+    expect(deps.listSchedule).not.toHaveBeenCalled();
+  });
+
+  it("requires a temporary password change before schedule reads", async () => {
+    const deps = dependencies({ ...employee, mustChangePassword: true });
+    const service = createWorkspaceService(deps);
+
+    const result = await service.schedule({
+      from: "2026-08-05T00:00:00.000Z",
+      to: "2026-08-12T00:00:00.000Z",
+    });
+
+    expect(result).toEqual({
+      status: 428,
+      body: { ok: false, error: "Change your temporary password first." },
+    });
     expect(deps.listSchedule).not.toHaveBeenCalled();
   });
 

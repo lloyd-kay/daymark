@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const templateRoot = new URL("../", import.meta.url);
@@ -40,14 +40,23 @@ test("server-renders the Daymark booking experience", async () => {
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
-test("keeps the team workspace behind ChatGPT sign-in", async () => {
+test("redirects the team workspace to staff sign-in", async () => {
   const response = await render("/workspace");
+  assert.equal(response.status, 307);
+  assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, "/workspace/sign-in");
+});
+
+test("server-renders staff sign-in without the retired ChatGPT enrolment", async () => {
+  const response = await render("/workspace/sign-in");
   assert.equal(response.status, 200);
 
   const html = await response.text();
-  assert.match(html, /A private room for the team/i);
-  assert.match(html, /Sign in with ChatGPT/i);
+  assert.match(html, /Staff sign in/i);
   assert.match(html, /Employees see only their own calendar/i);
+  assert.doesNotMatch(html, /Sign in with ChatGPT/i);
+
+  const appSource = await readSourceTree(new URL("../app/", import.meta.url));
+  assert.doesNotMatch(appSource, /Sign in with ChatGPT/i);
 });
 
 test("removes starter infrastructure and keeps the editorial visual system", async () => {
@@ -69,3 +78,13 @@ test("removes starter infrastructure and keeps the editorial visual system", asy
 
   await assert.rejects(access(new URL("../app/_sites-preview", templateRoot)));
 });
+
+async function readSourceTree(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const contents = await Promise.all(entries.map(async (entry) => {
+    const url = new URL(`${entry.name}${entry.isDirectory() ? "/" : ""}`, directory);
+    if (entry.isDirectory()) return readSourceTree(url);
+    return /\.(?:ts|tsx|js|mjs)$/.test(entry.name) ? readFile(url, "utf8") : "";
+  }));
+  return contents.join("\n");
+}

@@ -45,7 +45,6 @@ export function WorkspaceClient({
   initialAvailability,
   initialRange,
   nowIso,
-  signOutPath,
 }: {
   actor: WorkspaceActor;
   profiles: TeamProfile[];
@@ -53,7 +52,6 @@ export function WorkspaceClient({
   initialAvailability: EmployeeAvailability | null;
   initialRange: { from: string; to: string };
   nowIso: string;
-  signOutPath: string;
 }) {
   const [view, setView] = useState<WorkspaceView>("schedule");
   const [profiles, setProfiles] = useState(initialProfiles);
@@ -99,6 +97,15 @@ export function WorkspaceClient({
     };
     setRange(nextRange);
     await loadSchedule(nextRange, scheduleFilter);
+  }
+
+  async function signOut() {
+    setLoading(true);
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+    } finally {
+      window.location.assign("/");
+    }
   }
 
   async function changeScheduleFilter(employeeId: string) {
@@ -315,7 +322,9 @@ export function WorkspaceClient({
             <small>{actor.role}</small>
             <strong>{actor.displayName}</strong>
           </div>
-          <a href={signOutPath} aria-label="Sign out"><LogOut size={17} /></a>
+          <button type="button" onClick={signOut} aria-label="Sign out">
+            <LogOut size={17} />
+          </button>
         </div>
       </header>
 

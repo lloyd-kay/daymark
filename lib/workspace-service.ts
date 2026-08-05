@@ -48,8 +48,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       to?: unknown;
       employeeId?: unknown;
     }): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       const range = parseRange(query.from, query.to);
       if (!range) return badRequest("Choose a valid date range.");
       const requestedId =
@@ -68,8 +69,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async cancel(raw: unknown): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       if (!raw || typeof raw !== "object") return badRequest("Confirm the cancellation.");
       const body = raw as Record<string, unknown>;
       if (
@@ -89,8 +91,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async availability(employeeId: unknown): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       if (typeof employeeId !== "string" || !actorCanAccessProfile(actor, employeeId)) {
         return forbidden();
       }
@@ -102,8 +105,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async saveAvailability(raw: unknown): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       const parsed = parseAvailabilityBody(raw);
       if (!parsed) return badRequest("Check the availability settings.");
       if (!actorCanAccessProfile(actor, parsed.employeeId)) return forbidden();
@@ -118,8 +122,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async blockTime(raw: unknown): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       const parsed = parseBlockBody(raw);
       if (!parsed) return badRequest("Check the blocked-time details.");
       if (!actorCanAccessProfile(actor, parsed.employeeId)) return forbidden();
@@ -134,8 +139,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async team(): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       if (actor.role !== "admin") return forbidden();
       return {
         status: 200,
@@ -144,8 +150,9 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
     },
 
     async teamAction(raw: unknown): Promise<WorkspaceResult> {
-      const actor = await dependencies.getActor();
-      if (!actor) return unauthorized();
+      const ready = await readyActor(dependencies);
+      if (ready.error) return ready.error;
+      const actor = ready.actor;
       if (actor.role !== "admin") return forbidden();
       if (!raw || typeof raw !== "object") return badRequest("Check the team action.");
       const body = raw as Record<string, unknown>;
@@ -176,6 +183,24 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       return badRequest("Check the team action.");
     },
   };
+}
+
+async function readyActor(dependencies: WorkspaceDependencies): Promise<
+  | { actor: WorkspaceActor; error: null }
+  | { actor: null; error: WorkspaceResult }
+> {
+  const actor = await dependencies.getActor();
+  if (!actor) return { actor: null, error: unauthorized() };
+  if (actor.mustChangePassword) {
+    return {
+      actor: null,
+      error: {
+        status: 428,
+        body: { ok: false, error: "Change your temporary password first." },
+      },
+    };
+  }
+  return { actor, error: null };
 }
 
 function parseRange(from: unknown, to: unknown) {

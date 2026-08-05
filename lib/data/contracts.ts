@@ -20,15 +20,8 @@ export type TeamProfile = EmployeeProfileRecord & {
   hasCredential: boolean;
 };
 
-export type AuthenticatedIdentity = {
-  userId: string;
-  email: string;
-  displayName: string;
-};
-
 export type MembershipRecord = {
   id: string;
-  oaiUserId: string | null;
   email: string;
   displayName: string;
   role: "admin" | "employee";

@@ -4,7 +4,6 @@ import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { loginAttempts } from "../db/schema";
 import {
   PUBLIC_PROFILE_SEEDS,
-  invitationIsUsable,
   profileIdsForScope,
   retentionCutoffIso,
   sha256,
@@ -73,32 +72,6 @@ describe("privacy retention", () => {
 });
 
 describe("single-use invitations", () => {
-  it("rejects redeemed and expired invitations", () => {
-    const now = new Date("2026-08-05T12:00:00.000Z");
-
-    expect(
-      invitationIsUsable(
-        { expiresAt: "2026-08-06T12:00:00.000Z", redeemedAt: null },
-        now,
-      ),
-    ).toBe(true);
-    expect(
-      invitationIsUsable(
-        {
-          expiresAt: "2026-08-06T12:00:00.000Z",
-          redeemedAt: "2026-08-05T11:00:00.000Z",
-        },
-        now,
-      ),
-    ).toBe(false);
-    expect(
-      invitationIsUsable(
-        { expiresAt: "2026-08-05T11:59:59.000Z", redeemedAt: null },
-        now,
-      ),
-    ).toBe(false);
-  });
-
   it("hashes access codes deterministically without retaining the raw code", async () => {
     const first = await sha256("DAYMARK-ALPHA");
     const second = await sha256("DAYMARK-ALPHA");
