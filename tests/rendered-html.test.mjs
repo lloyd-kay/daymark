@@ -49,6 +49,27 @@ test("server-renders the standalone live booking route", async () => {
   assert.match(html, /Maya Chen/i);
 });
 
+test("server-renders the embeddable booking route with framing limited to embeds", async () => {
+  const embedResponse = await render("/embed?employee=maya-chen&channel=test-channel-7f3a");
+  assert.equal(embedResponse.status, 200);
+  assert.equal(
+    embedResponse.headers.get("content-security-policy"),
+    "frame-ancestors 'self' https: http://localhost:*",
+  );
+  assert.equal(embedResponse.headers.get("x-frame-options"), null);
+
+  const html = await embedResponse.text();
+  assert.match(html, /<title>Daymark appointment booking\.<\/title>/i);
+  assert.match(html, /A clear path to a good conversation/i);
+
+  const bookResponse = await render("/book");
+  assert.equal(bookResponse.headers.get("content-security-policy"), "frame-ancestors 'none'");
+  assert.equal(bookResponse.headers.get("x-frame-options"), "DENY");
+
+  const unsafeResponse = await render("/embed?employee=%3Cscript%3E&channel=test-channel-7f3a");
+  assert.equal(unsafeResponse.status, 404);
+});
+
 test("redirects the team workspace to staff sign-in", async () => {
   const response = await render("/workspace");
   assert.equal(response.status, 307);

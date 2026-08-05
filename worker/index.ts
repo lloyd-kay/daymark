@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { framePolicyHeaders } from "../lib/widget/protocol";
 
 interface Env {
   ASSETS: Fetcher;
@@ -31,17 +32,32 @@ const worker = {
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      return handleImageOptimization(request, {
+      const response = await handleImageOptimization(request, {
         fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
         transformImage: async (body, { width, format, quality }) => {
           const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
           return result.response();
         },
       }, allowedWidths);
+      return withFramePolicy(response, url.pathname);
     }
 
-    return handler.fetch(request, env, ctx);
+    const response = await handler.fetch(request, env, ctx);
+    return withFramePolicy(response, url.pathname);
   },
 };
+
+function withFramePolicy(response: Response, pathname: string): Response {
+  const headers = new Headers(response.headers);
+  if (pathname === "/embed") headers.delete("x-frame-options");
+  framePolicyHeaders(pathname).forEach((value, name) => {
+    headers.set(name, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 export default worker;

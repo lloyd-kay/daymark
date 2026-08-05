@@ -1,0 +1,184 @@
+(function () {
+  "use strict";
+
+  var script = document.currentScript;
+  if (!script || !script.src) return;
+
+  var origin = new URL(script.src).origin;
+  var mode = script.dataset.mode === "inline" ? "inline" : "floating";
+  var employee = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/.test(script.dataset.employee || "")
+    ? script.dataset.employee
+    : "all";
+  var rawLabel = (script.dataset.label || "").trim();
+  var label = rawLabel.length >= 1 && rawLabel.length <= 80
+    ? rawLabel
+    : "Book an appointment";
+  var channel = crypto.randomUUID();
+  var widgetId = "daymark-widget-" + channel;
+  var wrapper = document.createElement("div");
+  var frameMount = document.createElement("div");
+  var iframe = document.createElement("iframe");
+  var launcher = null;
+  var closeButton = null;
+  var panelOpen = mode === "inline";
+
+  installStyles();
+  wrapper.className = "daymark-widget daymark-widget--" + mode;
+  wrapper.id = widgetId;
+  frameMount.className = "daymark-widget__frame";
+  iframe.title = "Daymark appointment booking";
+  iframe.setAttribute("sandbox", "allow-scripts allow-forms allow-same-origin");
+  iframe.setAttribute("loading", "eager");
+  iframe.src = origin + "/embed?employee=" + encodeURIComponent(employee) + "&channel=" + encodeURIComponent(channel);
+  iframe.style.height = "680px";
+  frameMount.appendChild(iframe);
+
+  var loadTimer = window.setTimeout(showFallback, 10000);
+  iframe.addEventListener("load", function () {
+    window.clearTimeout(loadTimer);
+  }, { once: true });
+
+  if (mode === "inline") {
+    wrapper.appendChild(frameMount);
+    script.insertAdjacentElement("afterend", wrapper);
+  } else {
+    launcher = document.createElement("button");
+    launcher.type = "button";
+    launcher.className = "daymark-widget__launcher";
+    launcher.id = widgetId + "-launcher";
+    launcher.textContent = label;
+    launcher.setAttribute("aria-haspopup", "dialog");
+    launcher.setAttribute("aria-expanded", "false");
+    launcher.setAttribute("aria-controls", widgetId);
+
+    closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "daymark-widget__close";
+    closeButton.textContent = "Close";
+    closeButton.setAttribute("aria-label", "Close appointment booking");
+
+    wrapper.className += " daymark-widget__panel";
+    wrapper.hidden = true;
+    wrapper.setAttribute("role", "dialog");
+    wrapper.setAttribute("aria-modal", "true");
+    wrapper.setAttribute("aria-labelledby", launcher.id);
+    wrapper.appendChild(closeButton);
+    wrapper.appendChild(frameMount);
+    document.body.appendChild(launcher);
+    document.body.appendChild(wrapper);
+
+    launcher.addEventListener("click", openPanel);
+    closeButton.addEventListener("click", closePanel);
+    document.addEventListener("keydown", trapKeyboard);
+  }
+
+  window.addEventListener("message", function (event) {
+    if (event.origin !== origin || event.source !== iframe.contentWindow) return;
+    var message = event.data;
+    if (!message || typeof message !== "object" || Array.isArray(message)) return;
+    if (message.channel !== channel) return;
+
+    if (
+      message.type === "daymark:resize" &&
+      Object.keys(message).length === 3 &&
+      typeof message.height === "number" &&
+      Number.isInteger(message.height) &&
+      message.height >= 280 &&
+      message.height <= 1200
+    ) {
+      iframe.style.height = message.height + "px";
+      return;
+    }
+
+    if (message.type === "daymark:close" && Object.keys(message).length === 2 && mode === "floating") {
+      closePanel();
+    }
+  });
+
+  function openPanel() {
+    if (!launcher || !closeButton) return;
+    panelOpen = true;
+    wrapper.hidden = false;
+    launcher.setAttribute("aria-expanded", "true");
+    window.requestAnimationFrame(function () {
+      closeButton.focus();
+    });
+  }
+
+  function closePanel() {
+    if (!launcher) return;
+    panelOpen = false;
+    wrapper.hidden = true;
+    launcher.setAttribute("aria-expanded", "false");
+    if (iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "daymark:reset", channel: channel }, origin);
+    }
+    launcher.focus();
+  }
+
+  function trapKeyboard(event) {
+    if (!panelOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closePanel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    var controls = [launcher].concat(Array.prototype.slice.call(
+      wrapper.querySelectorAll("button, a[href], iframe, [tabindex]:not([tabindex='-1'])"),
+    )).filter(function (control) {
+      return control && !control.disabled && control.tabIndex !== -1 && !control.hidden;
+    });
+    if (!controls.length) return;
+    var first = controls[0];
+    var last = controls[controls.length - 1];
+    if (controls.indexOf(document.activeElement) === -1) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function showFallback() {
+    iframe.remove();
+    var fallback = document.createElement("div");
+    fallback.className = "daymark-widget__fallback";
+    var message = document.createElement("p");
+    message.textContent = "Booking is taking longer than expected.";
+    var link = document.createElement("a");
+    link.href = origin + "/book";
+    link.target = "_top";
+    link.textContent = "Book directly with Daymark";
+    fallback.appendChild(message);
+    fallback.appendChild(link);
+    frameMount.replaceChildren(fallback);
+  }
+
+  function installStyles() {
+    var style = document.createElement("style");
+    style.textContent = [
+      ".daymark-widget{font-family:Arial,sans-serif;color:#172722;box-sizing:border-box}",
+      ".daymark-widget *{box-sizing:border-box}",
+      ".daymark-widget__frame,.daymark-widget iframe{width:100%}",
+      ".daymark-widget iframe{display:block;border:0;min-height:280px;background:#f2eadc}",
+      ".daymark-widget--inline{width:100%}",
+      ".daymark-widget__launcher{position:fixed;right:24px;bottom:24px;z-index:2147483646;border:1px solid #172722;border-radius:999px;padding:14px 20px;background:#df654b;color:#172722;font:700 15px/1.2 Arial,sans-serif;box-shadow:4px 4px 0 #172722;cursor:pointer}",
+      ".daymark-widget__launcher:focus-visible,.daymark-widget__close:focus-visible,.daymark-widget__fallback a:focus-visible{outline:3px solid #df654b;outline-offset:3px}",
+      ".daymark-widget__panel{position:fixed;right:24px;bottom:84px;z-index:2147483647;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 108px);overflow:auto;border:1px solid #172722;background:#fbf7ef;box-shadow:8px 8px 0 #172722}",
+      ".daymark-widget__panel[hidden]{display:none}",
+      ".daymark-widget__close{display:block;margin:10px 10px 10px auto;border:1px solid #172722;background:#fbf7ef;padding:7px 12px;color:#172722;font:700 13px/1.2 Arial,sans-serif;cursor:pointer}",
+      ".daymark-widget__fallback{min-height:280px;display:grid;place-content:center;gap:12px;padding:32px;text-align:center;background:#fbf7ef}",
+      ".daymark-widget__fallback p{margin:0}",
+      ".daymark-widget__fallback a{font-weight:700;color:#172722}",
+      "@media(max-width:640px){.daymark-widget__launcher{right:12px;bottom:12px}.daymark-widget__panel{inset:0;width:100vw;max-height:100vh;box-shadow:none}.daymark-widget__panel iframe{height:calc(100vh - 52px)!important}}",
+      "@media(prefers-reduced-motion:reduce){.daymark-widget *{scroll-behavior:auto!important;transition:none!important}}",
+    ].join("");
+    document.head.appendChild(style);
+  }
+})();
