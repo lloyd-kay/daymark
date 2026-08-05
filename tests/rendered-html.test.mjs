@@ -37,8 +37,10 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /product-title-line title-line-sky/);
   assert.match(html, /Interactive demonstration/i);
   assert.match(html, /No appointment will be created/i);
-  assert.match(html, /Floating widget/i);
-  assert.match(html, /Inline panel/i);
+  assert.match(html, /Always close, never in the way/i);
+  assert.match(html, /A booking section with presence/i);
+  assert.match(html, /Cedar House/i);
+  assert.match(html, /aria-pressed="true"/i);
   assert.match(html, /Start real booking/i);
   assert.doesNotMatch(html, /Confirm appointment/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);

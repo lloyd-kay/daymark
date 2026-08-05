@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUpRight, LockKeyhole, ShieldCheck } from "lucide-react";
 import { DemoBookingFlow } from "./demo/DemoBookingFlow";
+import { WidgetOptionsShowcase } from "./home/WidgetOptionsShowcase";
 
 const privacyPromises = [
   { number: "01", title: "Discrete slots only", copy: "Clients choose from the times a person offers. They never see the calendar behind them." },
@@ -73,17 +74,7 @@ export default function Home() {
           <p className="eyebrow">Widget options</p><h2 id="widget-title">Place booking where it belongs.</h2>
           <p>Choose the surface that feels native to your site; the private scheduling rules stay the same.</p>
         </div>
-        <div className="widget-grid">
-          <article className="widget-card launcher-card">
-            <span className="widget-index">Option 01</span><div className="launcher-preview" aria-hidden="true"><span>Book a time</span><ArrowUpRight size={18} /></div>
-            <h3>Floating widget</h3><p>A compact launcher anchored to the lower corner of your pages.</p>
-          </article>
-          <article className="widget-card panel-card">
-            <span className="widget-index">Option 02</span>
-            <div className="panel-preview" aria-hidden="true"><span>Daymark</span><i /><strong>Choose a time</strong><small>Private availability, clearly shared.</small></div>
-            <h3>Inline panel</h3><p>A complete booking panel placed directly inside a contact or service page.</p>
-          </article>
-        </div>
+        <WidgetOptionsShowcase />
         <p className="widget-setup">Use the embed position that suits your layout, then <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.</p>
       </section>
 
