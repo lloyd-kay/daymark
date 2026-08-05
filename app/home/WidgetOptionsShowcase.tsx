@@ -25,7 +25,11 @@ function HostHero({ inline = false }: { inline?: boolean }) {
         <strong>{inline ? <>Start with a<br />conversation.</> : <>Room to feel<br />at home.</>}</strong>
         <p>{inline ? "The booking experience becomes part of a dedicated contact or services page." : "A sample host website keeps its own visual identity while Daymark waits quietly in the corner."}</p>
       </div>
-      <div className="widget-host-art widget-host-art-full-wordmark" />
+      <div className="widget-host-art widget-host-art-full-wordmark">
+        {/* The local source artwork must preserve its exact crop inside this decorative mockup. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/daymark-widget-art-4x3-textured.png" alt="" />
+      </div>
     </div>
   );
 }

@@ -27,5 +27,9 @@ All paths below are relative to the project root and are intended to remain port
 - `qa-evidence/daymark-homepage/wordmark-fit-mobile-inline-chrome.png` - final 390 x 844 inline-card view with complete wordmark
 - `qa-evidence/daymark-homepage/keyboard-focus-floating-chrome.png` - genuine Chrome forward-Tab focus on the floating choice
 - `qa-evidence/daymark-homepage/keyboard-focus-inline-chrome.png` - the next genuine Chrome forward-Tab focus on the inline choice
+- `qa-evidence/daymark-homepage/textured-widget-desktop-chrome.png` - approved textured artwork in both widget previews at 1280 x 890
+- `qa-evidence/daymark-homepage/textured-widget-mobile-floating-chrome.png` - preserved floating booking panel at 390 x 844
+- `qa-evidence/daymark-homepage/textured-widget-mobile-inline-chrome.png` - complete inline Daymark wordmark at 390 x 844
+- `qa-evidence/daymark-homepage/chrome-textured-widget-qa.json` - responsive image metrics, interaction states, asset observation, and console result
 
 The older `keyboard-traversal.json` and `keyboard-traversal-blocked.png` remain as historical evidence of the in-app-browser limitation. The final Chrome run supersedes that tooling blocker without using direct DOM focus on either target.

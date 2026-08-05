@@ -2,41 +2,39 @@
 
 ## Scope and result
 
-- references: `qa-evidence/daymark-homepage/wordmark-crop-user-report.png`, `qa-evidence/daymark-homepage/widget-options-user-annotation.png`, and `qa-evidence/daymark-homepage/widget-options-recovered.html`
-- current desktop implementation: `qa-evidence/daymark-homepage/wordmark-fit-desktop-chrome.png` and `qa-evidence/daymark-homepage/wordmark-fit-desktop-1775x1234-chrome.png`
-- current mobile implementation: `qa-evidence/daymark-homepage/wordmark-fit-mobile-chrome.png` and `qa-evidence/daymark-homepage/wordmark-fit-mobile-inline-chrome.png`
-- browser record: `qa-evidence/daymark-homepage/chrome-wordmark-qa.json`
+- selected artwork: `public/daymark-widget-art-4x3-textured.png` (1448 x 1086)
+- desktop implementation: `qa-evidence/daymark-homepage/textured-widget-desktop-chrome.png` at 1280 x 890
+- mobile implementation: `qa-evidence/daymark-homepage/textured-widget-mobile-floating-chrome.png` and `qa-evidence/daymark-homepage/textured-widget-mobile-inline-chrome.png` at 390 x 844
+- browser record: `qa-evidence/daymark-homepage/chrome-textured-widget-qa.json`
 - comparison state: floating option selected, inline option unselected, floating booking panel visible
-- P0-P2 findings: none after the responsive wordmark correction
+- P0-P2 findings: none after applying the approved textured artwork
 
 ## Same-state visual comparison
 
-The user's exact wordmark-crop report and the fresh desktop Chrome capture were opened together. Both widget cards retain the approved Cedar House compositions, option order, selected state, blue section, spacing, and controls. The shared artwork now uses `background-size: auto 76%` and `background-position: 30% 50%` on desktop. The inline preview displays the complete `DAYMARK` wordmark unobstructed, while the floating preview keeps the booking panel in its original size and position over the smaller artwork.
+The approved 4:3 source artwork and the fresh desktop Chrome implementation were opened together in the same comparison input. Both previews preserve the original Cedar House composition, rounded artwork cutout, widget option order, selected state, blue section, spacing, controls, and paper-based visual language.
 
-The 1775 x 1234 Chrome capture was also compared with the tracked 1775 x 1234 widget annotation. The richer recovered previews remain intentional; the wordmark fit is the only production visual change. Both cards remain unclipped and the page has no horizontal overflow.
+At 1280 x 890, both image elements use `object-fit: cover` inside 200 x 168 px artwork slots. The textured cream paper and coloured folder tabs fill the cutouts cleanly. The inline preview displays the complete `DAYMARK` name unobstructed. The floating preview keeps the 205 px booking panel in its original position over the artwork, as requested.
 
-At 390 x 844, both artwork elements use the approved narrow-screen size `auto 52%` while retaining the 30% horizontal position. The cards stack in the approved order, the complete inline `DAYMARK` wordmark remains visible, the rounded artwork slots are unchanged, the floating panel remains present, and `scrollWidth === clientWidth`.
+At 390 x 844, the cards stack in the approved order and both image elements switch to `object-fit: contain` inside 116 x 168 px slots. This keeps the complete inline `DAYMARK` name visible instead of clipping it on the narrower card. The floating panel remains present and usable, and `scrollWidth === clientWidth`.
 
 ## Required fidelity surfaces
 
 - typography and copy: passed; hierarchy and approved copy remain complete and legible
 - spacing and layout: passed; desktop columns and mobile stacking retain their existing geometry
-- colours and visual tokens: passed; the Daymark paper colours, ink, blue field, and coral/sage accents are unchanged
-- image fidelity: passed; both previews use the existing `og.png` artwork without redrawing or replacement
+- colours and visual tokens: passed; the stronger cream paper texture and all Daymark folder colours carry through accurately
+- image fidelity: passed; both previews load the approved 1448 x 1086 textured artwork at its natural dimensions
+- crop quality: passed; desktop fills the cutout, while mobile preserves the complete wordmark
 - floating panel preservation: passed; the panel remains visible at 205 px wide and was not moved or hidden
 
-## Chrome interaction and accessibility evidence
+## Chrome interaction and browser evidence
 
-Real forward-Tab traversal began at the hero `Start real booking` link, continued through the four person controls, then reached the floating and inline choice buttons sequentially. Direct DOM `focus()` was not used on either target.
+- default option state: floating `aria-pressed=true`, inline `aria-pressed=false`
+- inline activation: floating changed to `false`, inline changed to `true`
+- restored state: floating returned to `true`, inline returned to `false`
+- observed page assets: the approved image was loaded once and referenced by both widget image elements
+- console: Vite debug messages and the React development notice only; zero warnings or errors
+- horizontal overflow: none at 1280 x 890 or 390 x 844
 
-- floating target: `BUTTON`, accessible name `Always close, never in the way`, `aria-pressed=true`, `:focus-visible=true`; evidence: `qa-evidence/daymark-homepage/keyboard-focus-floating-chrome.png`
-- inline target after one more forward Tab: `BUTTON`, accessible name `A booking section with presence`, `aria-pressed=false`, `:focus-visible=true`; evidence: `qa-evidence/daymark-homepage/keyboard-focus-inline-chrome.png`
-- option activation: inline changed states to floating `false` / inline `true`; floating restored floating `true` / inline `false`
-
-## Chrome network and console evidence
-
-Monitoring was enabled before a fresh reload. Chrome observed 129 GET requests for the document and local development assets, zero failed loads, zero Fetch/XHR requests, zero business endpoint requests, and zero mutation requests. Activating both widget choices produced zero request events. The initial load and both interactions produced zero console warnings, errors, assertions, exceptions, or hydration failures. The compact record is `qa-evidence/daymark-homepage/chrome-wordmark-qa.json`.
-
-The earlier in-app-browser traversal limitation remains preserved in the historic evidence files, but Chrome completed the required real keyboard check and supersedes that tooling blocker.
+The earlier keyboard and network evidence remains valid in `qa-evidence/daymark-homepage/chrome-wordmark-qa.json`; this pass specifically verifies the new raster artwork, responsive fit, preserved overlay, and unchanged choice interaction.
 
 final result: passed
