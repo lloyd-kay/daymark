@@ -39,7 +39,7 @@ describe("WidgetOptionsShowcase", () => {
 
     expect(artwork).toHaveLength(2);
     expect(artwork.every((element) => element.classList.contains("widget-host-art-full-wordmark"))).toBe(true);
-    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-textured.png")).toBe(true);
+    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable.png")).toBe(true);
     expect(images.every((image) => image?.getAttribute("alt") === "")).toBe(true);
     expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
   });
