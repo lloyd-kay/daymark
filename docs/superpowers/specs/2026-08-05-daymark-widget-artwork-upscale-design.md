@@ -32,7 +32,7 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
 - Both text lines remain verbatim, with no changed, missing, or malformed characters.
 - The selected asset has natural dimensions of at least 2896 x 2172 pixels; a 1448 x 1086 sharpened export does not satisfy the upscale requirement.
 - The selected asset is a valid 4:3 PNG no larger than 6,000,000 bytes, and both decorative widget images use `loading="lazy"` and `decoding="async"`.
-- Letter edges and fine strokes appear visibly crisper in a same-viewport comparison at 1280 x 890.
+- Letter edges and fine strokes appear visibly crisper in a same-viewport comparison at the available 1303 x 1231 Chrome desktop viewport.
 - The inline preview retains the complete unobstructed `DAYMARK` wordmark.
 - The floating preview retains its existing 205 px booking panel in the same position and stacking order.
 - Desktop and 390 x 844 mobile layouts retain their current dimensions, crop rules, rounded artwork silhouette, card order, and lack of horizontal overflow.
@@ -47,7 +47,7 @@ Implementation follows a red-green cycle:
 2. Generate the sibling high-fidelity asset with the built-in image editor and inspect it at original resolution for exact text, unchanged scale, and preserved composition.
 3. Apply the new asset path and confirm the focused regression passes.
 4. Run the full unit suite, lint, production build, rendered-route checks, and diff checks.
-5. In Chrome, capture the widget section at 1280 x 890 and both cards at 390 x 844. Compare the approved source, user-reported browser state, and fresh implementation together at the same viewport and state.
+5. In Chrome, capture the widget section at the available 1303 x 1231 desktop viewport and both cards at 390 x 844. Compare the approved source, user-reported browser state, and fresh implementation together at the same viewport and state.
 6. Verify image natural dimensions, responsive fit, no horizontal overflow, unchanged floating-panel geometry, restored default selection, and zero console warnings or errors.
 
 No typography enlargement, layout change, authentication change, booking change, embed change, administrator change, persistence change, or deployment is included.

@@ -16,7 +16,7 @@ The earlier 1448 x 1086 implementation and the fresh 2896 x 2172 Chrome implemen
 
 At the desktop review viewport, both image elements use `object-fit: cover` inside approximately 200 x 168 px artwork slots. The textured cream paper and coloured folder tabs fill the cutouts cleanly. The inline preview displays the complete `DAYMARK` name unobstructed. The floating preview keeps the 205 px booking panel in its original position over the artwork, as requested.
 
-At 390 x 844, the cards stack in the approved order and both image elements switch to `object-fit: contain` inside 116 x 168 px slots. This keeps the complete inline `DAYMARK` name visible instead of clipping it on the narrower card. The floating panel remains present and usable, and `scrollWidth === clientWidth`.
+At 390 x 844, the cards stack in the approved order and both image elements switch to `object-fit: contain`; the rendered artwork measures approximately 110 x 168 px in the floating card and 95 x 168 px in the inline card. This keeps the complete inline `DAYMARK` name visible instead of clipping it on the narrower card. The floating panel remains present and usable, and `scrollWidth === clientWidth`.
 
 ## Required fidelity surfaces
 
