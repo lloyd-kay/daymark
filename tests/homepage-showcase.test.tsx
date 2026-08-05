@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,16 +34,29 @@ describe("WidgetOptionsShowcase", () => {
     expect(container.textContent).toContain("Jon");
   });
 
-  it("uses the approved textured artwork in both previews without removing the floating panel", async () => {
+  it("uses the true 2x artwork in both previews without removing the floating panel", async () => {
     const container = await renderShowcase();
     const artwork = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art"));
     const images = artwork.map((element) => element.querySelector<HTMLImageElement>("img"));
 
     expect(artwork).toHaveLength(2);
     expect(artwork.every((element) => element.classList.contains("widget-host-art-full-wordmark"))).toBe(true);
-    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable.png")).toBe(true);
+    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable-2x.png")).toBe(true);
     expect(images.every((image) => image?.getAttribute("alt") === "")).toBe(true);
     expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
+  });
+
+  it("ships the widget artwork at a true two-times pixel density", () => {
+    const artworkPath = resolve(process.cwd(), "public/daymark-widget-art-4x3-readable-2x.png");
+    const artworkExists = existsSync(artworkPath);
+
+    expect(artworkExists).toBe(true);
+    if (!artworkExists) return;
+
+    const png = readFileSync(artworkPath);
+    expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(png.readUInt32BE(16)).toBeGreaterThanOrEqual(2896);
+    expect(png.readUInt32BE(20)).toBeGreaterThanOrEqual(2172);
   });
 
   it("changes only local accessible selection state", async () => {

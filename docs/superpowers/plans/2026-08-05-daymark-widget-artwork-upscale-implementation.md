@@ -14,7 +14,7 @@
 - Do not enlarge, shrink, move, re-space, recolour, or recompose either text line; apparent bounding boxes may vary by no more than two percent.
 - Preserve the cream paper texture, orange binding and stitches, green/lilac/ochre/blue folders, 4:3 framing, lighting, colour balance, and negative space.
 - Keep `public/daymark-widget-art-4x3-textured.png` untouched for rollback.
-- Save the selected sibling as `public/daymark-widget-art-4x3-readable.png` and accept it only if it is at least 1448 x 1086 and visibly sharper at the real widget size.
+- Save the selected sibling as a true two-times-density asset and accept it only if it is at least 2896 x 2172 and visibly sharper at the real widget size.
 - Keep desktop `object-fit: cover`, mobile `object-fit: contain`, artwork-slot dimensions, the 205 px floating panel, widget choice behaviour, and all booking behaviour unchanged.
 - Do not deploy or publish.
 
@@ -23,20 +23,20 @@
 ### Task 1: Generate and wire the sharper widget artwork
 
 **Files:**
-- Create: `public/daymark-widget-art-4x3-readable.png`
+- Create: `public/daymark-widget-art-4x3-readable-2x.png`
 - Modify: `tests/homepage-showcase.test.tsx:35-44`
 - Modify: `app/home/WidgetOptionsShowcase.tsx:28-32`
 
 **Interfaces:**
 - Consumes: approved edit target `public/daymark-widget-art-4x3-textured.png` and the shared `HostHero` component.
-- Produces: decorative `<img src="/daymark-widget-art-4x3-readable.png" alt="" />` used by both widget previews.
+- Produces: decorative `<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" />` used by both widget previews.
 
 - [ ] **Step 1: Change the focused regression to require the new asset**
 
 Replace only the source expectation in `tests/homepage-showcase.test.tsx`:
 
 ```tsx
-expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable.png")).toBe(true);
+expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-readable-2x.png")).toBe(true);
 ```
 
 - [ ] **Step 2: Run the focused test and verify the red state**
@@ -68,7 +68,7 @@ Constraints: do not enlarge, shrink, move, reflow, recolour, replace, omit, or a
 Save the selected result from the generated-images location to:
 
 ```text
-public/daymark-widget-art-4x3-readable.png
+public/daymark-widget-art-4x3-readable-2x.png
 ```
 
 Do not overwrite `public/daymark-widget-art-4x3-textured.png`.
@@ -81,19 +81,19 @@ Check file dimensions:
 
 ```powershell
 Add-Type -AssemblyName System.Drawing
-$img = [System.Drawing.Image]::FromFile((Resolve-Path 'public\daymark-widget-art-4x3-readable.png'))
+$img = [System.Drawing.Image]::FromFile((Resolve-Path 'public\daymark-widget-art-4x3-readable-2x.png'))
 [pscustomobject]@{ Width = $img.Width; Height = $img.Height; Ratio = [math]::Round($img.Width / $img.Height, 4) }
 $img.Dispose()
 ```
 
-Expected: width at least 1448, height at least 1086, ratio approximately `1.3333`, exact text preserved, and visibly cleaner typography edges.
+Expected: width at least 2896, height at least 2172, ratio approximately `1.3333`, exact text preserved, and visibly cleaner typography edges.
 
 - [ ] **Step 5: Point both widget previews at the new asset**
 
 Change the shared image in `app/home/WidgetOptionsShowcase.tsx` to:
 
 ```tsx
-<img src="/daymark-widget-art-4x3-readable.png" alt="" />
+<img src="/daymark-widget-art-4x3-readable-2x.png" alt="" />
 ```
 
 Do not change `app/globals.css`.
@@ -111,7 +111,7 @@ Expected: 3 tests pass, 0 fail.
 - [ ] **Step 7: Commit the asset and source change**
 
 ```powershell
-git add public/daymark-widget-art-4x3-readable.png app/home/WidgetOptionsShowcase.tsx tests/homepage-showcase.test.tsx
+git add public/daymark-widget-art-4x3-readable-2x.png app/home/WidgetOptionsShowcase.tsx tests/homepage-showcase.test.tsx
 git commit -m "feat: sharpen Daymark widget artwork"
 ```
 
@@ -126,7 +126,7 @@ git commit -m "feat: sharpen Daymark widget artwork"
 - Modify: `qa-evidence/daymark-homepage/README.md`
 
 **Interfaces:**
-- Consumes: `/daymark-widget-art-4x3-readable.png` from Task 1 and the local preview at `http://localhost:3000/#widget-options`.
+- Consumes: `/daymark-widget-art-4x3-readable-2x.png` from Task 1 and the local preview at `http://localhost:3000/#widget-options`.
 - Produces: durable desktop/mobile visual evidence and a compact machine-readable QA record.
 
 - [ ] **Step 1: Inspect the desktop implementation at 1280 x 890**
@@ -136,7 +136,7 @@ In the already selected Chrome browser, open `http://localhost:3000/#widget-opti
 ```json
 {
   "imageCount": 2,
-  "src": "/daymark-widget-art-4x3-readable.png",
+  "src": "/daymark-widget-art-4x3-readable-2x.png",
   "objectFit": "cover",
   "floatingPanelWidth": 205,
   "horizontalOverflow": false,

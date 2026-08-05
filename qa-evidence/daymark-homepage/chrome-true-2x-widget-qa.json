@@ -1,0 +1,53 @@
+{
+  "asset": "/daymark-widget-art-4x3-readable-2x.png",
+  "previousNaturalSize": {
+    "width": 1448,
+    "height": 1086
+  },
+  "naturalSize": {
+    "width": 2896,
+    "height": 2172,
+    "densityIncrease": 2
+  },
+  "desktop": {
+    "viewport": {
+      "width": 1303,
+      "height": 1231,
+      "devicePixelRatio": 1
+    },
+    "imageCount": 2,
+    "renderedSize": {
+      "width": 200.640625,
+      "height": 168
+    },
+    "objectFit": "cover",
+    "floatingPanelWidth": 205,
+    "horizontalOverflow": false
+  },
+  "mobile": {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "renderedHeights": [168, 168],
+    "renderedWidths": [109.6875, 94.9375],
+    "objectFit": "contain",
+    "floatingPanelWidth": 205,
+    "horizontalOverflow": false
+  },
+  "interaction": {
+    "inlinePressed": [false, true],
+    "restoredPressed": [true, false],
+    "urlUnchanged": true
+  },
+  "console": {
+    "warnings": 0,
+    "errors": 0
+  },
+  "comparisonEvidence": [
+    "qa-evidence/daymark-homepage/true-2x-widget-before-chrome.png",
+    "qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png",
+    "qa-evidence/daymark-homepage/true-2x-wordmark-comparison.png"
+  ],
+  "result": "passed"
+}

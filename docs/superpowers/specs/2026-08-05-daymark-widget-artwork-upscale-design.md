@@ -20,8 +20,8 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
   - `Book the right person. Keep every calendar private.`
 - Reconstruct only typography edge clarity and fine contrast; do not add, remove, enlarge, shrink, or move any text.
 - Preserve the cream paper texture, orange binding, stitch details, green/lilac/ochre/blue folders, rounded shapes, lighting, colour balance, 4:3 framing, and all negative space.
-- Save the selected result non-destructively as `public/daymark-widget-art-4x3-readable.png`. The existing approved asset remains untouched for rollback.
-- Target a two-times-density 4:3 master. Accept only a result that is at least as large as the current 1448 x 1086 source and visibly sharper at the actual widget display size; do not substitute a smaller or compositionally altered output.
+- Save the selected result non-destructively as `public/daymark-widget-art-4x3-readable-2x.png`. The existing approved and sharpened assets remain untouched for rollback.
+- Target a true two-times-density 4:3 master. Accept only a result that is at least 2896 x 2172 pixels and visibly sharper at the actual widget display size; do not substitute a same-size, smaller, or compositionally altered output.
 - Update both widget image elements to use the new sibling asset. Retain the current desktop `object-fit: cover` and mobile `object-fit: contain` rules.
 - Do not change the artwork slot dimensions, crop behaviour, floating panel, widget copy, option selection, or any booking functionality.
 
@@ -29,6 +29,7 @@ This is a sharpness problem, not a sizing request. The visible size and placemen
 
 - The wordmark and tagline occupy the same apparent bounding boxes as the approved current artwork, within a two-percent visual tolerance.
 - Both text lines remain verbatim, with no changed, missing, or malformed characters.
+- The selected asset has natural dimensions of at least 2896 x 2172 pixels; a 1448 x 1086 sharpened export does not satisfy the upscale requirement.
 - Letter edges and fine strokes appear visibly crisper in a same-viewport comparison at 1280 x 890.
 - The inline preview retains the complete unobstructed `DAYMARK` wordmark.
 - The floating preview retains its existing 205 px booking panel in the same position and stacking order.
