@@ -27,6 +27,7 @@ import type {
   PublicSlotResult,
   ScheduleEntry,
   ScheduleScope,
+  TeamProfile,
 } from "./contracts";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -154,6 +155,27 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
     .where(eq(employeeProfiles.active, true))
     .orderBy(asc(employeeProfiles.sortOrder));
   return rows;
+}
+
+export async function listTeamProfiles(): Promise<TeamProfile[]> {
+  await ensureSeedData();
+  const db = await database();
+  return db
+    .select({
+      id: employeeProfiles.id,
+      membershipId: employeeProfiles.membershipId,
+      publicName: employeeProfiles.publicName,
+      title: employeeProfiles.title,
+      bio: employeeProfiles.bio,
+      accent: employeeProfiles.accent,
+      active: employeeProfiles.active,
+      sortOrder: employeeProfiles.sortOrder,
+      memberEmail: memberships.email,
+      memberDisplayName: memberships.displayName,
+    })
+    .from(employeeProfiles)
+    .leftJoin(memberships, eq(memberships.id, employeeProfiles.membershipId))
+    .orderBy(asc(employeeProfiles.sortOrder));
 }
 
 export async function listPublicSlots(

@@ -14,6 +14,11 @@ export type EmployeeProfileRecord = PublicEmployee & {
   sortOrder: number;
 };
 
+export type TeamProfile = EmployeeProfileRecord & {
+  memberEmail: string | null;
+  memberDisplayName: string | null;
+};
+
 export type AuthenticatedIdentity = {
   userId: string;
   email: string;

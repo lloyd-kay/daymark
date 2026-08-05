@@ -4,13 +4,13 @@ import test from "node:test";
 
 const templateRoot = new URL("../", import.meta.url);
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${path}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -38,6 +38,16 @@ test("server-renders the Daymark booking experience", async () => {
   assert.match(html, /Maya Chen/i);
   assert.match(html, /Open team workspace/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
+});
+
+test("keeps the team workspace behind ChatGPT sign-in", async () => {
+  const response = await render("/workspace");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /A private room for the team/i);
+  assert.match(html, /Sign in with ChatGPT/i);
+  assert.match(html, /Employees see only their own calendar/i);
 });
 
 test("removes starter infrastructure and keeps the editorial visual system", async () => {
