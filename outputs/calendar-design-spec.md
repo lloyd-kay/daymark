@@ -5,7 +5,7 @@ Daymark is a privacy-first scheduling website for a small team. Employees sign i
 ## Core experience
 
 - Clients choose an employee, date, and discrete bookable slot, then confirm with their contact details.
-- Employees see and manage only their own schedule, availability, and appointment details.
+- Employees sign in with ChatGPT and see and manage only their own schedule, availability, and appointment details.
 - Administrators can view all employee calendars, appointment details, and availability, and can manage employee accounts.
 - Appointment and client data is deleted 30 days after the appointment ends.
 
@@ -30,6 +30,7 @@ Administrators get a team week view, employee filters, full booking details, sch
 ## Privacy and reliability
 
 - Server-side permission checks protect every private read and write.
+- Team membership uses single-use invitation codes, while a deployment-only setup code enrols the first administrator.
 - Availability responses never include calendar-entry or client metadata.
 - Booking availability is rechecked immediately before saving.
 - A uniqueness rule prevents double-booking.

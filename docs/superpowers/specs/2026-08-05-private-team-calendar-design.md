@@ -4,7 +4,7 @@
 
 Daymark is a privacy-first scheduling website for a small team. Employees sign in to manage only their own calendar and availability. Administrators can view and manage the whole team. Clients use a public booking flow to choose a specific employee and reserve one of that employee's available time slots without seeing calendar contents, busy periods, or other client information.
 
-The first release will be a complete responsive web application with durable shared data, employee and administrator authentication, real-time conflict prevention, and automatic removal of appointment records more than 30 days old.
+The first release will be a complete responsive web application with durable shared data, ChatGPT-backed employee and administrator sign-in, real-time conflict prevention, and automatic removal of appointment records more than 30 days old.
 
 ## Product goals
 
@@ -27,14 +27,14 @@ The first release will be a complete responsive web application with durable sha
 
 ### Employee
 
-- Signs in to a private workspace.
+- Signs in to a private workspace with ChatGPT and enrols using a single-use team invitation code.
 - Can view and edit only their own availability and appointment details.
 - Can block time, create recurring weekly availability, and cancel their own appointments.
 - Cannot view or query another employee's calendar, availability rules, blocked time, appointment counts, or client details.
 
 ### Administrator
 
-- Signs in to the same private workspace with additional controls.
+- Signs in to the same private workspace with additional controls. The first administrator claims the site with a deployment-only setup code; later access is stored against that authenticated identity.
 - Can view all employee calendars, availability, and appointment details.
 - Can filter the team calendar by employee.
 - Can invite, activate, and deactivate employee accounts.
@@ -105,7 +105,7 @@ Owns employee discovery, safe slot retrieval, booking details, and confirmation.
 
 ### Authentication and session module
 
-Owns employee sign-in, administrator role checks, secure session cookies, password verification, sign-out, and protected-route enforcement.
+Uses the hosting platform's ChatGPT sign-in flow to identify employees. It owns administrator and employee enrolment, role checks, single-use invitation codes, sign-out links, and protected-route enforcement. Application code never stores passwords.
 
 ### Schedule module
 
@@ -121,7 +121,7 @@ Owns team-wide calendar queries and employee account lifecycle operations. Its s
 
 ### Data storage
 
-Durable records will use the Sites-provided relational store. The minimum model comprises users, employee profiles, sessions, availability rules, blocked periods, and appointments. Times are stored in UTC and displayed in Europe/London for the first release.
+Durable records will use the Sites-provided relational store. The minimum model comprises team memberships, employee profiles, single-use invitations, availability rules, blocked periods, and appointments. Authentication sessions are owned by the platform. Times are stored in UTC and displayed in Europe/London for the first release.
 
 ## Data and privacy rules
 
@@ -145,8 +145,8 @@ Durable records will use the Sites-provided relational store. The minimum model 
 
 ## Error handling
 
-- Invalid sign-in details use a neutral message that does not reveal whether an account exists.
-- Expired sessions return the user to sign-in with a clear explanation.
+- Signed-out visitors to the workspace are returned to the platform sign-in flow with a safe same-origin return path.
+- Authenticated people without a valid team membership see an enrolment screen that does not expose employee or appointment data.
 - Booking conflicts preserve entered contact information locally while asking the client to select a new time.
 - Empty availability states explain that no slots are open and offer another employee or later date.
 - Network failures keep the current step and provide a retry action.
@@ -166,7 +166,7 @@ Durable records will use the Sites-provided relational store. The minimum model 
 ## Validation strategy
 
 - Unit tests cover slot calculation, buffer handling, timezone boundaries, role authorization, and 30-day retention.
-- Integration tests cover successful booking, simultaneous booking conflict, employee data isolation, administrator visibility, expired sessions, and deactivated employees.
+- Integration tests cover successful booking, simultaneous booking conflict, employee data isolation, administrator visibility, unauthorised identities, single-use invitations, and deactivated employees.
 - A production build must complete successfully before publishing.
 - The implementation will be checked for realistic empty, loading, success, and error states across desktop and mobile layouts.
 
