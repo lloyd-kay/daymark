@@ -1,4 +1,5 @@
 import { getTableColumns } from "drizzle-orm";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import {
   appointments,
@@ -35,5 +36,21 @@ describe("staff authentication schema", () => {
     expect(columns.clientAddress.notNull).toBe(true);
     expect(columns.clientEmail.notNull).toBe(false);
     expect(columns.clientPhone.notNull).toBe(false);
+  });
+});
+
+describe("Daymark widget auth migration", () => {
+  it("keeps foreign keys disabled until both dependent table rebuilds finish", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0001_daymark_widget_auth.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration.indexOf("PRAGMA foreign_keys=OFF")).toBeLessThan(
+      migration.indexOf("DROP TABLE `appointments`"),
+    );
+    expect(migration.indexOf("DROP TABLE `memberships`")).toBeLessThan(
+      migration.lastIndexOf("PRAGMA foreign_keys=ON"),
+    );
   });
 });

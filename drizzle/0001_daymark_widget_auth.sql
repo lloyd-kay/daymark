@@ -64,7 +64,6 @@ CREATE TABLE `__new_appointments` (
 INSERT INTO `__new_appointments`("id", "public_reference", "employee_profile_id", "start_at", "end_at", "client_name", "client_address", "client_email", "client_phone", "client_note", "status", "created_at", "updated_at") SELECT "id", "public_reference", "employee_profile_id", "start_at", "end_at", "client_name", '', "client_email", NULL, "client_note", "status", "created_at", "updated_at" FROM `appointments`;--> statement-breakpoint
 DROP TABLE `appointments`;--> statement-breakpoint
 ALTER TABLE `__new_appointments` RENAME TO `appointments`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_appointments_public_reference` ON `appointments` (`public_reference`);--> statement-breakpoint
 CREATE INDEX `idx_appointments_employee_time` ON `appointments` (`employee_profile_id`,`start_at`,`end_at`);--> statement-breakpoint
 CREATE INDEX `idx_appointments_retention` ON `appointments` (`end_at`);--> statement-breakpoint
@@ -85,4 +84,5 @@ INSERT INTO `__new_memberships`("id", "oai_user_id", "email", "display_name", "r
 DROP TABLE `memberships`;--> statement-breakpoint
 ALTER TABLE `__new_memberships` RENAME TO `memberships`;--> statement-breakpoint
 CREATE UNIQUE INDEX `idx_memberships_oai_user_id` ON `memberships` (`oai_user_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `idx_memberships_single_admin` ON `memberships` (`role`) WHERE "memberships"."role" = 'admin';
+CREATE UNIQUE INDEX `idx_memberships_single_admin` ON `memberships` (`role`) WHERE "memberships"."role" = 'admin';--> statement-breakpoint
+PRAGMA foreign_keys=ON;
