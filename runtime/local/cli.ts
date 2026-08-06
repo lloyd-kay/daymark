@@ -64,8 +64,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
 export function resolveConfig(parsed: ParsedArgs, env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
   const setupCode = env.DAYMARK_SETUP_CODE;
   if (!setupCode) throw new Error("DAYMARK_SETUP_CODE is required in the protected process environment");
-  const appDir = path.resolve(parsed.appDir ?? env.DAYMARK_APP_DIR ?? process.cwd());
-  const stateRoot = path.resolve(env.DAYMARK_STATE_DIR ?? path.join(appDir, ".daymark"));
+  const appDir = resolveRuntimePath(parsed.appDir ?? env.DAYMARK_APP_DIR ?? process.cwd());
+  const stateRoot = resolveRuntimePath(env.DAYMARK_STATE_DIR ?? path.join(appDir, ".daymark"));
 
   return {
     host: parsed.host ?? "127.0.0.1",
@@ -73,11 +73,15 @@ export function resolveConfig(parsed: ParsedArgs, env: NodeJS.ProcessEnv = proce
     setupCode,
     paths: {
       appDir,
-      dataDir: path.resolve(parsed.dataDir ?? env.DAYMARK_DATA_DIR ?? path.join(stateRoot, "data")),
-      backupDir: path.resolve(parsed.backupDir ?? env.DAYMARK_BACKUP_DIR ?? path.join(stateRoot, "backups")),
-      logDir: path.resolve(parsed.logDir ?? env.DAYMARK_LOG_DIR ?? path.join(stateRoot, "logs")),
+      dataDir: resolveRuntimePath(parsed.dataDir ?? env.DAYMARK_DATA_DIR ?? path.join(stateRoot, "data")),
+      backupDir: resolveRuntimePath(parsed.backupDir ?? env.DAYMARK_BACKUP_DIR ?? path.join(stateRoot, "backups")),
+      logDir: resolveRuntimePath(parsed.logDir ?? env.DAYMARK_LOG_DIR ?? path.join(stateRoot, "logs")),
     },
   };
+}
+
+function resolveRuntimePath(value: string): string {
+  return path.win32.isAbsolute(value) || path.posix.isAbsolute(value) ? value : path.resolve(value);
 }
 
 async function main(argv: string[]): Promise<void> {

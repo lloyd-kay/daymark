@@ -90,5 +90,7 @@ describe("Wrangler command construction", () => {
     expect(written.main).toBe(path.join(localConfig.paths.appDir, "dist", "server", "index.js"));
     expect(written.assets.directory).toBe(path.join(localConfig.paths.appDir, "dist", "client"));
     expect(written.d1_databases[0].migrations_dir).toBe(path.join(localConfig.paths.appDir, "drizzle"));
+    expect(written.secrets).toEqual({ required: ["DAYMARK_SETUP_CODE"] });
+    expect(JSON.stringify(written)).not.toContain(localConfig.setupCode);
   });
 });

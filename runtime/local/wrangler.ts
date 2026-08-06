@@ -41,6 +41,9 @@ export async function writeRuntimeConfig(config: RuntimeConfig): Promise<string>
     assets: {
       directory: pathApi.join(config.paths.appDir, "dist", "client"),
     },
+    secrets: {
+      required: ["DAYMARK_SETUP_CODE"],
+    },
     d1_databases: [{
       binding: "DB",
       database_name: "daymark-local",
