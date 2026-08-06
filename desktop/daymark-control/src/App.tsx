@@ -1,13 +1,9 @@
-export interface ControlStatus {
-  state: "running" | "stopped" | "starting" | "needs_attention";
-  mode: "service" | "manual";
-  access: "local" | "temporary" | "permanent" | "error";
-  localUrl: string;
-  publicUrl: string | null;
-  version: string;
-  latestMigration: string;
-  message: string | null;
-}
+import type { MouseEvent } from "react";
+
+import type { RuntimeStatus } from "./contracts";
+import { isTauriRuntime, openLocalUrl, useRuntimeStatus } from "./runtime";
+
+export type ControlStatus = RuntimeStatus;
 
 interface AppProps {
   initialStatus: ControlStatus;
@@ -21,8 +17,15 @@ const stateLabel: Record<ControlStatus["state"], string> = {
 };
 
 export function App({ initialStatus }: AppProps) {
-  const isRunning = initialStatus.state === "running";
-  const administratorUrl = `${initialStatus.localUrl}/workspace/sign-in`;
+  const status = useRuntimeStatus(initialStatus);
+  const isRunning = status.state === "running";
+  const administratorUrl = `${status.localUrl}/workspace/sign-in`;
+
+  const handleAdministratorLink = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isTauriRuntime()) return;
+    event.preventDefault();
+    void openLocalUrl(administratorUrl);
+  };
 
   return (
     <div className="control-shell">
@@ -53,25 +56,25 @@ export function App({ initialStatus }: AppProps) {
           <div className="service-heading-row">
             <div>
               <p className="eyebrow">SERVICE STATUS</p>
-              <h2 id="service-heading">{stateLabel[initialStatus.state]}</h2>
+              <h2 id="service-heading">{stateLabel[status.state]}</h2>
             </div>
             <p
-              className={`status-seal status-${initialStatus.state}`}
-              aria-label={`Service status: ${stateLabel[initialStatus.state]}`}
-              title={`Service status: ${stateLabel[initialStatus.state]}`}
+              className={`status-seal status-${status.state}`}
+              aria-label={`Service status: ${stateLabel[status.state]}`}
+              title={`Service status: ${stateLabel[status.state]}`}
             >
               <span aria-hidden="true">{isRunning ? "✓" : "■"}</span>
             </p>
           </div>
-          <p className="status-message">{initialStatus.message ?? "Daymark is responding normally."}</p>
+          <p className="status-message">{status.message ?? "Daymark is responding normally."}</p>
           <dl className="quick-facts">
             <div>
               <dt>Runs as</dt>
-              <dd>{initialStatus.mode === "service" ? "Always-on Windows service" : "Only while Control is open"}</dd>
+              <dd>{status.mode === "service" ? "Always-on Windows service" : "Only while Control is open"}</dd>
             </div>
             <div>
               <dt>Booking access</dt>
-              <dd>{initialStatus.access === "local" ? "This computer only" : "Public link available"}</dd>
+              <dd>{status.access === "local" ? "This computer only" : "Public link available"}</dd>
             </div>
           </dl>
           <div className="primary-actions">
@@ -79,7 +82,7 @@ export function App({ initialStatus }: AppProps) {
               {isRunning ? "Restart Daymark" : "Start Daymark"}
               <span aria-hidden="true">↗</span>
             </button>
-            <a className="button button-paper" href={administratorUrl}>
+            <a className="button button-paper" href={administratorUrl} onClick={handleAdministratorLink}>
               Open administrator workspace
               <span aria-hidden="true">↗</span>
             </a>
@@ -119,11 +122,11 @@ export function App({ initialStatus }: AppProps) {
         <footer className="system-strip" aria-label="Installed Daymark details">
           <div>
             <span>CONTROL VERSION</span>
-            <strong>{initialStatus.version}</strong>
+            <strong>{status.version}</strong>
           </div>
           <div>
             <span>DATABASE</span>
-            <strong>{initialStatus.latestMigration.replace(/^\d{4}_/, "").replace(/\.sql$/, "").replaceAll("_", " ")}</strong>
+            <strong>{status.latestMigration.replace(/^\d{4}_/, "").replace(/\.sql$/, "").replaceAll("_", " ")}</strong>
           </div>
           <div className="privacy-note">
             <span aria-hidden="true">◇</span>

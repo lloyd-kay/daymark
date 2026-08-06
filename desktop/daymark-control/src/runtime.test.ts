@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+
+import { assertSafeLocalUrl, parseRuntimeStatus } from "./runtime";
+
+describe("runtime contracts", () => {
+  it("accepts a complete Daymark runtime status", () => {
+    expect(
+      parseRuntimeStatus({
+        state: "running",
+        mode: "service",
+        access: "local",
+        localUrl: "http://127.0.0.1:3210",
+        publicUrl: null,
+        version: "0.1.0",
+        latestMigration: "0002_daymark_company_workspaces.sql",
+        message: null,
+      }).state,
+    ).toBe("running");
+  });
+
+  it("rejects incomplete or unknown runtime states", () => {
+    expect(() => parseRuntimeStatus({ state: "online" })).toThrow(
+      "Daymark returned an invalid runtime status",
+    );
+  });
+
+  it("allows only the loopback Daymark application", () => {
+    expect(assertSafeLocalUrl("http://127.0.0.1:3210/workspace/sign-in").href).toBe(
+      "http://127.0.0.1:3210/workspace/sign-in",
+    );
+    expect(assertSafeLocalUrl("http://localhost:3210/api/health").hostname).toBe("localhost");
+    expect(() => assertSafeLocalUrl("https://example.com/workspace")).toThrow(
+      "Only the local Daymark address can be opened",
+    );
+    expect(() => assertSafeLocalUrl("http://127.0.0.1:3210.evil.example/workspace")).toThrow(
+      "Only the local Daymark address can be opened",
+    );
+  });
+});
