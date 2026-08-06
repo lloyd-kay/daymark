@@ -33,10 +33,15 @@ export default function GetDaymarkPage() {
             <li>Private invitation-only employee access</li>
             <li>Your database, backups, and operating policies</li>
           </ul>
-          <span className="get-option-action is-disabled" aria-disabled="true">
+          <a
+            className="get-option-action"
+            href="https://github.com/lloyd-kay/daymark"
+            target="_blank"
+            rel="noreferrer"
+          >
             <Code2 size={17} /> View private repository
-          </span>
-          <small>The invitation-only repository link will activate when the private release is connected.</small>
+          </a>
+          <small>Repository access is invitation-only while Daymark remains private.</small>
         </article>
 
         <article className="get-option get-option-hosted">
