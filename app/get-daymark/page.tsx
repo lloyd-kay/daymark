@@ -39,9 +39,8 @@ export default function GetDaymarkPage() {
             target="_blank"
             rel="noreferrer"
           >
-            <Code2 size={17} /> View private repository
+            <Code2 size={17} /> View public repository
           </a>
-          <small>Repository access is invitation-only while Daymark remains private.</small>
         </article>
 
         <article className="get-option get-option-hosted">

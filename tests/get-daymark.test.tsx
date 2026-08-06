@@ -9,9 +9,9 @@ describe("Get Daymark choices", () => {
     const html = renderToStaticMarkup(createElement(GetDaymarkPage));
     expect(html).toContain("Choose how Daymark runs.");
     expect(html).toContain("Self-hosted");
-    expect(html).toContain("View private repository");
+    expect(html).toContain("View public repository");
     expect(html).toContain('href="https://github.com/lloyd-kay/daymark"');
-    expect(html).toContain("Repository access is invitation-only while Daymark remains private.");
+    expect(html).not.toContain("Repository access is invitation-only while Daymark remains private.");
     expect(html).toContain("Daymark Hosted");
     expect(html).toContain("Coming soon");
     expect(html).toContain("Interested in early access or joining the trial programme?");
