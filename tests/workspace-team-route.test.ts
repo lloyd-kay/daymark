@@ -60,7 +60,7 @@ describe("workspace team route security", () => {
     team.team.mockResolvedValue({ status: 200, body: { profiles: [] } });
     const { GET } = await import("../app/api/workspace/team/route");
 
-    const response = await GET();
+    const response = await GET(new Request(`${origin}/api/workspace/team?workspace=cedar-house`));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");

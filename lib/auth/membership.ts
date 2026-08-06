@@ -1,11 +1,18 @@
 import { headers } from "vinext/shims/headers";
-import type { SessionActorRecord } from "../data/contracts";
+import type {
+  AccountSessionRecord,
+  WorkspaceMembershipRecord,
+} from "../data/contracts";
 import { hashOpaqueValue } from "./password";
 import { sessionTokenFromRequest } from "./request-security";
-import { findSessionActor } from "./repository";
+import { findSessionActor, findWorkspaceMembership } from "./repository";
 
 export type WorkspaceActor = {
+  accountId: string;
   membershipId: string;
+  workspaceId: string;
+  workspaceName: string;
+  workspaceSlug: string;
   employeeProfileId: string | null;
   role: "admin" | "employee";
   email: string;
@@ -24,17 +31,26 @@ export class WorkspaceAuthError extends Error {
 }
 
 export function resolveWorkspaceActor(
-  membership: SessionActorRecord | null,
+  session: AccountSessionRecord | null,
+  membership: WorkspaceMembershipRecord | null,
 ): WorkspaceActor | null {
-  if (!membership?.active) return null;
+  if (
+    !session?.active
+    || !membership?.active
+    || session.accountId !== membership.accountId
+  ) return null;
 
   return {
+    accountId: session.accountId,
     membershipId: membership.membershipId,
+    workspaceId: membership.workspaceId,
+    workspaceName: membership.workspaceName,
+    workspaceSlug: membership.workspaceSlug,
     employeeProfileId: membership.employeeProfileId,
     role: membership.role,
-    email: membership.email,
-    displayName: membership.displayName,
-    mustChangePassword: membership.mustChangePassword,
+    email: session.email,
+    displayName: session.displayName,
+    mustChangePassword: session.mustChangePassword,
   };
 }
 
@@ -58,6 +74,7 @@ export function requireRole(
 }
 
 export async function getWorkspaceActor(
+  workspaceSlug: string,
   request?: Request,
 ): Promise<WorkspaceActor | null> {
   const token = request
@@ -67,17 +84,33 @@ export async function getWorkspaceActor(
       );
   if (!token) return null;
   const tokenHash = await hashOpaqueValue(token);
-  return resolveWorkspaceActor(await findSessionActor(tokenHash));
+  const session = await findSessionActor(tokenHash);
+  if (!session) return null;
+  return resolveWorkspaceActor(
+    session,
+    await findWorkspaceMembership(session.accountId, workspaceSlug),
+  );
 }
 
-export async function requireEmployeeActor(): Promise<WorkspaceActor> {
-  const actor = await getWorkspaceActor();
+export async function getAccountSession(
+  request?: Request,
+): Promise<AccountSessionRecord | null> {
+  const token = request
+    ? sessionTokenFromRequest(request)
+    : sessionTokenFromRequest(
+        new Request("https://daymark.invalid", { headers: await headers() }),
+      );
+  return token ? findSessionActor(await hashOpaqueValue(token)) : null;
+}
+
+export async function requireEmployeeActor(workspaceSlug: string): Promise<WorkspaceActor> {
+  const actor = await getWorkspaceActor(workspaceSlug);
   if (!actor) throw new WorkspaceAuthError("unauthorized");
   return requireRole(actor, "employee");
 }
 
-export async function requireAdminActor(): Promise<WorkspaceActor> {
-  const actor = await getWorkspaceActor();
+export async function requireAdminActor(workspaceSlug: string): Promise<WorkspaceActor> {
+  const actor = await getWorkspaceActor(workspaceSlug);
   if (!actor) throw new WorkspaceAuthError("unauthorized");
   return requireRole(actor, "admin");
 }

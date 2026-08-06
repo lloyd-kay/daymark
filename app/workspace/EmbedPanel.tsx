@@ -9,7 +9,13 @@ type EmbedMode = "floating" | "inline";
 const EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
 const DEFAULT_LABEL = "Book an appointment";
 
-export function EmbedPanel({ profiles }: { profiles: TeamProfile[] }) {
+export function EmbedPanel({
+  profiles,
+  workspaceSlug = "daymark",
+}: {
+  profiles: TeamProfile[];
+  workspaceSlug?: string;
+}) {
   const [mode, setMode] = useState<EmbedMode>("floating");
   const [employee, setEmployee] = useState("all");
   const [copied, setCopied] = useState(false);
@@ -23,7 +29,7 @@ export function EmbedPanel({ profiles }: { profiles: TeamProfile[] }) {
   );
 
   const snippet = origin
-    ? buildEmbedSnippet(origin, mode, employee, DEFAULT_LABEL)
+    ? buildEmbedSnippet(origin, mode, employee, DEFAULT_LABEL, workspaceSlug)
     : "";
 
   async function copySnippet() {
@@ -125,13 +131,15 @@ export function buildEmbedSnippet(
   mode: EmbedMode,
   employee: string,
   label: string,
+  workspaceSlug = "daymark",
 ): string {
   const safeOrigin = normalizedOrigin(origin);
   const safeMode: EmbedMode = mode === "inline" ? "inline" : "floating";
   const safeEmployee = employee === "all" || EMPLOYEE_PROFILE_ID.test(employee)
     ? employee
     : "all";
-  return `<script src="${escapeAttribute(`${safeOrigin}/daymark-widget.js`)}" data-mode="${safeMode}" data-employee="${escapeAttribute(safeEmployee)}" data-label="${escapeAttribute(label)}"></script>`;
+  const safeWorkspace = EMPLOYEE_PROFILE_ID.test(workspaceSlug) ? workspaceSlug : "daymark";
+  return `<script src="${escapeAttribute(`${safeOrigin}/daymark-widget.js`)}" data-workspace="${escapeAttribute(safeWorkspace)}" data-mode="${safeMode}" data-employee="${escapeAttribute(safeEmployee)}" data-label="${escapeAttribute(label)}"></script>`;
 }
 
 function normalizedOrigin(value: string): string {

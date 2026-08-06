@@ -1,5 +1,6 @@
 import {
   and,
+  asc,
   eq,
   exists,
   gt,
@@ -12,13 +13,21 @@ import {
 import type { SQL } from "drizzle-orm";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
+  accounts,
   authSessions,
   credentials,
   employeeProfiles,
+  invitations,
   loginAttempts,
   memberships,
+  workspaces,
 } from "../../db/schema";
-import type { CredentialRecord, SessionActorRecord } from "../data/contracts";
+import type {
+  AccountSessionRecord,
+  CredentialRecord,
+  WorkspaceSummary,
+  WorkspaceMembershipRecord,
+} from "../data/contracts";
 import type { PasswordVerifier } from "./password";
 
 const IDLE_SESSION_MS = 12 * 60 * 60 * 1000;
@@ -85,29 +94,48 @@ export function sessionIsUsable(
 export async function administratorExists(): Promise<boolean> {
   const db = await database();
   const [administrator] = await db
-    .select({ id: memberships.id })
+    .select({ id: memberships.id, workspaceId: memberships.workspaceId })
     .from(memberships)
     .where(and(eq(memberships.role, "admin"), eq(memberships.active, true)))
     .limit(1);
   return Boolean(administrator);
 }
 
-export async function createAdministratorAccount(input: {
+export async function createInitialWorkspaceAdministrator(input: {
+  workspaceName: string;
+  workspaceSlug: string;
   email: string;
   displayName: string;
   verifier: PasswordVerifier;
   mustChangePassword: false;
-}): Promise<{ membershipId: string }> {
+}): Promise<{ accountId: string; workspaceSlug: string }> {
   const db = await database();
+  const workspaceId = crypto.randomUUID();
+  const accountId = crypto.randomUUID();
   const membershipId = crypto.randomUUID();
   const now = new Date().toISOString();
   const email = normalizedEmail(input.email);
   await db.batch([
-    db.insert(memberships).values({
-      id: membershipId,
-      oaiUserId: null,
+    db.insert(workspaces).values({
+      id: workspaceId,
+      name: input.workspaceName,
+      slug: input.workspaceSlug,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(accounts).values({
+      id: accountId,
       email,
       displayName: input.displayName,
+      active: true,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(memberships).values({
+      id: membershipId,
+      workspaceId,
+      accountId,
       role: "admin",
       active: true,
       createdAt: now,
@@ -115,8 +143,7 @@ export async function createAdministratorAccount(input: {
     }),
     db.insert(credentials).values({
       id: crypto.randomUUID(),
-      membershipId,
-      email,
+      accountId,
       passwordHash: input.verifier.hash,
       passwordSalt: input.verifier.salt,
       passwordIterations: input.verifier.iterations,
@@ -127,7 +154,7 @@ export async function createAdministratorAccount(input: {
       updatedAt: now,
     }),
   ]);
-  return { membershipId };
+  return { accountId, workspaceSlug: input.workspaceSlug };
 }
 
 export async function findCredentialByEmail(
@@ -141,12 +168,10 @@ export async function findCredentialByEmail(
 
   const [row] = await db
     .select({
-      membershipId: memberships.id,
-      employeeProfileId: employeeProfiles.id,
-      displayName: memberships.displayName,
-      role: memberships.role,
-      active: memberships.active,
-      email: credentials.email,
+      accountId: accounts.id,
+      displayName: accounts.displayName,
+      active: accounts.active,
+      email: accounts.email,
       passwordHash: credentials.passwordHash,
       passwordSalt: credentials.passwordSalt,
       passwordIterations: credentials.passwordIterations,
@@ -155,9 +180,8 @@ export async function findCredentialByEmail(
       failedAttempts: credentials.failedAttempts,
     })
     .from(credentials)
-    .innerJoin(memberships, eq(memberships.id, credentials.membershipId))
-    .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
-    .where(eq(credentials.email, normalizedEmail(email)))
+    .innerJoin(accounts, eq(accounts.id, credentials.accountId))
+    .where(eq(accounts.email, normalizedEmail(email)))
     .limit(1);
   const [attempt] = await db
     .select({
@@ -182,11 +206,9 @@ export async function findCredentialByEmail(
     : null;
 
   const credential = row
-    ? {
-        membershipId: row.membershipId,
-        employeeProfileId: row.employeeProfileId,
+      ? {
+        accountId: row.accountId,
         displayName: row.displayName,
-        role: row.role,
         active: row.active,
         email: row.email,
         passwordHash: row.passwordHash,
@@ -202,7 +224,7 @@ export async function findCredentialByEmail(
 export async function recordFailedLogin(
   emailHash: string,
   fingerprintHash: string,
-  membershipId: string | null,
+  accountId: string | null,
   now = new Date(),
 ): Promise<string | null> {
   const db = await database();
@@ -245,7 +267,7 @@ export async function recordFailedLogin(
     })
     .returning({ lockedUntil: loginAttempts.lockedUntil });
 
-  if (!membershipId) {
+  if (!accountId) {
     const [subject] = await subjectWrite;
     return subject?.lockedUntil ?? null;
   }
@@ -268,7 +290,7 @@ export async function recordFailedLogin(
       end`,
       updatedAt: timestamp,
     })
-    .where(eq(credentials.membershipId, membershipId))
+    .where(eq(credentials.accountId, accountId))
     .returning({ lockedUntil: credentials.lockedUntil });
   const [subjectRows, accountRows] = await db.batch([
     subjectWrite,
@@ -283,7 +305,7 @@ export async function recordFailedLogin(
 export async function clearFailedLogins(
   emailHash: string,
   fingerprintHash: string,
-  membershipId: string,
+  accountId: string,
 ): Promise<void> {
   const db = await database();
   const now = new Date().toISOString();
@@ -299,12 +321,12 @@ export async function clearFailedLogins(
     db
       .update(credentials)
       .set({ failedAttempts: 0, lockedUntil: null, updatedAt: now })
-      .where(eq(credentials.membershipId, membershipId)),
+      .where(eq(credentials.accountId, accountId)),
   ]);
 }
 
 export async function createAuthSession(
-  membershipId: string,
+  accountId: string,
   tokenHash: string,
   times: {
     createdAt: string;
@@ -316,7 +338,7 @@ export async function createAuthSession(
   const db = await database();
   await db.insert(authSessions).values({
     id: crypto.randomUUID(),
-    membershipId,
+    accountId,
     tokenHash,
     ...times,
     revokedAt: null,
@@ -326,32 +348,29 @@ export async function createAuthSession(
 export async function findSessionActor(
   tokenHash: string,
   now = new Date(),
-): Promise<SessionActorRecord | null> {
+): Promise<AccountSessionRecord | null> {
   const db = await database();
   await cleanupAuthState(db, now);
   const [actor] = await db
     .select({
-      membershipId: memberships.id,
-      employeeProfileId: employeeProfiles.id,
-      displayName: memberships.displayName,
-      email: credentials.email,
-      role: memberships.role,
-      active: memberships.active,
+      accountId: accounts.id,
+      displayName: accounts.displayName,
+      email: accounts.email,
+      active: accounts.active,
       mustChangePassword: credentials.mustChangePassword,
       idleExpiresAt: authSessions.idleExpiresAt,
       absoluteExpiresAt: authSessions.absoluteExpiresAt,
     })
     .from(authSessions)
-    .innerJoin(memberships, eq(memberships.id, authSessions.membershipId))
-    .innerJoin(credentials, eq(credentials.membershipId, memberships.id))
-    .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
+    .innerJoin(accounts, eq(accounts.id, authSessions.accountId))
+    .innerJoin(credentials, eq(credentials.accountId, accounts.id))
     .where(
       and(
         eq(authSessions.tokenHash, tokenHash),
         isNull(authSessions.revokedAt),
         gt(authSessions.idleExpiresAt, now.toISOString()),
         gt(authSessions.absoluteExpiresAt, now.toISOString()),
-        eq(memberships.active, true),
+        eq(accounts.active, true),
       ),
     )
     .limit(1);
@@ -365,8 +384,191 @@ export async function findSessionActor(
   return { ...actor, idleExpiresAt };
 }
 
+export async function findWorkspaceMembership(
+  accountId: string,
+  workspaceSlug: string,
+): Promise<WorkspaceMembershipRecord | null> {
+  const db = await database();
+  const [membership] = await db
+    .select({
+      membershipId: memberships.id,
+      workspaceId: workspaces.id,
+      workspaceName: workspaces.name,
+      workspaceSlug: workspaces.slug,
+      accountId: memberships.accountId,
+      employeeProfileId: employeeProfiles.id,
+      role: memberships.role,
+      active: memberships.active,
+    })
+    .from(memberships)
+    .innerJoin(workspaces, eq(workspaces.id, memberships.workspaceId))
+    .leftJoin(
+      employeeProfiles,
+      and(
+        eq(employeeProfiles.membershipId, memberships.id),
+        eq(employeeProfiles.workspaceId, workspaces.id),
+      ),
+    )
+    .where(
+      and(
+        eq(memberships.accountId, accountId),
+        eq(memberships.active, true),
+        eq(workspaces.slug, workspaceSlug),
+        eq(workspaces.active, true),
+      ),
+    )
+    .limit(1);
+  return membership ?? null;
+}
+
+export async function listAccountWorkspaces(
+  accountId: string,
+): Promise<WorkspaceSummary[]> {
+  const db = await database();
+  return db
+    .select({
+      name: workspaces.name,
+      slug: workspaces.slug,
+      role: memberships.role,
+    })
+    .from(memberships)
+    .innerJoin(workspaces, eq(workspaces.id, memberships.workspaceId))
+    .where(and(
+      eq(memberships.accountId, accountId),
+      eq(memberships.active, true),
+      eq(workspaces.active, true),
+    ))
+    .orderBy(asc(workspaces.name));
+}
+
+export async function insertWorkspaceInvitation(input: {
+  administratorMembershipId: string;
+  emailHash: string;
+  codeHash: string;
+  role: "admin" | "employee";
+  employeeProfileId: string | null;
+  expiresAt: string;
+}): Promise<boolean> {
+  const db = await database();
+  const [administrator] = await db
+    .select({ workspaceId: memberships.workspaceId })
+    .from(memberships)
+    .where(and(
+      eq(memberships.id, input.administratorMembershipId),
+      eq(memberships.role, "admin"),
+      eq(memberships.active, true),
+    ))
+    .limit(1);
+  if (!administrator) return false;
+
+  if (input.employeeProfileId) {
+    const [profile] = await db
+      .select({ id: employeeProfiles.id })
+      .from(employeeProfiles)
+      .where(and(
+        eq(employeeProfiles.id, input.employeeProfileId),
+        eq(employeeProfiles.workspaceId, administrator.workspaceId),
+        isNull(employeeProfiles.membershipId),
+      ))
+      .limit(1);
+    if (!profile) return false;
+  }
+
+  await db.insert(invitations).values({
+    id: crypto.randomUUID(),
+    workspaceId: administrator.workspaceId,
+    codeHash: input.codeHash,
+    emailHash: input.emailHash,
+    role: input.role,
+    employeeProfileId: input.employeeProfileId,
+    expiresAt: input.expiresAt,
+    createdByMembershipId: input.administratorMembershipId,
+  });
+  return true;
+}
+
+export async function redeemWorkspaceInvitation(input: {
+  codeHash: string;
+  emailHash: string;
+  accountId: string;
+  now: Date;
+}): Promise<{ workspaceSlug: string } | null> {
+  const db = await database();
+  const timestamp = input.now.toISOString();
+  const [invitation] = await db
+    .select({
+      id: invitations.id,
+      workspaceId: invitations.workspaceId,
+      workspaceSlug: workspaces.slug,
+      emailHash: invitations.emailHash,
+      role: invitations.role,
+      employeeProfileId: invitations.employeeProfileId,
+    })
+    .from(invitations)
+    .innerJoin(workspaces, eq(workspaces.id, invitations.workspaceId))
+    .where(and(
+      eq(invitations.codeHash, input.codeHash),
+      eq(invitations.emailHash, input.emailHash),
+      isNull(invitations.redeemedAt),
+      gt(invitations.expiresAt, timestamp),
+      eq(workspaces.active, true),
+    ))
+    .limit(1);
+  if (!invitation) return null;
+
+  const [existing] = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(and(
+      eq(memberships.workspaceId, invitation.workspaceId),
+      eq(memberships.accountId, input.accountId),
+    ))
+    .limit(1);
+  if (existing) return null;
+
+  const membershipId = crypto.randomUUID();
+  const membershipInsert = db.insert(memberships).values({
+    id: membershipId,
+    workspaceId: invitation.workspaceId,
+    accountId: input.accountId,
+    role: invitation.role,
+    active: true,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  const redeem = db
+    .update(invitations)
+    .set({ redeemedAt: timestamp })
+    .where(and(
+      eq(invitations.id, invitation.id),
+      isNull(invitations.redeemedAt),
+      gt(invitations.expiresAt, timestamp),
+    ));
+
+  try {
+    if (invitation.employeeProfileId) {
+      const profileLink = db
+        .update(employeeProfiles)
+        .set({ membershipId, updatedAt: timestamp })
+        .where(and(
+          eq(employeeProfiles.id, invitation.employeeProfileId),
+          eq(employeeProfiles.workspaceId, invitation.workspaceId),
+          isNull(employeeProfiles.membershipId),
+        ));
+      const results = await db.batch([membershipInsert, profileLink, redeem]);
+      if (!requiredWritesChanged(results, [0, 1, 2])) return null;
+    } else {
+      const results = await db.batch([membershipInsert, redeem]);
+      if (!requiredWritesChanged(results, [0, 1])) return null;
+    }
+  } catch {
+    return null;
+  }
+  return { workspaceSlug: invitation.workspaceSlug };
+}
+
 export async function replacePassword(
-  membershipId: string,
+  accountId: string,
   verifier: PasswordVerifier,
 ): Promise<void> {
   const db = await database();
@@ -381,7 +583,7 @@ export async function replacePassword(
       lockedUntil: null,
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(credentials.membershipId, membershipId));
+    .where(eq(credentials.accountId, accountId));
 }
 
 export async function revokeSession(tokenHash: string, now = new Date()): Promise<void> {
@@ -392,8 +594,8 @@ export async function revokeSession(tokenHash: string, now = new Date()): Promis
     .where(and(eq(authSessions.tokenHash, tokenHash), isNull(authSessions.revokedAt)));
 }
 
-export async function revokeMembershipSessions(
-  membershipId: string,
+export async function revokeAccountSessions(
+  accountId: string,
   now = new Date(),
 ): Promise<void> {
   const db = await database();
@@ -402,7 +604,7 @@ export async function revokeMembershipSessions(
     .set({ revokedAt: now.toISOString() })
     .where(
       and(
-        eq(authSessions.membershipId, membershipId),
+        eq(authSessions.accountId, accountId),
         isNull(authSessions.revokedAt),
       ),
     );
@@ -429,7 +631,7 @@ export async function insertStaffCredential(
 
   const db = await database();
   const [administrator] = await db
-    .select({ id: memberships.id })
+    .select({ id: memberships.id, workspaceId: memberships.workspaceId })
     .from(memberships)
     .where(
       and(
@@ -440,7 +642,7 @@ export async function insertStaffCredential(
     )
     .limit(1);
   const [profile] = await db
-    .select({ id: employeeProfiles.id })
+    .select({ id: employeeProfiles.id, workspaceId: employeeProfiles.workspaceId })
     .from(employeeProfiles)
     .where(
       and(
@@ -450,8 +652,13 @@ export async function insertStaffCredential(
       ),
     )
     .limit(1);
-  if (!administrator || !profile) return null;
+  if (
+    !administrator
+    || !profile
+    || profile.workspaceId !== administrator.workspaceId
+  ) return null;
 
+  const accountId = crypto.randomUUID();
   const membershipId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const email = input.email;
@@ -469,9 +676,13 @@ export async function insertStaffCredential(
   );
   const profileIsEligible = and(
     eq(employeeProfiles.id, input.employeeProfileId),
+    eq(employeeProfiles.workspaceId, administrator.workspaceId),
     eq(employeeProfiles.active, true),
     isNull(employeeProfiles.membershipId),
     administratorIsActive,
+  );
+  const accountExists = exists(
+    db.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)),
   );
   const membershipExists = exists(
     db
@@ -480,20 +691,20 @@ export async function insertStaffCredential(
       .where(
         and(
           eq(memberships.id, membershipId),
+          eq(memberships.workspaceId, administrator.workspaceId),
+          eq(memberships.accountId, accountId),
           eq(memberships.role, "employee"),
           eq(memberships.active, true),
         ),
       ),
   );
   const results = await db.batch([
-    db.insert(memberships).select(
+    db.insert(accounts).select(
       db
         .select({
-          id: sql<string>`${membershipId}`.as("id"),
-          oaiUserId: sql<string | null>`null`.as("oai_user_id"),
+          id: sql<string>`${accountId}`.as("id"),
           email: sql<string>`${email}`.as("email"),
           displayName: sql<string>`${input.displayName}`.as("display_name"),
-          role: sql<"employee">`'employee'`.as("role"),
           active: sql<boolean>`true`.as("active"),
           createdAt: sql<string>`${timestamp}`.as("created_at"),
           updatedAt: sql<string>`${timestamp}`.as("updated_at"),
@@ -502,12 +713,26 @@ export async function insertStaffCredential(
         .where(profileIsEligible)
         .limit(1),
     ),
+    db.insert(memberships).select(
+      db
+        .select({
+          id: sql<string>`${membershipId}`.as("id"),
+          workspaceId: sql<string>`${administrator.workspaceId}`.as("workspace_id"),
+          accountId: sql<string>`${accountId}`.as("account_id"),
+          role: sql<"employee">`'employee'`.as("role"),
+          active: sql<boolean>`true`.as("active"),
+          createdAt: sql<string>`${timestamp}`.as("created_at"),
+          updatedAt: sql<string>`${timestamp}`.as("updated_at"),
+        })
+        .from(employeeProfiles)
+        .where(and(profileIsEligible, accountExists))
+        .limit(1),
+    ),
     db.insert(credentials).select(
       db
         .select({
           id: sql<string>`${crypto.randomUUID()}`.as("id"),
-          membershipId: sql<string>`${membershipId}`.as("membership_id"),
-          email: sql<string>`${email}`.as("email"),
+          accountId: sql<string>`${accountId}`.as("account_id"),
           passwordHash: sql<string>`${input.verifier.hash}`.as("password_hash"),
           passwordSalt: sql<string>`${input.verifier.salt}`.as("password_salt"),
           passwordIterations: sql<number>`${input.verifier.iterations}`.as(
@@ -520,7 +745,7 @@ export async function insertStaffCredential(
           updatedAt: sql<string>`${timestamp}`.as("updated_at"),
         })
         .from(employeeProfiles)
-        .where(and(profileIsEligible, membershipExists))
+        .where(and(profileIsEligible, accountExists, membershipExists))
         .limit(1),
     ),
     db
@@ -528,7 +753,7 @@ export async function insertStaffCredential(
       .set({ membershipId, updatedAt: timestamp })
       .where(and(profileIsEligible, membershipExists)),
   ]);
-  if (!requiredWritesChanged(results, [0, 1, 2])) return null;
+  if (!requiredWritesChanged(results, [0, 1, 2, 3])) return null;
   return { membershipId };
 }
 
@@ -543,7 +768,7 @@ export async function replaceStaffPasswordVerifier(
 
   const db = await database();
   const [administrator] = await db
-    .select({ id: memberships.id })
+    .select({ id: memberships.id, workspaceId: memberships.workspaceId })
     .from(memberships)
     .where(
       and(
@@ -555,20 +780,24 @@ export async function replaceStaffPasswordVerifier(
     .limit(1);
   const [target] = await db
     .select({
+      accountId: memberships.accountId,
       membershipId: memberships.id,
+      workspaceId: memberships.workspaceId,
       role: memberships.role,
       membershipActive: memberships.active,
       profileActive: employeeProfiles.active,
       profileMembershipId: employeeProfiles.membershipId,
     })
-    .from(credentials)
-    .innerJoin(memberships, eq(memberships.id, credentials.membershipId))
-    .leftJoin(employeeProfiles, eq(employeeProfiles.membershipId, memberships.id))
+    .from(employeeProfiles)
+    .innerJoin(memberships, eq(memberships.id, employeeProfiles.membershipId))
+    .innerJoin(accounts, eq(accounts.id, memberships.accountId))
+    .innerJoin(credentials, eq(credentials.accountId, accounts.id))
     .where(eq(employeeProfiles.id, employeeProfileId))
     .limit(1);
   if (
     !administrator
     || !target
+    || administrator.workspaceId !== target.workspaceId
     || !staffPasswordResetIsAllowed(target, target.membershipId)
   ) return false;
 
@@ -579,6 +808,7 @@ export async function replaceStaffPasswordVerifier(
       .where(
         and(
           eq(memberships.id, administratorMembershipId),
+          eq(memberships.workspaceId, administrator.workspaceId),
           eq(memberships.role, "admin"),
           eq(memberships.active, true),
         ),
@@ -595,6 +825,7 @@ export async function replaceStaffPasswordVerifier(
       .where(
         and(
           eq(memberships.id, target.membershipId),
+          eq(memberships.workspaceId, administrator.workspaceId),
           eq(memberships.role, "employee"),
           eq(memberships.active, true),
           eq(employeeProfiles.id, employeeProfileId),
@@ -617,7 +848,7 @@ export async function replaceStaffPasswordVerifier(
       })
       .where(
         and(
-          eq(credentials.membershipId, target.membershipId),
+          eq(credentials.accountId, target.accountId),
           targetIsCurrentAndActive,
         ),
       ),
@@ -626,7 +857,7 @@ export async function replaceStaffPasswordVerifier(
       .set({ revokedAt: now.toISOString() })
       .where(
         and(
-          eq(authSessions.membershipId, target.membershipId),
+          eq(authSessions.accountId, target.accountId),
           isNull(authSessions.revokedAt),
           targetIsCurrentAndActive,
         ),
@@ -646,7 +877,7 @@ export async function setStaffActiveState(
 
   const db = await database();
   const [administrator] = await db
-    .select({ id: memberships.id })
+    .select({ id: memberships.id, workspaceId: memberships.workspaceId })
     .from(memberships)
     .where(
       and(
@@ -658,7 +889,9 @@ export async function setStaffActiveState(
     .limit(1);
   const [target] = await db
     .select({
+      accountId: memberships.accountId,
       membershipId: memberships.id,
+      workspaceId: memberships.workspaceId,
       role: memberships.role,
       profileMembershipId: employeeProfiles.membershipId,
     })
@@ -669,6 +902,7 @@ export async function setStaffActiveState(
   if (
     !administrator
     || !target
+    || administrator.workspaceId !== target.workspaceId
     || target.role !== "employee"
     || target.profileMembershipId !== target.membershipId
   ) {
@@ -683,6 +917,7 @@ export async function setStaffActiveState(
       .where(
         and(
           eq(memberships.id, administratorMembershipId),
+          eq(memberships.workspaceId, administrator.workspaceId),
           eq(memberships.role, "admin"),
           eq(memberships.active, true),
         ),
@@ -696,10 +931,11 @@ export async function setStaffActiveState(
         employeeProfiles,
         eq(employeeProfiles.membershipId, memberships.id),
       )
-      .innerJoin(credentials, eq(credentials.membershipId, memberships.id))
+      .innerJoin(credentials, eq(credentials.accountId, memberships.accountId))
       .where(
         and(
           eq(memberships.id, target.membershipId),
+          eq(memberships.workspaceId, administrator.workspaceId),
           eq(memberships.role, "employee"),
           eq(employeeProfiles.id, employeeProfileId),
           administratorIsActive,
@@ -728,20 +964,7 @@ export async function setStaffActiveState(
         targetIsCurrent,
       ),
     );
-  const sessionRevocation = db
-    .update(authSessions)
-    .set({ revokedAt: timestamp })
-    .where(
-      and(
-        eq(authSessions.membershipId, target.membershipId),
-        isNull(authSessions.revokedAt),
-        administratorIsActive,
-        targetIsCurrent,
-      ),
-    );
-  const results = active
-    ? await db.batch([membershipUpdate, profileUpdate])
-    : await db.batch([membershipUpdate, profileUpdate, sessionRevocation]);
+  const results = await db.batch([membershipUpdate, profileUpdate]);
   if (!requiredWritesChanged(results, [0, 1])) return null;
   return { membershipId: target.membershipId };
 }

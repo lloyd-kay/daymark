@@ -42,7 +42,11 @@ const profiles: TeamProfile[] = [
 ];
 
 const admin: WorkspaceActor = {
+  accountId: "account-admin",
   membershipId: "membership-admin",
+  workspaceId: "workspace-cedar",
+  workspaceName: "Cedar House",
+  workspaceSlug: "cedar-house",
   employeeProfileId: null,
   role: "admin",
   email: "admin@example.com",
@@ -51,7 +55,11 @@ const admin: WorkspaceActor = {
 };
 
 const employee: WorkspaceActor = {
+  accountId: "account-maya",
   membershipId: "membership-maya",
+  workspaceId: "workspace-cedar",
+  workspaceName: "Cedar House",
+  workspaceSlug: "cedar-house",
   employeeProfileId: "maya-chen",
   role: "employee",
   email: "maya@example.com",
@@ -78,125 +86,68 @@ afterEach(async () => {
 });
 
 describe("staff access controls", () => {
-  it("confirms account creation and keeps the temporary password in a dismissible one-time slip", async () => {
+  it("creates a single-use invitation without creating or exposing another account", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    const fetchMock = vi.mocked(fetch).mockResolvedValue(
-      jsonResponse(201, {
-        membershipId: "membership-theo",
-        temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
-      }),
-    );
-    const onProfilesChange = vi.fn();
-    const { container, root } = await render(
-      createElement(TeamAccessPanel, { profiles, onProfilesChange }),
-    );
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(jsonResponse(201, {
+      code: "private-invitation-code",
+      expiresAt: "2026-08-13T00:00:00.000Z",
+      message: "Access invitation created. Existing Daymark users keep their current password.",
+    }));
+    const { container } = await render(createElement(TeamAccessPanel, {
+      workspaceSlug: "cedar-house",
+      profiles,
+      onProfilesChange: vi.fn(),
+    }));
 
     await changeInput(
       container.querySelector<HTMLInputElement>('input[name="staff-email-theo-brooks"]')!,
       "theo@example.com",
     );
-    const createButton = buttonNamed(container, "Create staff account");
+    const createButton = buttonNamed(container, "Create private invitation");
     await act(async () => createButton.click());
 
     expect(confirm).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledWith("/api/workspace/team", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/workspace/team?workspace=cedar-house", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        action: "create-account",
+        action: "create-invitation",
         employeeProfileId: "theo-brooks",
         email: "theo@example.com",
-        displayName: "Theo Brooks",
+        role: "employee",
         confirm: true,
       }),
     });
-    expect(container.textContent).toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
-    expect(onProfilesChange).toHaveBeenCalledWith([
-      profiles[0],
-      expect.objectContaining({
-        id: "theo-brooks",
-        membershipId: "membership-theo",
-        memberEmail: "theo@example.com",
-        memberDisplayName: "Theo Brooks",
-        hasCredential: true,
-      }),
-    ]);
-
-    await act(async () => buttonNamed(container, "Copy temporary password").click());
+    expect(container.textContent).toContain("/join/private-invitation-code");
+    expect(container.textContent).toContain("Existing Daymark users keep their current password.");
+    await act(async () => buttonNamed(container, "Copy invitation link").click());
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      "ABCDE-FGHJK-LMNPQ-RSTUV",
+      `${window.location.origin}/join/private-invitation-code`,
     );
-    await act(async () => buttonNamed(container, "Dismiss temporary password").click());
-    expect(container.textContent).not.toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-
-    await act(async () => root.unmount());
-    roots = roots.filter((candidate) => candidate !== root);
-    const remounted = await render(
-      createElement(TeamAccessPanel, { profiles, onProfilesChange }),
-    );
-    expect(remounted.container.textContent).not.toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
+    await act(async () => buttonNamed(container, "Dismiss invitation link").click());
+    expect(container.textContent).not.toContain("/join/private-invitation-code");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("requires confirmation before reset and deactivation requests", async () => {
+  it("requires confirmation before invitation and company deactivation requests", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const fetchMock = vi.mocked(fetch);
     const { container } = await render(
       createElement(TeamAccessPanel, { profiles, onProfilesChange: vi.fn() }),
     );
 
-    await act(async () => buttonNamed(container, "Reset temporary password").click());
-    await act(async () => buttonNamed(container, "Deactivate").click());
+    await changeInput(
+      container.querySelector<HTMLInputElement>('input[name="staff-email-theo-brooks"]')!,
+      "theo@example.com",
+    );
+    await act(async () => buttonNamed(container, "Create private invitation").click());
+    await act(async () => buttonNamed(container, "Remove company access").click());
 
     expect(confirm).toHaveBeenCalledTimes(2);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("replaces a successful reset slip without retaining the previous password", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(jsonResponse(200, {
-        temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
-      }))
-      .mockResolvedValueOnce(jsonResponse(200, {
-        temporaryPassword: "VWXYZ-23456-789AB-CDEFG",
-      }));
-    const { container } = await render(
-      createElement(TeamAccessPanel, { profiles, onProfilesChange: vi.fn() }),
-    );
-
-    await act(async () => buttonNamed(container, "Reset temporary password").click());
-    expect(container.textContent).toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
-    await act(async () => buttonNamed(container, "Reset temporary password").click());
-
-    expect(container.querySelectorAll(".temporary-password-slip")).toHaveLength(1);
-    expect(container.textContent).not.toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
-    expect(container.textContent).toContain("VWXYZ-23456-789AB-CDEFG");
-  });
-
-  it("retains the one-time password and shows safe feedback when clipboard access is denied", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.mocked(fetch).mockResolvedValue(jsonResponse(200, {
-      temporaryPassword: "ABCDE-FGHJK-LMNPQ-RSTUV",
-    }));
-    vi.mocked(navigator.clipboard.writeText).mockRejectedValue(
-      new Error("clipboard permission denied"),
-    );
-    const { container } = await render(
-      createElement(TeamAccessPanel, { profiles, onProfilesChange: vi.fn() }),
-    );
-    await act(async () => buttonNamed(container, "Reset temporary password").click());
-
-    await act(async () => buttonNamed(container, "Copy temporary password").click());
-
-    expect(container.textContent).toContain("ABCDE-FGHJK-LMNPQ-RSTUV");
-    expect(container.textContent).toContain(
-      "Copy unavailable. Select the temporary password and copy it manually.",
-    );
-  });
-
-  it("activates a linked staff account after confirmation", async () => {
+  it("restores only the selected company membership after confirmation", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     const fetchMock = vi.mocked(fetch).mockResolvedValue(jsonResponse(200, { ok: true }));
     const onProfilesChange = vi.fn();
@@ -208,9 +159,9 @@ describe("staff access controls", () => {
       }),
     );
 
-    await act(async () => buttonNamed(container, "Activate").click());
+    await act(async () => buttonNamed(container, "Restore company access").click());
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/workspace/team", expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith("/api/workspace/team?workspace=daymark", expect.objectContaining({
       body: JSON.stringify({
         action: "set-active",
         employeeProfileId: "maya-chen",
@@ -232,7 +183,7 @@ describe("embed configuration", () => {
       "maya-chen",
       "Book an appointment",
     )).toBe(
-      '<script src="https://appointments.daymark.test/daymark-widget.js" data-mode="floating" data-employee="maya-chen" data-label="Book an appointment"></script>',
+      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="maya-chen" data-label="Book an appointment"></script>',
     );
     expect(buildEmbedSnippet(
       'https://appointments.daymark.test/" onload="alert(1)',
@@ -240,7 +191,7 @@ describe("embed configuration", () => {
       'maya-chen" onload="alert(1)',
       'Book "now" & return',
     )).toBe(
-      '<script src="https://appointments.daymark.test/daymark-widget.js" data-mode="inline" data-employee="all" data-label="Book &quot;now&quot; &amp; return"></script>',
+      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="inline" data-employee="all" data-label="Book &quot;now&quot; &amp; return"></script>',
     );
   });
 
@@ -257,7 +208,7 @@ describe("embed configuration", () => {
     const options = [...container.querySelectorAll("option")].map((option) => option.value);
     expect(options).toEqual(["all", "maya-chen", "theo-brooks"]);
     expect(container.querySelector("textarea")?.value).toBe(
-      `<script src="${window.location.origin}/daymark-widget.js" data-mode="floating" data-employee="all" data-label="Book an appointment"></script>`,
+      `<script src="${window.location.origin}/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="all" data-label="Book an appointment"></script>`,
     );
     expect(fetchMock).not.toHaveBeenCalled();
   });

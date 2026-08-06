@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUpRight, LockKeyhole, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { DemoBookingFlow } from "./demo/DemoBookingFlow";
 import { WidgetOptionsShowcase } from "./home/WidgetOptionsShowcase";
 
@@ -18,7 +19,7 @@ export default function Home() {
         <nav className="product-nav" aria-label="Primary navigation">
           <a href="#how-it-works">How it works</a>
           <a href="#widget-options">Widget options</a>
-          <a href="/workspace/sign-in">Staff sign in</a>
+          <Link href="/workspace/sign-in">Staff sign in</Link>
         </nav>
       </header>
 
@@ -78,7 +79,7 @@ export default function Home() {
         <div className="widget-setup">
           <p>
             Use the embed position that suits your layout, then{" "}
-            <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.
+            <Link href="/workspace/sign-in">sign in to the staff workspace</Link> to set it up.
           </p>
           <p className="widget-contact-note">
             <span className="widget-contact-label">Custom fit</span>
@@ -89,7 +90,7 @@ export default function Home() {
 
       <footer className="site-footer product-footer">
         <p>Daymark keeps private calendars private and appointments clear.</p>
-        <div><a href="/book">Start real booking</a><a href="/workspace/sign-in">Staff sign in</a></div>
+        <div><a href="/book">Start real booking</a><Link href="/workspace/sign-in">Staff sign in</Link></div>
       </footer>
     </main>
   );

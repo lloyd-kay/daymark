@@ -1,108 +1,83 @@
 "use client";
 
-import { Check, Copy, KeyRound, LockKeyhole } from "lucide-react";
+import { Check, Copy, LockKeyhole, MailPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import type { TeamProfile } from "../../lib/data/contracts";
 
 export type TeamAccessPanelProps = {
+  workspaceSlug?: string;
   profiles: TeamProfile[];
   onProfilesChange(profiles: TeamProfile[]): void;
 };
 
-type AccountDraft = { email: string; displayName: string };
-
-type TemporaryCredential = {
+type InvitationSlip = {
   employeeProfileId: string;
   publicName: string;
-  temporaryPassword: string;
+  url: string;
+  expiresAt: string;
 };
 
 export function TeamAccessPanel({
+  workspaceSlug = "daymark",
   profiles,
   onProfilesChange,
 }: TeamAccessPanelProps) {
-  const [drafts, setDrafts] = useState<Record<string, AccountDraft>>(() =>
-    Object.fromEntries(profiles.map((profile) => [
-      profile.id,
-      {
-        email: profile.memberEmail ?? "",
-        displayName: profile.memberDisplayName ?? profile.publicName,
-      },
-    ])),
+  const [emails, setEmails] = useState<Record<string, string>>(() =>
+    Object.fromEntries(profiles.map((profile) => [profile.id, profile.memberEmail ?? ""])),
   );
-  const [temporaryCredential, setTemporaryCredential] =
-    useState<TemporaryCredential | null>(null);
+  const [invitation, setInvitation] = useState<InvitationSlip | null>(null);
   const [loadingProfileId, setLoadingProfileId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  function updateDraft(employeeProfileId: string, change: Partial<AccountDraft>) {
-    setDrafts((current) => ({
-      ...current,
-      [employeeProfileId]: {
-        email: current[employeeProfileId]?.email ?? "",
-        displayName: current[employeeProfileId]?.displayName ?? "",
-        ...change,
-      },
-    }));
-  }
-
-  async function createAccount(
-    event: FormEvent<HTMLFormElement>,
-    profile: TeamProfile,
-  ) {
+  async function invite(event: FormEvent<HTMLFormElement>, profile: TeamProfile) {
     event.preventDefault();
-    const draft = drafts[profile.id] ?? { email: "", displayName: profile.publicName };
-    if (!window.confirm(`Create a staff account for ${profile.publicName}?`)) return;
-    await runAccountAction(profile.id, {
-      action: "create-account",
-      employeeProfileId: profile.id,
-      email: draft.email,
-      displayName: draft.displayName,
-      confirm: true,
-    }, (temporaryPassword, membershipId) => {
-      onProfilesChange(profiles.map((item) => item.id === profile.id
-        ? {
-            ...item,
-            membershipId,
-            memberEmail: draft.email.trim().toLowerCase(),
-            memberDisplayName: draft.displayName.trim(),
-            hasCredential: true,
-          }
-        : item));
-      setTemporaryCredential({
+    const email = (emails[profile.id] ?? "").trim().toLowerCase();
+    if (!window.confirm(`Create private access for ${profile.publicName}?`)) return;
+    setLoadingProfileId(profile.id);
+    setInvitation(null);
+    setMessage("");
+    try {
+      const response = await fetch(`/api/workspace/team?workspace=${encodeURIComponent(workspaceSlug)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create-invitation",
+          employeeProfileId: profile.id,
+          email,
+          role: "employee",
+          confirm: true,
+        }),
+      });
+      const body = await response.json() as {
+        code?: string;
+        expiresAt?: string;
+        message?: string;
+        error?: string;
+      };
+      if (!response.ok || !body.code || !body.expiresAt) {
+        throw new Error(body.error ?? "The access invitation could not be created.");
+      }
+      setInvitation({
         employeeProfileId: profile.id,
         publicName: profile.publicName,
-        temporaryPassword,
+        url: `${window.location.origin}/join/${encodeURIComponent(body.code)}`,
+        expiresAt: body.expiresAt,
       });
-      setMessage(`Staff account created for ${profile.publicName}.`);
-    });
-  }
-
-  async function resetPassword(profile: TeamProfile) {
-    if (!window.confirm(`Reset the temporary password for ${profile.publicName}?`)) return;
-    await runAccountAction(profile.id, {
-      action: "reset-password",
-      employeeProfileId: profile.id,
-      confirm: true,
-    }, (temporaryPassword) => {
-      setTemporaryCredential({
-        employeeProfileId: profile.id,
-        publicName: profile.publicName,
-        temporaryPassword,
-      });
-      setMessage(`Temporary password reset for ${profile.publicName}.`);
-    });
+      setMessage(body.message ?? "Access invitation created.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The access invitation could not be created.");
+    } finally {
+      setLoadingProfileId(null);
+    }
   }
 
   async function toggleActive(profile: TeamProfile) {
     const active = !profile.active;
-    if (!window.confirm(`${active ? "Activate" : "Deactivate"} ${profile.publicName}?`)) {
-      return;
-    }
+    if (!window.confirm(`${active ? "Activate" : "Deactivate"} ${profile.publicName} for this company?`)) return;
     setLoadingProfileId(profile.id);
     setMessage("");
     try {
-      const response = await fetch("/api/workspace/team", {
+      const response = await fetch(`/api/workspace/team?workspace=${encodeURIComponent(workspaceSlug)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -112,153 +87,68 @@ export function TeamAccessPanel({
           confirm: true,
         }),
       });
-      const body = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(body.error ?? "The account could not be changed.");
-      onProfilesChange(profiles.map((item) =>
-        item.id === profile.id ? { ...item, active } : item));
-      setMessage(`${profile.publicName} is now ${active ? "active" : "inactive"}.`);
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Company access could not be changed.");
+      onProfilesChange(profiles.map((item) => item.id === profile.id ? { ...item, active } : item));
+      setMessage(`${profile.publicName} is now ${active ? "active" : "inactive"} for this company.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The account could not be changed.");
+      setMessage(error instanceof Error ? error.message : "Company access could not be changed.");
     } finally {
       setLoadingProfileId(null);
     }
   }
 
-  async function runAccountAction(
-    employeeProfileId: string,
-    requestBody: Record<string, unknown>,
-    onSuccess: (temporaryPassword: string, membershipId: string | null) => void,
-  ) {
-    setLoadingProfileId(employeeProfileId);
-    setMessage("");
-    setTemporaryCredential(null);
+  async function copyInvitation(url: string) {
     try {
-      const response = await fetch("/api/workspace/team", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-      const body = (await response.json()) as {
-        membershipId?: string;
-        temporaryPassword?: string;
-        error?: string;
-      };
-      if (!response.ok || !body.temporaryPassword) {
-        throw new Error(body.error ?? "The temporary password could not be created.");
-      }
-      onSuccess(body.temporaryPassword, body.membershipId ?? null);
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "The staff account could not be updated.",
-      );
-    } finally {
-      setLoadingProfileId(null);
-    }
-  }
-
-  async function copyTemporaryPassword(password: string) {
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(password);
-      setMessage("Temporary password copied.");
+      await navigator.clipboard.writeText(url);
+      setMessage("Invitation link copied.");
     } catch {
-      setMessage(
-        "Copy unavailable. Select the temporary password and copy it manually.",
-      );
+      setMessage("Copy unavailable. Select the invitation link and copy it manually.");
     }
   }
 
   return (
     <div className="team-view">
       <div className="team-heading">
-        <div>
-          <p className="eyebrow">Administrator desk</p>
-          <h2>Four calendars. One clear view.</h2>
-        </div>
-        <span><KeyRound size={16} /> Account access stays administrator-controlled</span>
+        <div><p className="eyebrow">Administrator desk</p><h2>Company access, by invitation.</h2></div>
+        <span><MailPlus size={16} /> People can join only after an administrator grants access</span>
       </div>
       {message ? <p className="workspace-message" role="status">{message}</p> : null}
       <div className="team-cards">
         {profiles.map((profile, index) => {
-          const draft = drafts[profile.id] ?? {
-            email: profile.memberEmail ?? "",
-            displayName: profile.memberDisplayName ?? profile.publicName,
-          };
           const loading = loadingProfileId === profile.id;
           return (
             <article className="team-card" data-accent={profile.accent} key={profile.id}>
               <span className="team-number">{String(index + 1).padStart(2, "0")}</span>
               <div className="avatar-stamp">{initials(profile.publicName)}</div>
               <div className="team-copy">
-                <small>{profile.title}</small>
-                <h3>{profile.publicName}</h3>
-                <p>{profile.memberEmail ?? "No staff account yet"}</p>
+                <small>{profile.title}</small><h3>{profile.publicName}</h3>
+                <p>{profile.memberEmail ?? "No company access yet"}</p>
               </div>
-              <span className={profile.active ? "status-chip is-active" : "status-chip"}>
-                {profile.active ? "Active" : "Inactive"}
-              </span>
+              <span className={profile.active ? "status-chip is-active" : "status-chip"}>{profile.active ? "Active" : "Inactive"}</span>
 
-              {profile.hasCredential ? (
+              {profile.membershipId ? (
                 <div className="team-actions">
-                  <button type="button" onClick={() => resetPassword(profile)} disabled={loading}>
-                    <KeyRound size={14} /> Reset temporary password
-                  </button>
                   <button type="button" onClick={() => toggleActive(profile)} disabled={loading}>
                     {profile.active ? <LockKeyhole size={14} /> : <Check size={14} />}
-                    {profile.active ? "Deactivate" : "Activate"}
+                    {profile.active ? "Remove company access" : "Restore company access"}
                   </button>
                 </div>
               ) : (
-                <form className="staff-account-form" onSubmit={(event) => createAccount(event, profile)}>
-                  <label>
-                    <span>Email</span>
-                    <input
-                      name={`staff-email-${profile.id}`}
-                      type="email"
-                      value={draft.email}
-                      onChange={(event) => updateDraft(profile.id, { email: event.target.value })}
-                      autoComplete="off"
-                      required
-                    />
-                  </label>
-                  <label>
-                    <span>Display name</span>
-                    <input
-                      name={`staff-display-name-${profile.id}`}
-                      value={draft.displayName}
-                      maxLength={80}
-                      onChange={(event) => updateDraft(profile.id, { displayName: event.target.value })}
-                      autoComplete="off"
-                      required
-                    />
-                  </label>
-                  <button type="submit" disabled={loading}>
-                    <KeyRound size={14} /> Create staff account
-                  </button>
+                <form className="staff-account-form" onSubmit={(event) => invite(event, profile)}>
+                  <label><span>Email</span><input name={`staff-email-${profile.id}`} type="email" value={emails[profile.id] ?? ""} onChange={(event) => setEmails((current) => ({ ...current, [profile.id]: event.target.value }))} autoComplete="off" required /></label>
+                  <button type="submit" disabled={loading}><MailPlus size={14} /> Create private invitation</button>
                 </form>
               )}
 
-              {temporaryCredential?.employeeProfileId === profile.id ? (
-                <div className="temporary-password-slip" role="status">
-                  <small>One-time temporary password for {temporaryCredential.publicName}</small>
-                  <strong>{temporaryCredential.temporaryPassword}</strong>
+              {invitation?.employeeProfileId === profile.id ? (
+                <div className="temporary-password-slip invitation-slip" role="status">
+                  <small>Single-use invitation for {invitation.publicName}</small>
+                  <strong>{invitation.url}</strong>
+                  <small>Expires {new Date(invitation.expiresAt).toLocaleDateString("en-GB")}</small>
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => copyTemporaryPassword(
-                        temporaryCredential.temporaryPassword,
-                      )}
-                      aria-label="Copy temporary password"
-                    >
-                      <Copy size={14} /> Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTemporaryCredential(null)}
-                      aria-label="Dismiss temporary password"
-                    >
-                      Dismiss
-                    </button>
+                    <button type="button" onClick={() => copyInvitation(invitation.url)} aria-label="Copy invitation link"><Copy size={14} /> Copy link</button>
+                    <button type="button" onClick={() => setInvitation(null)} aria-label="Dismiss invitation link">Dismiss</button>
                   </div>
                 </div>
               ) : null}

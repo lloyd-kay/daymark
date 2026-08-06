@@ -41,7 +41,11 @@ describe("authentication routes", () => {
   it("sets an opaque session cookie after successful administrator setup", async () => {
     auth.setup.mockResolvedValue({
       status: 200,
-      body: { ok: true, mustChangePassword: false },
+      body: {
+        ok: true,
+        mustChangePassword: false,
+        workspaceSlug: "cedar-house",
+      },
       session: {
         token: "opaque-token",
         expiresAt: "2026-08-12T12:00:00.000Z",
@@ -50,6 +54,8 @@ describe("authentication routes", () => {
     const { POST } = await import("../app/api/auth/setup/route");
     const response = await POST(request("/api/auth/setup", {
       setupCode: "setup-secret",
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
       displayName: "Maya Chen",
       email: "maya@example.com",
       password: "a secure password",
@@ -57,6 +63,27 @@ describe("authentication routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Set-Cookie")).toContain("daymark_session=opaque-token");
+    expect(auth.setup).toHaveBeenCalledWith({
+      setupCode: "setup-secret",
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
+      displayName: "Maya Chen",
+      email: "maya@example.com",
+      password: "a secure password",
+    }, "setup-secret");
+  });
+
+  it("requires company identity fields during first-time setup", async () => {
+    const { POST } = await import("../app/api/auth/setup/route");
+    const response = await POST(request("/api/auth/setup", {
+      setupCode: "setup-secret",
+      displayName: "Maya Chen",
+      email: "maya@example.com",
+      password: "a secure password",
+    }));
+
+    expect(response.status).toBe(400);
+    expect(auth.setup).not.toHaveBeenCalled();
   });
 
   it("sets the session cookie and supplies a request fingerprint on sign-in", async () => {

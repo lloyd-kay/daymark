@@ -9,6 +9,7 @@ export type PublicEmployee = {
 };
 
 export type EmployeeProfileRecord = PublicEmployee & {
+  workspaceId: string;
   membershipId: string | null;
   active: boolean;
   sortOrder: number;
@@ -29,10 +30,37 @@ export type MembershipRecord = {
   employeeProfileId: string | null;
 };
 
+export type AccountSessionRecord = {
+  accountId: string;
+  email: string;
+  displayName: string;
+  active: boolean;
+  mustChangePassword: boolean;
+  idleExpiresAt: string;
+  absoluteExpiresAt: string;
+};
+
+export type WorkspaceMembershipRecord = {
+  membershipId: string;
+  workspaceId: string;
+  workspaceName: string;
+  workspaceSlug: string;
+  accountId: string;
+  employeeProfileId: string | null;
+  role: "admin" | "employee";
+  active: boolean;
+};
+
 export type ScheduleScope = Pick<
   MembershipRecord,
   "role" | "employeeProfileId"
->;
+> & { workspaceId: string };
+
+export type WorkspaceSummary = {
+  name: string;
+  slug: string;
+  role: "admin" | "employee";
+};
 
 export type ScheduleEntry = {
   id: string;
@@ -61,10 +89,8 @@ export type CreateBookingInput = {
 };
 
 export type CredentialRecord = {
-  membershipId: string;
-  employeeProfileId: string | null;
+  accountId: string;
   displayName: string;
-  role: "admin" | "employee";
   active: boolean;
   email: string;
   passwordHash: string;
@@ -74,17 +100,7 @@ export type CredentialRecord = {
   lockedUntil: string | null;
 };
 
-export type SessionActorRecord = {
-  membershipId: string;
-  employeeProfileId: string | null;
-  displayName: string;
-  email: string;
-  role: "admin" | "employee";
-  active: boolean;
-  mustChangePassword: boolean;
-  idleExpiresAt: string;
-  absoluteExpiresAt: string;
-};
+export type SessionActorRecord = AccountSessionRecord;
 
 export type CreateBookingResult =
   | {

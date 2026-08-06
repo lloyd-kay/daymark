@@ -82,6 +82,7 @@ export function WorkspaceClient({
   const [blockNote, setBlockNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const workspaceQuery = `workspace=${encodeURIComponent(actor.workspaceSlug)}`;
 
   const dateKeys = useMemo(() => rangeDateKeys(range.from, 7), [range.from]);
   const today = londonDateKey(new Date());
@@ -121,7 +122,7 @@ export function WorkspaceClient({
     setLoading(true);
     setMessage("");
     try {
-      const query = new URLSearchParams({ from: nextRange.from, to: nextRange.to });
+      const query = new URLSearchParams({ workspace: actor.workspaceSlug, from: nextRange.from, to: nextRange.to });
       if (employeeId && employeeId !== "all") query.set("employeeId", employeeId);
       const response = await fetch(`/api/workspace/schedule?${query}`, { cache: "no-store" });
       const body = (await response.json()) as { entries?: ScheduleEntry[]; error?: string };
@@ -137,7 +138,7 @@ export function WorkspaceClient({
   async function cancel(entry: ScheduleEntry) {
     if (!window.confirm(`Cancel ${entry.clientName}’s appointment?`)) return;
     setLoading(true);
-    const response = await fetch("/api/workspace/schedule", {
+    const response = await fetch(`/api/workspace/schedule?${workspaceQuery}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ appointmentId: entry.id, confirm: true }),
@@ -163,7 +164,7 @@ export function WorkspaceClient({
     setMessage("");
     try {
       const response = await fetch(
-        `/api/workspace/availability?employeeId=${encodeURIComponent(employeeId)}`,
+        `/api/workspace/availability?${workspaceQuery}&employeeId=${encodeURIComponent(employeeId)}`,
         { cache: "no-store" },
       );
       const body = (await response.json()) as {
@@ -205,7 +206,7 @@ export function WorkspaceClient({
       slotMinutes,
       bufferMinutes,
     }));
-    const response = await fetch("/api/workspace/availability", {
+    const response = await fetch(`/api/workspace/availability?${workspaceQuery}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ employeeId: selectedProfileId, rules }),
@@ -220,7 +221,7 @@ export function WorkspaceClient({
     event.preventDefault();
     if (!selectedProfileId || !blockStart || !blockEnd) return;
     setLoading(true);
-    const response = await fetch("/api/workspace/availability", {
+    const response = await fetch(`/api/workspace/availability?${workspaceQuery}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -495,11 +496,11 @@ export function WorkspaceClient({
           ) : null}
 
           {view === "team" && actor.role === "admin" ? (
-            <TeamAccessPanel profiles={profiles} onProfilesChange={setProfiles} />
+            <TeamAccessPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} onProfilesChange={setProfiles} />
           ) : null}
 
           {view === "embed" && actor.role === "admin" ? (
-            <EmbedPanel profiles={profiles} />
+            <EmbedPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} />
           ) : null}
         </section>
       </div>

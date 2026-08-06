@@ -3,7 +3,8 @@ import { workspaceService } from "../../../../lib/workspace-runtime";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const result = await workspaceService().schedule({
+  const workspace = url.searchParams.get("workspace") ?? "";
+  const result = await workspaceService(workspace, request).schedule({
     from: url.searchParams.get("from"),
     to: url.searchParams.get("to"),
     employeeId: url.searchParams.get("employeeId") || undefined,
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const result = await workspaceService().cancel(await safeJson(request));
+  const workspace = new URL(request.url).searchParams.get("workspace") ?? "";
+  const result = await workspaceService(workspace, request).cancel(await safeJson(request));
   return noStoreJson(result.body, result.status);
 }

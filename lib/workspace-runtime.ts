@@ -1,7 +1,6 @@
 import { getWorkspaceActor } from "./auth/membership";
 import {
-  createStaffAccount,
-  resetStaffPassword,
+  createWorkspaceInvitation,
   setStaffActive,
 } from "./auth/staff-accounts";
 import {
@@ -14,17 +13,16 @@ import {
 } from "./data/repository";
 import { createWorkspaceService } from "./workspace-service";
 
-export function workspaceService() {
+export function workspaceService(workspaceSlug: string, request?: Request) {
   return createWorkspaceService({
-    getActor: getWorkspaceActor,
+    getActor: () => getWorkspaceActor(workspaceSlug, request),
     listSchedule,
     cancelAppointment,
     getEmployeeAvailability,
     replaceAvailabilityRules,
     addBlockedPeriod,
     listTeamProfiles,
-    createStaffAccount,
-    resetStaffPassword,
+    createWorkspaceInvitation,
     setStaffActive,
   });
 }

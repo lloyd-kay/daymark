@@ -141,7 +141,7 @@ describe("staff repository validation", () => {
 });
 
 describe("staff repository atomic write contracts", () => {
-  it("creates all three linked records conditionally and returns the real membership ID", async () => {
+  it("creates the global account, company membership, credential, and profile link atomically", async () => {
     const d1 = configureD1(successfulCreate());
     seedCreateLookups(d1);
 
@@ -152,18 +152,19 @@ describe("staff repository atomic write contracts", () => {
 
     expect(account?.membershipId).toMatch(/^[0-9a-f-]{36}$/i);
     expect(d1.batches).toHaveLength(1);
-    expect(d1.batches[0]).toHaveLength(3);
+    expect(d1.batches[0]).toHaveLength(4);
     const queries = d1.batches[0].map((statement) => statement.query).join("\n");
     expect(queries).toContain("select");
     expect(queries).toContain('"employee_profiles"."membership_id" is null');
     expect(queries).toContain('"memberships"."role" = ?');
+    expect(queries).toContain('"employee_profiles"."workspace_id"');
     expect(queries).toContain('"memberships"."active" = ?');
     expect(JSON.stringify(d1.batches[0].map((statement) => statement.params)))
       .not.toContain("temporary-password");
   });
 
   it("does not report creation success when a concurrency-shaped link write changes zero rows", async () => {
-    const d1 = configureD1([changed(1), changed(1), changed(0)]);
+    const d1 = configureD1([changed(1), changed(1), changed(1), changed(0)]);
     seedCreateLookups(d1);
 
     await expect(insertStaffCredential(
@@ -185,7 +186,7 @@ describe("staff repository atomic write contracts", () => {
   });
 
   it("requires an active administrator and current linked employee in every active-state write", async () => {
-    const d1 = configureD1([changed(0), changed(0), changed(0)]);
+    const d1 = configureD1([changed(0), changed(0)]);
     seedActiveLookups(d1);
 
     await expect(setStaffActiveState(
@@ -201,7 +202,7 @@ describe("staff repository atomic write contracts", () => {
     expect(queries).toContain('"employee_profiles"."membership_id"');
   });
 
-  it("atomically revokes sessions with deactivation and never revives them on activation", async () => {
+  it("changes only the company membership and never revokes global account sessions", async () => {
     const d1 = configureD1(
       new Error("atomic D1 batch failed"),
       [changed(1), changed(1)],
@@ -221,8 +222,9 @@ describe("staff repository atomic write contracts", () => {
       true,
     )).resolves.toEqual({ membershipId: "membership-maya" });
 
-    expect(d1.batches[0]).toHaveLength(3);
-    expect(d1.batches[0][2].query).toContain('update "auth_sessions" set "revoked_at"');
+    expect(d1.batches[0]).toHaveLength(2);
+    expect(d1.batches[0].map((statement) => statement.query).join("\n"))
+      .not.toContain('update "auth_sessions"');
     expect(d1.batches[1]).toHaveLength(2);
     expect(d1.batches[1].map((statement) => statement.query).join("\n"))
       .not.toContain('"revoked_at" = null');
@@ -245,7 +247,7 @@ function changed(changes: number) {
 }
 
 function successfulCreate() {
-  return [changed(1), changed(1), changed(1)];
+  return [changed(1), changed(1), changed(1), changed(1)];
 }
 
 function configureD1(...outcomes: Array<BatchResponse | Error>) {
@@ -255,21 +257,24 @@ function configureD1(...outcomes: Array<BatchResponse | Error>) {
 }
 
 function seedCreateLookups(d1: FakeD1) {
-  d1.rawResults.push([["membership-admin"]], [["maya-chen"]]);
+  d1.rawResults.push(
+    [["membership-admin", "workspace-cedar"]],
+    [["maya-chen", "workspace-cedar"]],
+  );
 }
 
 function seedResetLookups(d1: FakeD1) {
   d1.rawResults.push(
-    [["membership-admin"]],
-    [["membership-maya", "employee", true, true, "membership-maya"]],
+    [["membership-admin", "workspace-cedar"]],
+    [["account-maya", "membership-maya", "workspace-cedar", "employee", true, true, "membership-maya"]],
   );
 }
 
 function seedActiveLookups(d1: FakeD1) {
   d1.rawResults.push(
-    [["membership-admin"]],
-    [["membership-maya", "employee", "membership-maya"]],
-    [["membership-admin"]],
-    [["membership-maya", "employee", "membership-maya"]],
+    [["membership-admin", "workspace-cedar"]],
+    [["account-maya", "membership-maya", "workspace-cedar", "employee", "membership-maya"]],
+    [["membership-admin", "workspace-cedar"]],
+    [["account-maya", "membership-maya", "workspace-cedar", "employee", "membership-maya"]],
   );
 }

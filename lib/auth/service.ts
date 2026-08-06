@@ -1,4 +1,8 @@
 import type { CredentialRecord, SessionActorRecord } from "../data/contracts";
+import {
+  normalizeWorkspaceSlug,
+  workspaceSlugError,
+} from "../workspaces/slug";
 import type { PasswordVerifier } from "./password";
 
 const INVALID_CREDENTIALS = "Email or password not recognised.";
@@ -14,7 +18,12 @@ const DUMMY_VERIFIER = {
 
 export type AuthResult = {
   status: number;
-  body: { ok: boolean; error?: string; mustChangePassword?: boolean };
+  body: {
+    ok: boolean;
+    error?: string;
+    mustChangePassword?: boolean;
+    workspaceSlug?: string;
+  };
   session?: { token: string; expiresAt: string };
 };
 
@@ -32,12 +41,14 @@ type SessionTimes = {
 
 export type AuthDependencies = {
   administratorExists(): Promise<boolean>;
-  createAdministratorAccount(input: {
+  createInitialWorkspaceAdministrator(input: {
+    workspaceName: string;
+    workspaceSlug: string;
     email: string;
     displayName: string;
     verifier: PasswordVerifier;
     mustChangePassword: false;
-  }): Promise<{ membershipId: string }>;
+  }): Promise<{ accountId: string; workspaceSlug: string }>;
   findCredentialByEmail(
     email: string,
     emailHash: string,
@@ -47,23 +58,23 @@ export type AuthDependencies = {
   recordFailedLogin(
     emailHash: string,
     fingerprintHash: string,
-    membershipId: string | null,
+    accountId: string | null,
     now: Date,
   ): Promise<string | null>;
   clearFailedLogins(
     emailHash: string,
     fingerprintHash: string,
-    membershipId: string,
+    accountId: string,
   ): Promise<void>;
   createAuthSession(
-    membershipId: string,
+    accountId: string,
     tokenHash: string,
     times: SessionTimes,
   ): Promise<void>;
   findSessionActor(tokenHash: string, now: Date): Promise<SessionActorRecord | null>;
-  replacePassword(membershipId: string, verifier: PasswordVerifier): Promise<void>;
+  replacePassword(accountId: string, verifier: PasswordVerifier): Promise<void>;
   revokeSession(tokenHash: string, now: Date): Promise<void>;
-  revokeMembershipSessions(membershipId: string, now: Date): Promise<void>;
+  revokeAccountSessions(accountId: string, now: Date): Promise<void>;
   hashOpaqueValue(value: string): Promise<string>;
   hashPassword(password: string): Promise<PasswordVerifier>;
   verifyPassword(password: string, verifier: PasswordVerifier): Promise<boolean>;
@@ -76,14 +87,14 @@ export function normalizeEmail(value: string): string {
 
 export function createAuthService(dependencies: AuthDependencies) {
   async function issueSession(
-    membershipId: string,
+    accountId: string,
     mustChangePassword: boolean,
     now: Date,
   ): Promise<AuthResult> {
     const token = dependencies.generateSessionToken();
     const tokenHash = await dependencies.hashOpaqueValue(token);
     const absoluteExpiresAt = new Date(now.getTime() + ABSOLUTE_SESSION_MS).toISOString();
-    await dependencies.createAuthSession(membershipId, tokenHash, {
+    await dependencies.createAuthSession(accountId, tokenHash, {
       createdAt: now.toISOString(),
       lastUsedAt: now.toISOString(),
       idleExpiresAt: new Date(now.getTime() + IDLE_SESSION_MS).toISOString(),
@@ -100,6 +111,8 @@ export function createAuthService(dependencies: AuthDependencies) {
     async setup(
       input: {
         setupCode: string;
+        workspaceName: string;
+        workspaceSlug: string;
         displayName: string;
         email: string;
         password: string;
@@ -119,7 +132,14 @@ export function createAuthService(dependencies: AuthDependencies) {
       }
 
       const displayName = input.displayName.trim();
+      const workspaceName = input.workspaceName.trim();
+      const workspaceSlug = normalizeWorkspaceSlug(input.workspaceSlug);
       const email = normalizeEmail(input.email);
+      if (workspaceName.length < 2 || workspaceName.length > 80) {
+        return failure(400, "Company name must be between 2 and 80 characters.");
+      }
+      const slugError = workspaceSlugError(workspaceSlug);
+      if (slugError) return failure(400, slugError);
       if (displayName.length < 1 || displayName.length > 80) {
         return failure(400, "Display name must be between 1 and 80 characters.");
       }
@@ -131,13 +151,17 @@ export function createAuthService(dependencies: AuthDependencies) {
       }
 
       const verifier = await dependencies.hashPassword(input.password);
-      const account = await dependencies.createAdministratorAccount({
+      const account = await dependencies.createInitialWorkspaceAdministrator({
+        workspaceName,
+        workspaceSlug,
         email,
         displayName,
         verifier,
         mustChangePassword: false,
       });
-      return issueSession(account.membershipId, false, now);
+      const result = await issueSession(account.accountId, false, now);
+      result.body.workspaceSlug = account.workspaceSlug;
+      return result;
     },
 
     async signIn(
@@ -169,7 +193,7 @@ export function createAuthService(dependencies: AuthDependencies) {
         const failedRetryAt = await dependencies.recordFailedLogin(
           emailHash,
           fingerprintHash,
-          credential?.membershipId ?? null,
+          credential?.accountId ?? null,
           now,
         );
         if (failedRetryAt && Date.parse(failedRetryAt) > now.getTime()) {
@@ -181,9 +205,9 @@ export function createAuthService(dependencies: AuthDependencies) {
       await dependencies.clearFailedLogins(
         emailHash,
         fingerprintHash,
-        credential.membershipId,
+        credential.accountId,
       );
-      return issueSession(credential.membershipId, credential.mustChangePassword, now);
+      return issueSession(credential.accountId, credential.mustChangePassword, now);
     },
 
     async changePassword(
@@ -199,9 +223,9 @@ export function createAuthService(dependencies: AuthDependencies) {
       }
 
       const verifier = await dependencies.hashPassword(password);
-      await dependencies.replacePassword(actor.membershipId, verifier);
-      await dependencies.revokeMembershipSessions(actor.membershipId, now);
-      return issueSession(actor.membershipId, false, now);
+      await dependencies.replacePassword(actor.accountId, verifier);
+      await dependencies.revokeAccountSessions(actor.accountId, now);
+      return issueSession(actor.accountId, false, now);
     },
 
     async signOut(token: string, now = new Date()): Promise<AuthResult> {

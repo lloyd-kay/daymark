@@ -19,10 +19,8 @@ function dependencies(
   const credential = options.credential === null
     ? null
     : {
-        membershipId: "membership-maya",
-        employeeProfileId: "maya-chen",
+        accountId: "account-maya",
         displayName: "Maya Chen",
-        role: "employee" as const,
         active: true,
         email: "maya@example.com",
         passwordHash: "stored-hash",
@@ -35,11 +33,9 @@ function dependencies(
   const actor = options.actor === null
     ? null
     : {
-        membershipId: "membership-maya",
-        employeeProfileId: "maya-chen",
+        accountId: "account-maya",
         displayName: "Maya Chen",
         email: "maya@example.com",
-        role: "employee" as const,
         active: true,
         mustChangePassword: true,
         idleExpiresAt: "2026-08-06T00:00:00.000Z",
@@ -49,7 +45,10 @@ function dependencies(
 
   return {
     administratorExists: vi.fn().mockResolvedValue(options.administratorExists ?? false),
-    createAdministratorAccount: vi.fn().mockResolvedValue({ membershipId: "membership-admin" }),
+    createInitialWorkspaceAdministrator: vi.fn().mockResolvedValue({
+      accountId: "account-admin",
+      workspaceSlug: "cedar-house",
+    }),
     findCredentialByEmail: vi.fn().mockResolvedValue({
       credential,
       retryAt: options.retryAt ?? null,
@@ -60,7 +59,7 @@ function dependencies(
     findSessionActor: vi.fn().mockResolvedValue(actor),
     replacePassword: vi.fn().mockResolvedValue(undefined),
     revokeSession: vi.fn().mockResolvedValue(undefined),
-    revokeMembershipSessions: vi.fn().mockResolvedValue(undefined),
+    revokeAccountSessions: vi.fn().mockResolvedValue(undefined),
     hashOpaqueValue: vi.fn().mockImplementation(async (value: string) => {
       if (value === token) return tokenHash;
       if (value === "wrong") return "c".repeat(64);
@@ -123,7 +122,7 @@ describe("authentication service", () => {
     expect(result.body).toEqual({ ok: true, mustChangePassword: true });
     expect(result.session?.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(deps.createAuthSession).toHaveBeenCalledWith(
-      "membership-maya",
+      "account-maya",
       expect.stringMatching(/^[a-f0-9]{64}$/),
       expect.objectContaining({
         idleExpiresAt: "2026-08-06T00:00:00.000Z",
@@ -137,6 +136,8 @@ describe("authentication service", () => {
     const result = await createAuthService(deps).setup(
       {
         setupCode: "wrong",
+        workspaceName: "Cedar House",
+        workspaceSlug: "cedar-house",
         displayName: "Maya Chen",
         email: "maya@example.com",
         password: "a secure password",
@@ -157,6 +158,8 @@ describe("authentication service", () => {
     const result = await createAuthService(deps).setup(
       {
         setupCode: "expected",
+        workspaceName: "Cedar House",
+        workspaceSlug: "cedar-house",
         displayName: "Maya Chen",
         email: "maya@example.com",
         password: "a secure password",
@@ -176,6 +179,8 @@ describe("authentication service", () => {
     const result = await createAuthService(deps).setup(
       {
         setupCode: "expected",
+        workspaceName: "  Cedar House  ",
+        workspaceSlug: " Cedar House ",
         displayName: "  Maya Chen  ",
         email: "  MAYA@EXAMPLE.COM ",
         password: "a secure password",
@@ -183,7 +188,9 @@ describe("authentication service", () => {
       "expected",
       now,
     );
-    expect(deps.createAdministratorAccount).toHaveBeenCalledWith({
+    expect(deps.createInitialWorkspaceAdministrator).toHaveBeenCalledWith({
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
       email: "maya@example.com",
       displayName: "Maya Chen",
       verifier: {
@@ -195,7 +202,11 @@ describe("authentication service", () => {
     });
     expect(result).toEqual({
       status: 200,
-      body: { ok: true, mustChangePassword: false },
+      body: {
+        ok: true,
+        mustChangePassword: false,
+        workspaceSlug: "cedar-house",
+      },
       session: { token, expiresAt: "2026-08-12T12:00:00.000Z" },
     });
   });
@@ -206,6 +217,8 @@ describe("authentication service", () => {
     const result = await createAuthService(deps).setup(
       {
         setupCode: "expected",
+        workspaceName: "Cedar House",
+        workspaceSlug: "cedar-house",
         displayName: "Maya Chen",
         email: "maya@example.com",
         password: "too short",
@@ -251,7 +264,7 @@ describe("authentication service", () => {
     expect(deps.clearFailedLogins).toHaveBeenCalledWith(
       "b".repeat(64),
       "fingerprint",
-      "membership-maya",
+      "account-maya",
     );
   });
 
@@ -263,14 +276,14 @@ describe("authentication service", () => {
       now,
     );
     expect(result.body).toEqual({ ok: true, mustChangePassword: false });
-    expect(deps.replacePassword).toHaveBeenCalledWith("membership-maya", {
+    expect(deps.replacePassword).toHaveBeenCalledWith("account-maya", {
       hash: "new-hash",
       salt: "new-salt",
       iterations: 210_000,
     });
-    expect(deps.revokeMembershipSessions).toHaveBeenCalledWith("membership-maya", now);
+    expect(deps.revokeAccountSessions).toHaveBeenCalledWith("account-maya", now);
     expect(deps.createAuthSession).toHaveBeenCalledWith(
-      "membership-maya",
+      "account-maya",
       tokenHash,
       expect.objectContaining({
         idleExpiresAt: "2026-08-06T00:00:00.000Z",

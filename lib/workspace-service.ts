@@ -6,43 +6,39 @@ import type { AvailabilityRule, TimeRange } from "./scheduling/types";
 type WorkspaceDependencies = {
   getActor: () => Promise<WorkspaceActor | null>;
   listSchedule: (
-    scope: Pick<WorkspaceActor, "role" | "employeeProfileId">,
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
     range: { from: string; to: string },
     employeeId?: string,
   ) => Promise<unknown>;
   cancelAppointment: (
-    scope: Pick<WorkspaceActor, "role" | "employeeProfileId">,
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
     appointmentId: string,
   ) => Promise<boolean>;
   getEmployeeAvailability: (
-    scope: Pick<WorkspaceActor, "role" | "employeeProfileId">,
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
     employeeId: string,
   ) => Promise<unknown>;
   replaceAvailabilityRules: (
-    scope: Pick<WorkspaceActor, "role" | "employeeProfileId">,
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
     employeeId: string,
     rules: AvailabilityRule[],
   ) => Promise<boolean>;
   addBlockedPeriod: (
-    scope: Pick<WorkspaceActor, "role" | "employeeProfileId">,
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
     employeeId: string,
     range: TimeRange & { note?: string },
   ) => Promise<boolean>;
-  listTeamProfiles: () => Promise<unknown>;
-  createStaffAccount: (
+  listTeamProfiles: (
+    scope: Pick<WorkspaceActor, "workspaceId" | "role" | "employeeProfileId">,
+  ) => Promise<unknown>;
+  createWorkspaceInvitation: (
     adminMembershipId: string,
     input: {
-      employeeProfileId: string;
       email: string;
-      displayName: string;
-      confirm: boolean;
+      role: "admin" | "employee";
+      employeeProfileId: string | null;
     },
-  ) => Promise<{ membershipId: string; temporaryPassword: string } | null>;
-  resetStaffPassword: (
-    adminMembershipId: string,
-    employeeProfileId: string,
-    confirm: boolean,
-  ) => Promise<{ temporaryPassword: string } | null>;
+  ) => Promise<{ code: string; expiresAt: string } | null>;
   setStaffActive: (
     adminMembershipId: string,
     employeeProfileId: string,
@@ -75,7 +71,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       const targetId =
         requestedId ??
         (actor.role === "employee" ? actor.employeeProfileId ?? undefined : undefined);
-      const scope = { role: actor.role, employeeProfileId: actor.employeeProfileId };
+      const scope = actorScope(actor);
       const entries = await dependencies.listSchedule(scope, range, targetId);
       return { status: 200, body: { entries } };
     },
@@ -94,7 +90,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
         return badRequest("Confirm the cancellation.");
       }
       const changed = await dependencies.cancelAppointment(
-        { role: actor.role, employeeProfileId: actor.employeeProfileId },
+        actorScope(actor),
         body.appointmentId,
       );
       return changed
@@ -110,7 +106,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
         return forbidden();
       }
       const availability = await dependencies.getEmployeeAvailability(
-        { role: actor.role, employeeProfileId: actor.employeeProfileId },
+        actorScope(actor),
         employeeId,
       );
       return { status: 200, body: { availability } };
@@ -124,7 +120,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       if (!parsed) return badRequest("Check the availability settings.");
       if (!actorCanAccessProfile(actor, parsed.employeeId)) return forbidden();
       const changed = await dependencies.replaceAvailabilityRules(
-        { role: actor.role, employeeProfileId: actor.employeeProfileId },
+        actorScope(actor),
         parsed.employeeId,
         parsed.rules,
       );
@@ -141,7 +137,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       if (!parsed) return badRequest("Check the blocked-time details.");
       if (!actorCanAccessProfile(actor, parsed.employeeId)) return forbidden();
       const changed = await dependencies.addBlockedPeriod(
-        { role: actor.role, employeeProfileId: actor.employeeProfileId },
+        actorScope(actor),
         parsed.employeeId,
         parsed.range,
       );
@@ -157,7 +153,7 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       if (actor.role !== "admin") return forbidden();
       return {
         status: 200,
-        body: { profiles: await dependencies.listTeamProfiles() },
+        body: { profiles: await dependencies.listTeamProfiles(actorScope(actor)) },
       };
     },
 
@@ -172,34 +168,30 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
       if (!employeeProfileId) {
         return badRequest("Choose a team member.");
       }
-      if (body.action === "create-account") {
-        if (body.confirm !== true) return badRequest("Confirm account creation.");
-        const input = parseStaffAccountInput(employeeProfileId, body);
-        if (!input) return badRequest("Check the staff account details.");
-        const account = await dependencies.createStaffAccount(
+      if (body.action === "create-invitation") {
+        if (body.confirm !== true) return badRequest("Confirm the invitation.");
+        if (typeof body.email !== "string") return badRequest("Check the invitation details.");
+        const email = normalizeEmail(body.email);
+        if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          return badRequest("Check the invitation details.");
+        }
+        const role = body.role === "admin" ? "admin" : "employee";
+        const invitation = await dependencies.createWorkspaceInvitation(
           actor.membershipId,
-          { ...input, confirm: true },
+          {
+            email,
+            role,
+            employeeProfileId: role === "employee" ? employeeProfileId : null,
+          },
         );
-        return account
-          ? {
-              status: 201,
-              body: {
-                membershipId: account.membershipId,
-                temporaryPassword: account.temporaryPassword,
-              },
-            }
-          : badRequest("The staff account could not be created.");
-      }
-      if (body.action === "reset-password") {
-        if (body.confirm !== true) return badRequest("Confirm the password reset.");
-        const reset = await dependencies.resetStaffPassword(
-          actor.membershipId,
-          employeeProfileId,
-          true,
-        );
-        return reset
-          ? { status: 200, body: { temporaryPassword: reset.temporaryPassword } }
-          : badRequest("The temporary password could not be reset.");
+        return invitation
+          ? { status: 201, body: {
+              ok: true,
+              code: invitation.code,
+              expiresAt: invitation.expiresAt,
+              message: "Access invitation created. Existing Daymark users keep their current password.",
+            } }
+          : badRequest("The access invitation could not be created.");
       }
       if (body.action === "set-active" && typeof body.active === "boolean") {
         if (body.confirm !== true) return badRequest("Confirm the account change.");
@@ -218,6 +210,14 @@ export function createWorkspaceService(dependencies: WorkspaceDependencies) {
   };
 }
 
+function actorScope(actor: WorkspaceActor) {
+  return {
+    workspaceId: actor.workspaceId,
+    role: actor.role,
+    employeeProfileId: actor.employeeProfileId,
+  };
+}
+
 const EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
 
 function parseEmployeeProfileId(value: unknown): string | null {
@@ -226,27 +226,6 @@ function parseEmployeeProfileId(value: unknown): string | null {
     && EMPLOYEE_PROFILE_ID.test(value)
     ? value
     : null;
-}
-
-function parseStaffAccountInput(
-  employeeProfileId: string,
-  body: Record<string, unknown>,
-) {
-  if (typeof body.email !== "string" || typeof body.displayName !== "string") {
-    return null;
-  }
-  const email = normalizeEmail(body.email);
-  const displayName = body.displayName.trim();
-  if (
-    email.length < 3
-    || email.length > 254
-    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || displayName.length < 1
-    || displayName.length > 80
-  ) {
-    return null;
-  }
-  return { employeeProfileId, email, displayName };
 }
 
 async function readyActor(dependencies: WorkspaceDependencies): Promise<

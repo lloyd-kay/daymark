@@ -7,7 +7,15 @@ type AuthView = "sign-in" | "setup";
 
 const GENERIC_ERROR = "We couldn't complete that request. Check your details and try again.";
 
-export function SignInPanel() {
+export function SignInPanel({
+  workspaceSlug,
+  setupAllowed = true,
+  redirectPath,
+}: {
+  workspaceSlug?: string;
+  setupAllowed?: boolean;
+  redirectPath?: string;
+} = {}) {
   const [view, setView] = useState<AuthView>("sign-in");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
@@ -24,6 +32,8 @@ export function SignInPanel() {
         }
       : {
           setupCode: String(form.get("setupCode") ?? ""),
+          workspaceName: String(form.get("workspaceName") ?? ""),
+          workspaceSlug: String(form.get("workspaceSlug") ?? ""),
           displayName: String(form.get("displayName") ?? ""),
           email: String(form.get("email") ?? ""),
           password: String(form.get("password") ?? ""),
@@ -36,7 +46,16 @@ export function SignInPanel() {
         body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error("authentication failed");
-      window.location.assign("/workspace");
+      const result = await response.json() as { workspaceSlug?: string };
+      window.location.assign(
+        redirectPath && view === "sign-in"
+          ? redirectPath
+          : view === "setup" && result.workspaceSlug
+          ? `/workspace/${encodeURIComponent(result.workspaceSlug)}`
+          : workspaceSlug
+            ? `/workspace/${encodeURIComponent(workspaceSlug)}`
+            : "/workspace",
+      );
     } catch {
       setStatus(GENERIC_ERROR);
       setLoading(false);
@@ -56,16 +75,23 @@ export function SignInPanel() {
           : "Create the first administrator account using the private setup code supplied with this site."}
       </p>
 
-      <div className="auth-view-switch" aria-label="Authentication options">
-        <button type="button" aria-pressed={view === "sign-in"} onClick={() => switchView("sign-in")}>Sign in</button>
-        <button type="button" aria-pressed={view === "setup"} onClick={() => switchView("setup")}>First-time setup</button>
-      </div>
+      {setupAllowed ? (
+        <div className="auth-view-switch" aria-label="Authentication options">
+          <button type="button" aria-pressed={view === "sign-in"} onClick={() => switchView("sign-in")}>Sign in</button>
+          <button type="button" aria-pressed={view === "setup"} onClick={() => switchView("setup")}>First-time setup</button>
+        </div>
+      ) : null}
 
       <form onSubmit={submit}>
         {view === "setup" ? (
           <>
             <label htmlFor="setup-code">Setup code</label>
             <input id="setup-code" name="setupCode" autoComplete="one-time-code" required />
+            <label htmlFor="workspace-name">Company name</label>
+            <input id="workspace-name" name="workspaceName" autoComplete="organization" minLength={2} maxLength={80} required />
+            <label htmlFor="workspace-slug">Booking URL</label>
+            <span className="field-prefix">daymark / book /</span>
+            <input id="workspace-slug" name="workspaceSlug" inputMode="url" minLength={2} maxLength={64} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="cedar-house" required />
             <label htmlFor="display-name">Display name</label>
             <input id="display-name" name="displayName" autoComplete="name" required />
           </>

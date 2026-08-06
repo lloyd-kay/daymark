@@ -7,6 +7,7 @@ import {
   lt,
 } from "drizzle-orm";
 import {
+  accounts,
   appointments,
   availabilityRules,
   blockedPeriods,
@@ -31,10 +32,12 @@ import type {
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+export const LEGACY_WORKSPACE_ID = "workspace-daymark";
 
 export const PUBLIC_PROFILE_SEEDS = [
   {
     id: "maya-chen",
+    workspaceId: LEGACY_WORKSPACE_ID,
     membershipId: null,
     publicName: "Maya Chen",
     title: "Client partner",
@@ -45,6 +48,7 @@ export const PUBLIC_PROFILE_SEEDS = [
   },
   {
     id: "theo-brooks",
+    workspaceId: LEGACY_WORKSPACE_ID,
     membershipId: null,
     publicName: "Theo Brooks",
     title: "Operations specialist",
@@ -55,6 +59,7 @@ export const PUBLIC_PROFILE_SEEDS = [
   },
   {
     id: "priya-shah",
+    workspaceId: LEGACY_WORKSPACE_ID,
     membershipId: null,
     publicName: "Priya Shah",
     title: "Project adviser",
@@ -65,6 +70,7 @@ export const PUBLIC_PROFILE_SEEDS = [
   },
   {
     id: "jon-bell",
+    workspaceId: LEGACY_WORKSPACE_ID,
     membershipId: null,
     publicName: "Jon Bell",
     title: "Team coordinator",
@@ -136,7 +142,9 @@ export async function purgeExpiredAppointments(
   return { deleted: Number(result.meta?.changes ?? 0) };
 }
 
-export async function listPublicEmployees(): Promise<PublicEmployee[]> {
+export async function listPublicEmployees(
+  workspaceId = LEGACY_WORKSPACE_ID,
+): Promise<PublicEmployee[]> {
   await ensureSeedData();
   const db = await database();
   const rows = await db
@@ -148,17 +156,23 @@ export async function listPublicEmployees(): Promise<PublicEmployee[]> {
       accent: employeeProfiles.accent,
     })
     .from(employeeProfiles)
-    .where(eq(employeeProfiles.active, true))
+    .where(and(
+      eq(employeeProfiles.workspaceId, workspaceId),
+      eq(employeeProfiles.active, true),
+    ))
     .orderBy(asc(employeeProfiles.sortOrder));
   return rows;
 }
 
-export async function listTeamProfiles(): Promise<TeamProfile[]> {
+export async function listTeamProfiles(
+  scope: Pick<ScheduleScope, "workspaceId">,
+): Promise<TeamProfile[]> {
   await ensureSeedData();
   const db = await database();
   const rows = await db
     .select({
       id: employeeProfiles.id,
+      workspaceId: employeeProfiles.workspaceId,
       membershipId: employeeProfiles.membershipId,
       publicName: employeeProfiles.publicName,
       title: employeeProfiles.title,
@@ -166,13 +180,21 @@ export async function listTeamProfiles(): Promise<TeamProfile[]> {
       accent: employeeProfiles.accent,
       active: employeeProfiles.active,
       sortOrder: employeeProfiles.sortOrder,
-      memberEmail: credentials.email,
-      memberDisplayName: memberships.displayName,
+      memberEmail: accounts.email,
+      memberDisplayName: accounts.displayName,
       credentialId: credentials.id,
     })
     .from(employeeProfiles)
-    .leftJoin(memberships, eq(memberships.id, employeeProfiles.membershipId))
-    .leftJoin(credentials, eq(credentials.membershipId, memberships.id))
+    .leftJoin(
+      memberships,
+      and(
+        eq(memberships.id, employeeProfiles.membershipId),
+        eq(memberships.workspaceId, scope.workspaceId),
+      ),
+    )
+    .leftJoin(accounts, eq(accounts.id, memberships.accountId))
+    .leftJoin(credentials, eq(credentials.accountId, accounts.id))
+    .where(eq(employeeProfiles.workspaceId, scope.workspaceId))
     .orderBy(asc(employeeProfiles.sortOrder));
   return rows.map(projectTeamProfile);
 }
@@ -185,6 +207,7 @@ type TeamProfileProjection = Omit<TeamProfile, "hasCredential"> & {
 export function projectTeamProfile(row: TeamProfileProjection): TeamProfile {
   return {
     id: row.id,
+    workspaceId: row.workspaceId,
     membershipId: row.membershipId,
     publicName: row.publicName,
     title: row.title,
@@ -312,6 +335,7 @@ export function appointmentInsertValues(
 ) {
   return {
     id,
+    workspaceId: LEGACY_WORKSPACE_ID,
     publicReference: reference,
     employeeProfileId: input.employeeId,
     startAt: slot.startAt,
@@ -358,7 +382,10 @@ export async function createInvitation(
   const expiresAt = new Date(now.getTime() + SEVEN_DAYS_MS).toISOString();
   await db.insert(invitations).values({
     id: crypto.randomUUID(),
+    workspaceId: LEGACY_WORKSPACE_ID,
     codeHash: await sha256(code),
+    emailHash: await sha256(code),
+    role: "employee",
     employeeProfileId,
     expiresAt,
     createdByMembershipId: adminMembershipId,
@@ -377,7 +404,10 @@ export async function listSchedule(
   const allProfiles = await db
     .select({ id: employeeProfiles.id })
     .from(employeeProfiles)
-    .where(eq(employeeProfiles.active, true));
+    .where(and(
+      eq(employeeProfiles.workspaceId, scope.workspaceId),
+      eq(employeeProfiles.active, true),
+    ));
   const requestedIds = requestedEmployeeId
     ? [requestedEmployeeId]
     : allProfiles.map((profile) => profile.id);
@@ -407,6 +437,8 @@ export async function listSchedule(
     )
     .where(
       and(
+        eq(appointments.workspaceId, scope.workspaceId),
+        eq(employeeProfiles.workspaceId, scope.workspaceId),
         inArray(appointments.employeeProfileId, allowedIds),
         lt(appointments.startAt, range.to),
         gt(appointments.endAt, range.from),
@@ -453,6 +485,7 @@ export async function getEmployeeAvailability(
     .where(
       and(
         eq(availabilityRules.employeeProfileId, requestedEmployeeId),
+        eq(availabilityRules.workspaceId, scope.workspaceId),
         eq(availabilityRules.active, true),
       ),
     )
@@ -465,7 +498,10 @@ export async function getEmployeeAvailability(
       note: blockedPeriods.note,
     })
     .from(blockedPeriods)
-    .where(eq(blockedPeriods.employeeProfileId, requestedEmployeeId))
+    .where(and(
+      eq(blockedPeriods.workspaceId, scope.workspaceId),
+      eq(blockedPeriods.employeeProfileId, requestedEmployeeId),
+    ))
     .orderBy(asc(blockedPeriods.startAt));
   return { employeeProfileId: requestedEmployeeId, rules, blocked };
 }
@@ -480,11 +516,15 @@ export async function replaceAvailabilityRules(
   const db = await database();
   await db
     .delete(availabilityRules)
-    .where(eq(availabilityRules.employeeProfileId, requestedEmployeeId));
+    .where(and(
+      eq(availabilityRules.workspaceId, scope.workspaceId),
+      eq(availabilityRules.employeeProfileId, requestedEmployeeId),
+    ));
   if (rules.length > 0) {
     await db.insert(availabilityRules).values(
       rules.map((rule) => ({
         id: crypto.randomUUID(),
+        workspaceId: scope.workspaceId,
         employeeProfileId: requestedEmployeeId,
         ...rule,
         active: true,
@@ -504,6 +544,7 @@ export async function addBlockedPeriod(
   const db = await database();
   await db.insert(blockedPeriods).values({
     id: crypto.randomUUID(),
+    workspaceId: scope.workspaceId,
     employeeProfileId: requestedEmployeeId,
     startAt: range.startAt,
     endAt: range.endAt,
@@ -521,7 +562,10 @@ export async function cancelAppointment(
   const [appointment] = await db
     .select({ employeeProfileId: appointments.employeeProfileId })
     .from(appointments)
-    .where(eq(appointments.id, appointmentId))
+    .where(and(
+      eq(appointments.id, appointmentId),
+      eq(appointments.workspaceId, scope.workspaceId),
+    ))
     .limit(1);
   if (!appointment) return false;
   const [allowedId] = profileIdsForScope(scope, [appointment.employeeProfileId]);
@@ -529,7 +573,10 @@ export async function cancelAppointment(
   await db
     .update(appointments)
     .set({ status: "cancelled", updatedAt: now.toISOString() })
-    .where(eq(appointments.id, appointmentId));
+    .where(and(
+      eq(appointments.id, appointmentId),
+      eq(appointments.workspaceId, scope.workspaceId),
+    ));
   return true;
 }
 
@@ -573,6 +620,7 @@ function defaultAvailabilitySeeds() {
   return PUBLIC_PROFILE_SEEDS.flatMap((profile) =>
     [1, 2, 3, 4, 5].map((weekday) => ({
       id: `rule-${profile.id}-${weekday}`,
+      workspaceId: LEGACY_WORKSPACE_ID,
       employeeProfileId: profile.id,
       weekday,
       startMinute: windows[profile.id][0],

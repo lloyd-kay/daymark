@@ -1,80 +1,27 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getWorkspaceActor } from "../../lib/auth/membership";
-import {
-  ensureSeedData,
-  getEmployeeAvailability,
-  listPublicEmployees,
-  listSchedule,
-  listTeamProfiles,
-} from "../../lib/data/repository";
-import type { TeamProfile } from "../../lib/data/contracts";
+import { getAccountSession } from "../../lib/auth/membership";
+import { listAccountWorkspaces } from "../../lib/auth/repository";
 import { PasswordChangeGate } from "./PasswordChangeGate";
-import { WorkspaceClient } from "./WorkspaceClient";
+import { WorkspaceChooser } from "./WorkspaceChooser";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Team workspace — Daymark",
-  description: "A private scheduling workspace for the Daymark team.",
+  title: "Your companies — Daymark",
+  description: "Choose a private Daymark company workspace.",
 };
 
 export default async function WorkspacePage() {
-  const actor = await getWorkspaceActor();
-  if (!actor) redirect("/workspace/sign-in");
-  if (actor.mustChangePassword) {
-    return <PasswordChangeGate displayName={actor.displayName} />;
+  const session = await getAccountSession();
+  if (!session) redirect("/workspace/sign-in");
+  if (session.mustChangePassword) {
+    return <PasswordChangeGate displayName={session.displayName} />;
   }
-
-  await ensureSeedData();
-  const { from, to } = initialWeekRange();
-  const nowIso = new Date().toISOString();
-  const scope = { role: actor.role, employeeProfileId: actor.employeeProfileId };
-  let profiles: TeamProfile[];
-  if (actor.role === "admin") {
-    profiles = await listTeamProfiles();
-  } else {
-    const own = (await listPublicEmployees()).find(
-      (profile) => profile.id === actor.employeeProfileId,
-    );
-    profiles = own
-      ? [
-          {
-            ...own,
-            membershipId: actor.membershipId,
-            active: true,
-            sortOrder: 0,
-            memberEmail: actor.email,
-            memberDisplayName: actor.displayName,
-            hasCredential: true,
-          },
-        ]
-      : [];
-  }
-  const selectedProfileId =
-    actor.employeeProfileId ?? profiles.find((profile) => profile.active)?.id ?? null;
-  const [entries, availability] = await Promise.all([
-    listSchedule(scope, { from, to }, actor.employeeProfileId ?? undefined),
-    selectedProfileId
-      ? getEmployeeAvailability(scope, selectedProfileId)
-      : Promise.resolve(null),
-  ]);
-
   return (
-    <WorkspaceClient
-      actor={actor}
-      profiles={profiles}
-      initialEntries={entries}
-      initialAvailability={availability}
-      initialRange={{ from, to }}
-      nowIso={nowIso}
+    <WorkspaceChooser
+      displayName={session.displayName}
+      workspaces={await listAccountWorkspaces(session.accountId)}
     />
   );
-}
-
-function initialWeekRange() {
-  const start = new Date();
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start.getTime() + 7 * 86_400_000);
-  return { from: start.toISOString(), to: end.toISOString() };
 }

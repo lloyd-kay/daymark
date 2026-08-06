@@ -19,6 +19,8 @@ export async function POST(request: Request) {
 
 function isSetupBody(value: unknown): value is {
   setupCode: string;
+  workspaceName: string;
+  workspaceSlug: string;
   displayName: string;
   email: string;
   password: string;
@@ -26,6 +28,8 @@ function isSetupBody(value: unknown): value is {
   if (!value || typeof value !== "object") return false;
   const body = value as Record<string, unknown>;
   return typeof body.setupCode === "string"
+    && typeof body.workspaceName === "string"
+    && typeof body.workspaceSlug === "string"
     && typeof body.displayName === "string"
     && typeof body.email === "string"
     && typeof body.password === "string";

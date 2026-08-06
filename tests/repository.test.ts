@@ -52,7 +52,7 @@ describe("schedule privacy scope", () => {
   it("limits an employee to their own profile", () => {
     expect(
       profileIdsForScope(
-        { role: "employee", employeeProfileId: "maya" },
+        { workspaceId: "workspace-daymark", role: "employee", employeeProfileId: "maya" },
         ["maya", "theo"],
       ),
     ).toEqual(["maya"]);
@@ -61,7 +61,7 @@ describe("schedule privacy scope", () => {
   it("allows an administrator to view the requested team profiles", () => {
     expect(
       profileIdsForScope(
-        { role: "admin", employeeProfileId: null },
+        { workspaceId: "workspace-daymark", role: "admin", employeeProfileId: null },
         ["maya", "theo"],
       ),
     ).toEqual(["maya", "theo"]);
