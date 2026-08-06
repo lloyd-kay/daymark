@@ -6,7 +6,8 @@ use std::time::Duration;
 use serde::Deserialize;
 use url::Url;
 
-use crate::contracts::{AccessState, ControlError, RuntimeMode, RuntimeState, RuntimeStatus};
+use crate::contracts::{AccessState, ControlError, RuntimeState, RuntimeStatus};
+use crate::service::current_runtime_mode;
 
 const LOCAL_ORIGIN: &str = "http://127.0.0.1:3210";
 const EXPECTED_MIGRATION: &str = "0002_daymark_company_workspaces.sql";
@@ -37,13 +38,15 @@ pub fn get_runtime_status() -> Result<RuntimeStatus, ControlError> {
         HealthCheck::NeedsAttention(health) => (
             RuntimeState::NeedsAttention,
             health,
-            Some("Daymark is running but needs attention before it can accept bookings.".to_string()),
+            Some(
+                "Daymark is running but needs attention before it can accept bookings.".to_string(),
+            ),
         ),
     };
 
     Ok(RuntimeStatus {
         state,
-        mode: RuntimeMode::Service,
+        mode: current_runtime_mode(),
         access: AccessState::Local,
         local_url: LOCAL_ORIGIN.to_string(),
         public_url: None,
@@ -130,9 +133,12 @@ pub fn open_local_url(path: String) -> Result<(), ControlError> {
     #[cfg(all(unix, not(target_os = "macos")))]
     let result = Command::new("xdg-open").arg(safe_url.as_str()).spawn();
 
-    result
-        .map(|_| ())
-        .map_err(|_| ControlError::new("open_local_url_failed", "The local Daymark page could not be opened"))
+    result.map(|_| ()).map_err(|_| {
+        ControlError::new(
+            "open_local_url_failed",
+            "The local Daymark page could not be opened",
+        )
+    })
 }
 
 #[cfg(test)]

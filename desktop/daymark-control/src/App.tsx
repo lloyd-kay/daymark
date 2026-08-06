@@ -1,7 +1,15 @@
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 
 import type { RuntimeStatus } from "./contracts";
-import { isTauriRuntime, openLocalUrl, useRuntimeStatus } from "./runtime";
+import { RuntimeModePanel } from "./RuntimeModePanel";
+import {
+  isTauriRuntime,
+  openLocalUrl,
+  setRuntimeMode,
+  startRuntime,
+  stopRuntime,
+  useRuntimeStatus,
+} from "./runtime";
 
 export type ControlStatus = RuntimeStatus;
 
@@ -18,6 +26,8 @@ const stateLabel: Record<ControlStatus["state"], string> = {
 
 export function App({ initialStatus }: AppProps) {
   const status = useRuntimeStatus(initialStatus);
+  const [runtimeAction, setRuntimeAction] = useState<"idle" | "working">("idle");
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const isRunning = status.state === "running";
   const administratorUrl = `${status.localUrl}/workspace/sign-in`;
 
@@ -25,6 +35,30 @@ export function App({ initialStatus }: AppProps) {
     if (!isTauriRuntime()) return;
     event.preventDefault();
     void openLocalUrl(administratorUrl);
+  };
+
+  const handleRuntimeMode = async (mode: RuntimeStatus["mode"]) => {
+    if (!isTauriRuntime()) return;
+    setRuntimeError(null);
+    try {
+      await setRuntimeMode(mode);
+    } catch {
+      setRuntimeError("Windows could not change the runtime mode. Administrator approval may be required.");
+    }
+  };
+
+  const handleRuntimeAction = async () => {
+    if (!isTauriRuntime() || runtimeAction === "working") return;
+    setRuntimeAction("working");
+    setRuntimeError(null);
+    try {
+      if (isRunning) await stopRuntime();
+      await startRuntime();
+    } catch {
+      setRuntimeError("Windows could not change the Daymark service. Administrator approval may be required.");
+    } finally {
+      setRuntimeAction("idle");
+    }
   };
 
   return (
@@ -77,9 +111,15 @@ export function App({ initialStatus }: AppProps) {
               <dd>{status.access === "local" ? "This computer only" : "Public link available"}</dd>
             </div>
           </dl>
+          {runtimeError ? <p className="control-error" role="alert">{runtimeError}</p> : null}
           <div className="primary-actions">
-            <button type="button" className="button button-primary">
-              {isRunning ? "Restart Daymark" : "Start Daymark"}
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={runtimeAction === "working"}
+              onClick={handleRuntimeAction}
+            >
+              {runtimeAction === "working" ? "Working…" : isRunning ? "Restart Daymark" : "Start Daymark"}
               <span aria-hidden="true">↗</span>
             </button>
             <a className="button button-paper" href={administratorUrl} onClick={handleAdministratorLink}>
@@ -90,12 +130,7 @@ export function App({ initialStatus }: AppProps) {
         </section>
 
         <div className="file-grid" aria-label="Daymark controls">
-          <section className="file-card file-sage" aria-labelledby="runtime-mode-heading">
-            <p className="file-number">01 / RUNTIME</p>
-            <h2 id="runtime-mode-heading">Always ready.</h2>
-            <p>Service mode starts Daymark with Windows and keeps client links available.</p>
-            <button type="button" className="text-action">Review runtime mode <span aria-hidden="true">→</span></button>
-          </section>
+          <RuntimeModePanel mode={status.mode} onChange={handleRuntimeMode} />
 
           <section className="file-card file-lilac" aria-labelledby="access-heading">
             <p className="file-number">02 / ACCESS</p>

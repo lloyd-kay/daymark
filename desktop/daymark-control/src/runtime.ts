@@ -69,6 +69,18 @@ export async function openLocalUrl(value: string): Promise<void> {
   await invoke("open_local_url", { path: safeUrl.href });
 }
 
+export async function startRuntime(): Promise<void> {
+  await invoke("start_runtime");
+}
+
+export async function stopRuntime(): Promise<void> {
+  await invoke("stop_runtime");
+}
+
+export async function setRuntimeMode(mode: RuntimeMode): Promise<void> {
+  await invoke("set_runtime_mode", { mode });
+}
+
 export function useRuntimeStatus(initialStatus: RuntimeStatus): RuntimeStatus {
   const [status, setStatus] = useState(initialStatus);
 
