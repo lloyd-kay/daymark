@@ -40,7 +40,7 @@ export default function Home() {
           <p className="hero-summary">Let clients choose the right person and a clear time to meet, while every employee’s working calendar remains private to them.</p>
           <div className="hero-actions">
             <a className="hero-action" href="#demo">Try the demonstration <ArrowDown size={16} aria-hidden="true" /></a>
-            <a className="quiet-link hero-secondary" href="/book">Start real booking <ArrowUpRight size={16} aria-hidden="true" /></a>
+            <Link className="quiet-link hero-secondary" href="/get-daymark">Get Daymark <ArrowUpRight size={16} aria-hidden="true" /></Link>
           </div>
         </div>
         <aside className="hero-stamp product-stamp" aria-label="Daymark privacy promise">
@@ -90,7 +90,7 @@ export default function Home() {
 
       <footer className="site-footer product-footer">
         <p>Daymark keeps private calendars private and appointments clear.</p>
-        <div><a href="/book">Start real booking</a><Link href="/workspace/sign-in">Staff sign in</Link></div>
+        <div><Link href="/get-daymark">Get Daymark</Link><Link href="/workspace/sign-in">Staff sign in</Link></div>
       </footer>
     </main>
   );

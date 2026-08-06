@@ -58,7 +58,7 @@ Live metrics: `window.innerWidth=390`, `window.innerHeight=844`, `matchMedia('(m
 
 ### Hero reference
 
-Source: `C:\Users\Lloyd\AppData\Local\Temp\codex-clipboard-4f28498d-c8e5-4288-b3a0-f364322d775d.png` (1731 × 909).
+Source: the saved Daymark hero reference image (1731 × 909).
 
 - The desktop reference and implementation hero crop were opened together in one visual comparison input.
 - The approved refresh preserves the source's editorial paper-tab idea while using the required three-line copy: `Scheduling`, `without shared`, `calendars.`

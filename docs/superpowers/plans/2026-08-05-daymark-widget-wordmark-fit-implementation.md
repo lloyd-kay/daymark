@@ -200,7 +200,7 @@ git commit -m "fix: fit Daymark wordmarks on mobile"
 Copy the exact source image without modifying it:
 
 ```powershell
-Copy-Item -LiteralPath 'C:\Users\Lloyd\AppData\Local\Temp\codex-clipboard-5ed64736-3b54-4b7c-a6da-5edb4cb6942c.png' -Destination 'qa-evidence\daymark-homepage\wordmark-crop-user-report.png'
+Copy the supplied local reference image to `qa-evidence/daymark-homepage/wordmark-crop-user-report.png`.
 ```
 
 Expected: the tracked copy exists and opens successfully.

@@ -177,7 +177,7 @@ Open these three images in one comparison input:
 
 ```text
 public/daymark-widget-art-4x3-readable.png
-C:/Users/Lloyd/AppData/Local/Temp/codex-clipboard-e62092a1-5b77-401b-b1a2-40e9b923aacd.png
+<local-reference-image>
 qa-evidence/daymark-homepage/true-2x-widget-after-chrome.png
 ```
 

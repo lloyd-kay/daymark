@@ -43,32 +43,28 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /contact us\./i);
   assert.match(html, /Cedar House/i);
   assert.match(html, /aria-pressed="true"/i);
-  assert.match(html, /Start real booking/i);
+  assert.match(html, /Get Daymark/i);
   assert.doesNotMatch(html, /Confirm appointment/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
-test("server-renders the standalone live booking route", async () => {
+test("keeps the plain booking route non-transactional", async () => {
   const response = await render("/book");
   assert.equal(response.status, 200);
 
   const html = await response.text();
-  assert.match(html, /A clear path to a good conversation/i);
-  assert.match(html, /Maya Chen/i);
+  assert.match(html, /Use the booking link supplied by the company/i);
+  assert.doesNotMatch(html, /Confirm appointment/i);
 });
 
-test("server-renders the embeddable booking route with framing limited to embeds", async () => {
+test("requires a company scope for embeddable booking while limiting framing to embeds", async () => {
   const embedResponse = await render("/embed?employee=maya-chen&channel=test-channel-7f3a");
-  assert.equal(embedResponse.status, 200);
+  assert.equal(embedResponse.status, 404);
   assert.equal(
     embedResponse.headers.get("content-security-policy"),
     "frame-ancestors 'self' https: http://localhost:*",
   );
   assert.equal(embedResponse.headers.get("x-frame-options"), null);
-
-  const html = await embedResponse.text();
-  assert.match(html, /<title>Daymark appointment booking\.<\/title>/i);
-  assert.match(html, /A clear path to a good conversation/i);
 
   const bookResponse = await render("/book");
   assert.equal(bookResponse.headers.get("content-security-policy"), "frame-ancestors 'none'");
@@ -81,6 +77,16 @@ test("server-renders the embeddable booking route with framing limited to embeds
     "/embed?employee=maya-chen&employee=theo-brooks&channel=test-channel-7f3a",
   );
   assert.equal(repeatedEmployeeResponse.status, 404);
+});
+
+test("server-renders the Get Daymark setup choices", async () => {
+  const response = await render("/get-daymark");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Choose how Daymark runs/i);
+  assert.match(html, /Self-hosted/i);
+  assert.match(html, /Daymark Hosted/i);
+  assert.match(html, /Enquiries opening soon/i);
 });
 
 test("redirects the team workspace to staff sign-in", async () => {
