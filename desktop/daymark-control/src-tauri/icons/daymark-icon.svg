@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Daymark Control</title>
+  <rect width="1024" height="1024" rx="224" fill="#f2eadc"/>
+  <path d="M183 150c0-36 29-65 65-65h430c36 0 65 29 65 65v47h33c36 0 65 29 65 65v612c0 36-29 65-65 65H248c-36 0-65-29-65-65V150Z" fill="#172722"/>
+  <path d="M166 133c0-36 29-65 65-65h430c36 0 65 29 65 65v47h33c36 0 65 29 65 65v612c0 36-29 65-65 65H231c-36 0-65-29-65-65V133Z" fill="#df654b" stroke="#172722" stroke-width="24"/>
+  <path d="M312 281h186c159 0 269 91 269 231S657 743 498 743H312V281Zm151 122v218h36c70 0 113-40 113-109s-43-109-113-109h-36Z" fill="#f2eadc"/>
+  <circle cx="237" cy="188" r="18" fill="#172722"/>
+  <circle cx="237" cy="512" r="18" fill="#172722"/>
+  <circle cx="237" cy="836" r="18" fill="#172722"/>
+</svg>
