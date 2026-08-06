@@ -1,0 +1,26 @@
+services:
+  daymark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+    ports:
+      - "127.0.0.1:${DAYMARK_PORT:-3210}:3210"
+    volumes:
+      - daymark-data:/var/lib/daymark
+    restart: unless-stopped
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3210/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  daymark-data:
