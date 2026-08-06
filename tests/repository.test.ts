@@ -102,6 +102,7 @@ describe("appointment persistence and protected schedule projection", () => {
 
   it("keeps address, email, and phone together in the appointment insert values", () => {
     const values = appointmentInsertValues(
+      { workspaceId: "workspace-cedar", workspaceSlug: "cedar-house", workspaceName: "Cedar House" },
       booking,
       {
         dateKey: "2026-08-10",
@@ -114,6 +115,7 @@ describe("appointment persistence and protected schedule projection", () => {
 
     expect(values).toMatchObject({
       id: "appointment-1",
+      workspaceId: "workspace-cedar",
       publicReference: "DM-7K4P2Q",
       employeeProfileId: "maya-chen",
       clientAddress: "14 Example Street, London, N1 1AA",

@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BookingTransportError,
   demoBookingTransport,
-  liveBookingTransport,
+  liveBookingTransport as createLiveBookingTransport,
 } from "../lib/booking/transport";
+
+const liveBookingTransport = createLiveBookingTransport("cedar-house");
 
 describe("demonstration booking transport", () => {
   it("keeps every demo transport operation in-memory with London-current dates", async () => {
@@ -113,8 +115,8 @@ describe("live booking transport", () => {
       reference: "DM-7K4P2Q",
       contactSummary: "d••••@example.com",
     });
-    expect(fetchSpy).toHaveBeenNthCalledWith(1, expect.stringContaining("/api/public/slots"), { cache: "no-store" });
-    expect(fetchSpy).toHaveBeenNthCalledWith(2, "/api/public/bookings", expect.objectContaining({ method: "POST" }));
+    expect(fetchSpy).toHaveBeenNthCalledWith(1, expect.stringContaining("/api/public/cedar-house/slots"), { cache: "no-store" });
+    expect(fetchSpy).toHaveBeenNthCalledWith(2, "/api/public/cedar-house/bookings", expect.objectContaining({ method: "POST" }));
     fetchSpy.mockRestore();
   });
 

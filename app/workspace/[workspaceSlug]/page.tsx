@@ -62,7 +62,11 @@ export default async function CompanyWorkspacePage({
   if (actor.role === "admin") {
     profiles = await listTeamProfiles(scope);
   } else {
-    const own = (await listPublicEmployees(actor.workspaceId)).find(
+    const own = (await listPublicEmployees({
+      workspaceId: actor.workspaceId,
+      workspaceSlug: actor.workspaceSlug,
+      workspaceName: actor.workspaceName,
+    })).find(
       (profile) => profile.id === actor.employeeProfileId,
     );
     profiles = own ? [{

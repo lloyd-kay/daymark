@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPublicBookingService, maskContact } from "../lib/public-booking";
+import { createPublicBookingService as createScopedPublicBookingService, maskContact } from "../lib/public-booking";
+
+const scope = { workspaceId: "workspace-cedar", workspaceSlug: "cedar-house", workspaceName: "Cedar House" };
+
+function createPublicBookingService(deps: ReturnType<typeof dependencies>) {
+  return createScopedPublicBookingService(scope, deps);
+}
 
 const employee = {
   id: "maya-chen",
@@ -73,11 +79,12 @@ describe("slot lookup", () => {
     );
 
     expect(deps.listPublicSlots).toHaveBeenCalledWith(
+      scope,
       "maya-chen",
       expect.arrayContaining(["2026-08-06", "2026-08-19"]),
       expect.any(Date),
     );
-    expect(deps.listPublicSlots.mock.calls[0][1]).toHaveLength(14);
+    expect(deps.listPublicSlots.mock.calls[0][2]).toHaveLength(14);
   });
 });
 
@@ -178,6 +185,7 @@ describe("booking creation", () => {
 
     expect(result.body.booking).toMatchObject({ contactSummary: "•••• 0958" });
     expect(deps.createBooking).toHaveBeenCalledWith(
+      scope,
       expect.objectContaining({ clientEmail: null, clientPhone: "+44 20 7946 0958" }),
       expect.any(Date),
     );
@@ -191,6 +199,7 @@ describe("booking creation", () => {
     );
 
     expect(deps.createBooking).toHaveBeenCalledWith(
+      scope,
       expect.objectContaining({ clientAddress: "14 Example Street, London, N1 1AA" }),
       expect.any(Date),
     );

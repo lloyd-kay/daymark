@@ -62,6 +62,12 @@ export type WorkspaceSummary = {
   role: "admin" | "employee";
 };
 
+export type PublicBookingScope = {
+  workspaceId: string;
+  workspaceSlug: string;
+  workspaceName: string;
+};
+
 export type ScheduleEntry = {
   id: string;
   reference: string;

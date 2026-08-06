@@ -1,18 +1,21 @@
 import type {
   CreateBookingInput,
   CreateBookingResult,
+  PublicBookingScope,
   PublicEmployee,
   PublicSlotResult,
 } from "./data/contracts";
 
 type PublicBookingDependencies = {
-  listPublicEmployees: () => Promise<PublicEmployee[]>;
+  listPublicEmployees: (scope: PublicBookingScope) => Promise<PublicEmployee[]>;
   listPublicSlots: (
+    scope: PublicBookingScope,
     employeeId: string,
     dateKeys: string[],
     now: Date,
   ) => Promise<PublicSlotResult | null>;
   createBooking: (
+    scope: PublicBookingScope,
     input: CreateBookingInput,
     now: Date,
   ) => Promise<CreateBookingResult>;
@@ -21,11 +24,12 @@ type PublicBookingDependencies = {
 type ServiceResult = { status: number; body: Record<string, unknown> };
 
 export function createPublicBookingService(
+  scope: PublicBookingScope,
   dependencies: PublicBookingDependencies,
 ) {
   return {
     async employees(): Promise<ServiceResult> {
-      const rows = await dependencies.listPublicEmployees();
+      const rows = await dependencies.listPublicEmployees(scope);
       const employees = rows.map((employee) => ({
         id: employee.id,
         publicName: employee.publicName,
@@ -48,6 +52,7 @@ export function createPublicBookingService(
       }
       const dateKeys = consecutiveDateKeys(query.from, 14);
       const result = await dependencies.listPublicSlots(
+        scope,
         query.employeeId,
         dateKeys,
         now,
@@ -79,7 +84,7 @@ export function createPublicBookingService(
       if (!parsed.ok) {
         return { status: 400, body: { ok: false, error: parsed.error } };
       }
-      const result = await dependencies.createBooking(parsed.data, now);
+      const result = await dependencies.createBooking(scope, parsed.data, now);
       if (!result.ok) {
         const slotTaken = result.reason === "slot-taken";
         return {

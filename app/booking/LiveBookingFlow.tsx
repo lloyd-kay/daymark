@@ -6,10 +6,12 @@ import { BookingFlow } from "./BookingFlow";
 
 export function LiveBookingFlow({
   initialEmployees,
+  workspaceSlug,
   initialEmployeeId,
   embedded = false,
 }: {
   initialEmployees: PublicEmployee[];
+  workspaceSlug: string;
   initialEmployeeId?: string;
   embedded?: boolean;
 }) {
@@ -17,7 +19,7 @@ export function LiveBookingFlow({
     <BookingFlow
       initialEmployees={initialEmployees}
       initialEmployeeId={initialEmployeeId}
-      transport={liveBookingTransport}
+      transport={liveBookingTransport(workspaceSlug)}
       embedded={embedded}
     />
   );

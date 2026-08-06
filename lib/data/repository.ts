@@ -24,6 +24,7 @@ import type {
   EmployeeAvailability,
   EmployeeProfileRecord,
   PublicEmployee,
+  PublicBookingScope,
   PublicSlotResult,
   ScheduleEntry,
   ScheduleScope,
@@ -143,7 +144,7 @@ export async function purgeExpiredAppointments(
 }
 
 export async function listPublicEmployees(
-  workspaceId = LEGACY_WORKSPACE_ID,
+  scope: PublicBookingScope,
 ): Promise<PublicEmployee[]> {
   await ensureSeedData();
   const db = await database();
@@ -157,7 +158,7 @@ export async function listPublicEmployees(
     })
     .from(employeeProfiles)
     .where(and(
-      eq(employeeProfiles.workspaceId, workspaceId),
+      eq(employeeProfiles.workspaceId, scope.workspaceId),
       eq(employeeProfiles.active, true),
     ))
     .orderBy(asc(employeeProfiles.sortOrder));
@@ -222,6 +223,7 @@ export function projectTeamProfile(row: TeamProfileProjection): TeamProfile {
 }
 
 export async function listPublicSlots(
+  scope: PublicBookingScope,
   employeeId: string,
   dateKeys: string[],
   now = new Date(),
@@ -240,7 +242,11 @@ export async function listPublicSlots(
     })
     .from(employeeProfiles)
     .where(
-      and(eq(employeeProfiles.id, employeeId), eq(employeeProfiles.active, true)),
+      and(
+        eq(employeeProfiles.id, employeeId),
+        eq(employeeProfiles.workspaceId, scope.workspaceId),
+        eq(employeeProfiles.active, true),
+      ),
     )
     .limit(1);
   if (!employee) return null;
@@ -257,6 +263,7 @@ export async function listPublicSlots(
     .where(
       and(
         eq(availabilityRules.employeeProfileId, employeeId),
+        eq(availabilityRules.workspaceId, scope.workspaceId),
         eq(availabilityRules.active, true),
       ),
     );
@@ -268,6 +275,7 @@ export async function listPublicSlots(
     .where(
       and(
         eq(appointments.employeeProfileId, employeeId),
+        eq(appointments.workspaceId, scope.workspaceId),
         eq(appointments.status, "booked"),
         lt(appointments.startAt, to),
         gt(appointments.endAt, from),
@@ -279,6 +287,7 @@ export async function listPublicSlots(
     .where(
       and(
         eq(blockedPeriods.employeeProfileId, employeeId),
+        eq(blockedPeriods.workspaceId, scope.workspaceId),
         lt(blockedPeriods.startAt, to),
         gt(blockedPeriods.endAt, from),
       ),
@@ -297,11 +306,12 @@ export async function listPublicSlots(
 }
 
 export async function createBooking(
+  scope: PublicBookingScope,
   input: CreateBookingInput,
   now = new Date(),
 ): Promise<CreateBookingResult> {
   const dateKey = toLondonDateKey(new Date(input.startAt));
-  const result = await listPublicSlots(input.employeeId, [dateKey], now);
+  const result = await listPublicSlots(scope, input.employeeId, [dateKey], now);
   const slot = result?.slots.find((candidate) => candidate.startAt === input.startAt);
   if (!result || !slot) return { ok: false, reason: "unavailable" };
 
@@ -309,7 +319,7 @@ export async function createBooking(
   const db = await database();
   try {
     await db.insert(appointments).values(
-      appointmentInsertValues(input, slot, reference, crypto.randomUUID()),
+      appointmentInsertValues(scope, input, slot, reference, crypto.randomUUID()),
     );
   } catch (error) {
     if (isUniqueConstraint(error)) return { ok: false, reason: "slot-taken" };
@@ -328,6 +338,7 @@ export async function createBooking(
 }
 
 export function appointmentInsertValues(
+  scope: PublicBookingScope,
   input: CreateBookingInput,
   slot: Pick<BookableSlot, "startAt" | "endAt">,
   reference: string,
@@ -335,7 +346,7 @@ export function appointmentInsertValues(
 ) {
   return {
     id,
-    workspaceId: LEGACY_WORKSPACE_ID,
+    workspaceId: scope.workspaceId,
     publicReference: reference,
     employeeProfileId: input.employeeId,
     startAt: slot.startAt,

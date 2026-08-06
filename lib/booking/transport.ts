@@ -30,10 +30,12 @@ export function isBookingConflict(error: unknown): error is BookingTransportErro
   return error instanceof BookingTransportError && error.status === 409;
 }
 
-export const liveBookingTransport: BookingTransport = {
+export function liveBookingTransport(workspaceSlug: string): BookingTransport {
+  const basePath = `/api/public/${encodeURIComponent(workspaceSlug)}`;
+  return {
   async loadSlots(employeeId, from) {
     const response = await fetch(
-      `/api/public/slots?employeeId=${encodeURIComponent(employeeId)}&from=${encodeURIComponent(from)}`,
+      `${basePath}/slots?employeeId=${encodeURIComponent(employeeId)}&from=${encodeURIComponent(from)}`,
       { cache: "no-store" },
     );
     const body = await safeJsonBody(response) as {
@@ -54,7 +56,7 @@ export const liveBookingTransport: BookingTransport = {
   },
 
   async createBooking(input) {
-    const response = await fetch("/api/public/bookings", {
+    const response = await fetch(`${basePath}/bookings`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -71,7 +73,8 @@ export const liveBookingTransport: BookingTransport = {
     }
     return body.booking;
   },
-};
+  };
+}
 
 async function safeJsonBody(response: Response): Promise<Record<string, unknown> | null> {
   try {

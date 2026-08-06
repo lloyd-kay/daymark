@@ -14,6 +14,16 @@
     if (!document.body) return;
 
     var origin = new URL(script.src).origin;
+    var workspace = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])$/.test(script.dataset.workspace || "")
+      ? script.dataset.workspace
+      : "";
+    if (!workspace) {
+      var unavailable = document.createElement("span");
+      unavailable.className = "daymark-widget-unavailable";
+      unavailable.textContent = "Booking unavailable.";
+      script.insertAdjacentElement("afterend", unavailable);
+      return;
+    }
     var mode = script.dataset.mode === "inline" ? "inline" : "floating";
     var employee = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/.test(script.dataset.employee || "")
       ? script.dataset.employee
@@ -42,7 +52,7 @@
     iframe.title = "Daymark appointment booking";
     iframe.setAttribute("sandbox", "allow-scripts allow-forms allow-same-origin");
     iframe.setAttribute("loading", "eager");
-    iframe.src = origin + "/embed?employee=" + encodeURIComponent(employee) + "&channel=" + encodeURIComponent(channel);
+    iframe.src = origin + "/embed?workspace=" + encodeURIComponent(workspace) + "&employee=" + encodeURIComponent(employee) + "&channel=" + encodeURIComponent(channel);
     iframe.style.height = "680px";
     frameMount.appendChild(iframe);
 
@@ -217,7 +227,7 @@
       var message = document.createElement("p");
       message.textContent = "Booking is taking longer than expected.";
       var link = document.createElement("a");
-      link.href = origin + "/book";
+      link.href = origin + "/book/" + encodeURIComponent(workspace);
       link.target = "_top";
       link.textContent = "Book directly with Daymark";
       fallback.appendChild(message);

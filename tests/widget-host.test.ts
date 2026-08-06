@@ -9,13 +9,19 @@ beforeAll(async () => {
 });
 
 describe("Daymark host script", () => {
+  it("refuses to create a booking frame without a valid company workspace", () => {
+    const widget = runWidget({ mode: "inline", channel: "missing-workspace", placement: "body", workspace: "" });
+    expect(widget.document.querySelector("iframe")).toBeNull();
+    expect(widget.script.nextElementSibling?.textContent).toBe("Booking unavailable.");
+  });
+
   it("inserts inline after a body script and builds an accessible floating panel", () => {
     const inline = runWidget({ mode: "inline", channel: "inline-channel", placement: "body" });
     expect(inline.script.nextElementSibling).toBe(inline.wrapper);
     expect(inline.iframe.title).toBe("Daymark appointment booking");
     expect(inline.iframe.getAttribute("sandbox")).toBe("allow-scripts allow-forms allow-same-origin");
     expect(inline.iframe.style.height).toBe("680px");
-    expect(inline.iframe.src).toBe("https://widgets.daymark.test/embed?employee=maya-chen&channel=inline-channel");
+    expect(inline.iframe.src).toBe("https://widgets.daymark.test/embed?workspace=cedar-house&employee=maya-chen&channel=inline-channel");
 
     const floating = runWidget({ mode: "floating", channel: "floating-channel", placement: "body" });
     const launcher = floating.document.querySelector<HTMLButtonElement>(".daymark-widget__launcher");
@@ -46,7 +52,7 @@ describe("Daymark host script", () => {
     const errorDocument = runWidget({ mode: "inline", channel: "error-channel", placement: "body" });
     errorDocument.iframe.dispatchEvent(new errorDocument.window.Event("load"));
     errorDocument.runTimers(10_000);
-    expect(errorDocument.wrapper.querySelector<HTMLAnchorElement>("a")?.href).toBe("https://widgets.daymark.test/book");
+    expect(errorDocument.wrapper.querySelector<HTMLAnchorElement>("a")?.href).toBe("https://widgets.daymark.test/book/cedar-house");
 
     const healthy = runWidget({ mode: "inline", channel: "healthy-channel", placement: "body" });
     post(
@@ -214,11 +220,13 @@ function runWidget({
   channel,
   placement,
   bodyReady = true,
+  workspace = "cedar-house",
 }: {
   mode: "floating" | "inline";
   channel: string;
   placement: "head" | "body";
   bodyReady?: boolean;
+  workspace?: string;
 }) {
   const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
     runScripts: "outside-only",
@@ -229,6 +237,7 @@ function runWidget({
   const script = document.createElement("script");
   script.src = "https://widgets.daymark.test/daymark-widget.js";
   script.dataset.mode = mode;
+  if (workspace) script.dataset.workspace = workspace;
   script.dataset.employee = "maya-chen";
   (placement === "head" ? document.head : document.body).appendChild(script);
   Object.defineProperty(document, "currentScript", { configurable: true, value: script });
@@ -317,6 +326,7 @@ function runMultipleWidgets(mode: "floating" | "inline" = "inline") {
     const script = window.document.createElement("script");
     script.src = "https://widgets.daymark.test/daymark-widget.js";
     script.dataset.mode = mode;
+    script.dataset.workspace = "cedar-house";
     script.dataset.employee = employee;
     window.document.body.appendChild(script);
     Object.defineProperty(window.document, "currentScript", { configurable: true, value: script });
