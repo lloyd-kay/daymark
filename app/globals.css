@@ -415,6 +415,21 @@ a {
   font-weight: 700;
 }
 
+.selection-slip > span:not(.avatar-stamp) {
+  animation: booking-token-reveal 180ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes booking-token-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .booking-stage {
   position: relative;
   padding-top: clamp(2rem, 4vw, 3.5rem);
@@ -592,6 +607,35 @@ a {
   display: grid;
   grid-template-columns: repeat(7, minmax(72px, 1fr));
   gap: 9px;
+}
+
+.date-card,
+.time-tabs button {
+  animation: booking-card-reveal 210ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.date-card:nth-child(2),
+.time-tabs button:nth-child(2) { animation-delay: 28ms; }
+.date-card:nth-child(3),
+.time-tabs button:nth-child(3) { animation-delay: 56ms; }
+.date-card:nth-child(4),
+.time-tabs button:nth-child(4) { animation-delay: 84ms; }
+.date-card:nth-child(5),
+.time-tabs button:nth-child(5) { animation-delay: 112ms; }
+.date-card:nth-child(6),
+.time-tabs button:nth-child(6) { animation-delay: 140ms; }
+.date-card:nth-child(7),
+.time-tabs button:nth-child(7) { animation-delay: 168ms; }
+
+@keyframes booking-card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .date-card {
@@ -1088,6 +1132,7 @@ a {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
