@@ -1,7 +1,7 @@
 # Daymark Windows Installer and Installation Guide Design
 
 **Date:** 2026-08-06  
-**Status:** Approved design awaiting written-spec review
+**Status:** Approved
 
 ## Objective
 
