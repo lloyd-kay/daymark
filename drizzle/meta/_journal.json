@@ -15,6 +15,13 @@
       "when": 1785920882633,
       "tag": "0001_daymark_widget_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786008083868,
+      "tag": "0002_daymark_company_workspaces",
+      "breakpoints": true
     }
   ]
 }
