@@ -30,6 +30,35 @@ describe("demonstration booking transport", () => {
     }
   });
 
+  it("offers seven stable selectable days with employee-specific times", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-03-10T12:00:00.000Z"));
+    try {
+      const maya = await demoBookingTransport.loadSlots("maya-chen", "2030-03-10");
+      const mayaAgain = await demoBookingTransport.loadSlots("maya-chen", "2030-03-10");
+      const theo = await demoBookingTransport.loadSlots("theo-brooks", "2030-03-10");
+
+      expect(maya.dateKeys).toEqual([
+        "2030-03-10",
+        "2030-03-11",
+        "2030-03-12",
+        "2030-03-13",
+        "2030-03-14",
+        "2030-03-15",
+        "2030-03-16",
+      ]);
+      expect(maya.dateKeys.every((dateKey) =>
+        maya.slots.some((slot) => slot.dateKey === dateKey),
+      )).toBe(true);
+      expect(maya.slots).toEqual(mayaAgain.slots);
+      expect(maya.slots.map((slot) => slot.startAt)).not.toEqual(
+        theo.slots.map((slot) => slot.startAt),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("labels the selected fixed demo employee and uses a safe fallback for unknown ids", async () => {
     const slots = await demoBookingTransport.loadSlots("theo-brooks", "2026-08-06");
     const input = {
