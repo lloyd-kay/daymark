@@ -1,7 +1,17 @@
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 
+import { BackupPanel } from "./BackupPanel";
 import type { RuntimeStatus } from "./contracts";
+import {
+  copySetupCode,
+  createBackup,
+  getSetupState,
+  restoreBackup,
+  revealSetupCode,
+  verifyBackup,
+} from "./control";
 import { RuntimeModePanel } from "./RuntimeModePanel";
+import { SetupPanel } from "./SetupPanel";
 import {
   isTauriRuntime,
   openLocalUrl,
@@ -28,8 +38,24 @@ export function App({ initialStatus }: AppProps) {
   const status = useRuntimeStatus(initialStatus);
   const [runtimeAction, setRuntimeAction] = useState<"idle" | "working">("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [setupConfigured, setSetupConfigured] = useState(true);
   const isRunning = status.state === "running";
   const administratorUrl = `${status.localUrl}/workspace/sign-in`;
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let active = true;
+    void getSetupState()
+      .then((state) => {
+        if (active) setSetupConfigured(state.configured);
+      })
+      .catch(() => {
+        if (active) setSetupConfigured(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleAdministratorLink = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!isTauriRuntime()) return;
@@ -139,19 +165,13 @@ export function App({ initialStatus }: AppProps) {
             <button type="button" className="text-action">Manage booking access <span aria-hidden="true">→</span></button>
           </section>
 
-          <section className="file-card file-ochre" aria-labelledby="backup-heading">
-            <p className="file-number">03 / BACKUPS</p>
-            <h2 id="backup-heading">A safe copy, on demand.</h2>
-            <p>Create a verified backup before upgrades or whenever the calendar matters most.</p>
-            <button type="button" className="text-action">Create verified backup <span aria-hidden="true">→</span></button>
-          </section>
+          <BackupPanel onCreate={createBackup} onVerify={verifyBackup} onRestore={restoreBackup} />
 
-          <section className="file-card file-sky" aria-labelledby="recovery-heading">
-            <p className="file-number">04 / RECOVERY</p>
-            <h2 id="recovery-heading">Clear steps when needed.</h2>
-            <p>Diagnostics stay free of booking details, passwords and protected setup codes.</p>
-            <button type="button" className="text-action">Open recovery tools <span aria-hidden="true">→</span></button>
-          </section>
+          <SetupPanel
+            configured={setupConfigured}
+            onReveal={revealSetupCode}
+            onCopy={copySetupCode}
+          />
         </div>
 
         <footer className="system-strip" aria-label="Installed Daymark details">

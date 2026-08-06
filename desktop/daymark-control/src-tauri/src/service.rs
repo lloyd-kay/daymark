@@ -16,6 +16,7 @@ pub struct RuntimePaths {
     pub data_dir: PathBuf,
     pub settings_file: PathBuf,
     pub service_wrapper: PathBuf,
+    pub runtime_launcher: PathBuf,
     pub node_executable: PathBuf,
     pub runtime_cli: PathBuf,
 }
@@ -119,16 +120,11 @@ impl ServiceController {
             return Ok(());
         }
 
-        ensure_runtime_file(&self.paths.node_executable)?;
-        ensure_runtime_file(&self.paths.runtime_cli)?;
         fs::create_dir_all(&self.paths.data_dir).map_err(|_| permission_error())?;
+        ensure_runtime_file(&self.paths.runtime_launcher)?;
 
-        let mut command = Command::new(&self.paths.node_executable);
-        command
-            .arg(&self.paths.runtime_cli)
-            .arg("start")
-            .current_dir(&self.paths.install_dir)
-            .env("DAYMARK_DATA_DIR", &self.paths.data_dir);
+        let mut command = Command::new(&self.paths.runtime_launcher);
+        command.current_dir(&self.paths.install_dir);
 
         #[cfg(target_os = "windows")]
         {
@@ -217,7 +213,7 @@ pub fn set_runtime_mode(
     Ok(())
 }
 
-fn runtime_paths() -> RuntimePaths {
+pub(crate) fn runtime_paths() -> RuntimePaths {
     let install_dir = std::env::var_os("ProgramFiles")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Program Files"))
@@ -230,6 +226,7 @@ fn runtime_paths() -> RuntimePaths {
     RuntimePaths {
         settings_file: data_dir.join("control.json"),
         service_wrapper: install_dir.join("DaymarkService.exe"),
+        runtime_launcher: install_dir.join("DaymarkRuntime.exe"),
         node_executable: install_dir.join("node").join("node.exe"),
         runtime_cli: install_dir.join("runtime").join("local").join("cli.ts"),
         install_dir,
@@ -295,6 +292,13 @@ mod tests {
         assert_ne!(paths.install_dir, paths.data_dir);
         assert!(paths.settings_file.starts_with(&paths.data_dir));
         assert!(paths.node_executable.starts_with(&paths.install_dir));
+        assert_eq!(
+            paths
+                .runtime_launcher
+                .file_name()
+                .and_then(|value| value.to_str()),
+            Some("DaymarkRuntime.exe"),
+        );
     }
 
     #[test]

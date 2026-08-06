@@ -1,8 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod contracts;
-mod service;
-mod status;
+use daymark_control::{backups, secrets, service, status};
 
 fn main() {
     tauri::Builder::default()
@@ -12,7 +10,13 @@ fn main() {
             status::open_local_url,
             service::start_runtime,
             service::stop_runtime,
-            service::set_runtime_mode
+            service::set_runtime_mode,
+            secrets::get_setup_state,
+            secrets::reveal_setup_code,
+            secrets::copy_setup_code,
+            backups::create_backup,
+            backups::verify_backup,
+            backups::restore_backup
         ])
         .run(tauri::generate_context!())
         .expect("unable to start Daymark Control");

@@ -2,10 +2,8 @@
   <id>Daymark</id>
   <name>Daymark Booking Service</name>
   <description>Runs the private Daymark booking service on this computer.</description>
-  <executable>%BASE%\node\node.exe</executable>
-  <arguments>&quot;%BASE%\runtime\local\cli.ts&quot; start</arguments>
+  <executable>%BASE%\DaymarkRuntime.exe</executable>
   <workingdirectory>%BASE%</workingdirectory>
-  <env name="DAYMARK_DATA_DIR" value="%ProgramData%\Daymark" />
   <startmode>Automatic</startmode>
   <stoptimeout>30 sec</stoptimeout>
   <onfailure action="restart" delay="5 sec" />
