@@ -2488,7 +2488,7 @@ a {
 .privacy-tab:nth-child(3) { margin-left: clamp(0rem, 1.5vw, 1.25rem); background: #f7d9cf; }
 .privacy-tab > span { font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 850; }
 .privacy-tab h3 { margin: 0; font-family: var(--font-display), Georgia, serif; font-size: clamp(1.55rem, 2.4vw, 2.25rem); letter-spacing: -0.04em; line-height: 1; }
-.privacy-tab p, .widget-heading > p, .widget-setup { margin: 0.65rem 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.55; }
+.privacy-tab p, .widget-heading > p { margin: 0.65rem 0 0; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.55; }
 
 .demo-section { max-width: 1440px; margin: clamp(4rem, 9vw, 8rem) auto; padding: clamp(1.25rem, 3vw, 2.5rem); border: 1px solid var(--ink); background: var(--paper-light); box-shadow: 10px 10px 0 var(--ink); }
 .demo-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; padding: 0 clamp(0.25rem, 1vw, 0.8rem) clamp(1.8rem, 4vw, 3.2rem); }
@@ -2655,8 +2655,43 @@ a {
   .inline-panel { grid-template-columns: 52px 1fr; margin-inline: 10px; }
   .inline-grid { grid-template-columns: repeat(2, 1fr); }
 }
-.widget-setup { margin-top: clamp(2.5rem, 6vw, 5rem); padding-top: 1rem; border-top: 1px solid var(--rule); }
+.widget-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+  align-items: center;
+  gap: 1rem clamp(1.5rem, 4vw, 4rem);
+  margin-top: clamp(2.5rem, 6vw, 5rem);
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.widget-setup > p { margin: 0; }
 .widget-setup a, .product-footer a { color: var(--ink); font-weight: 800; }
+.widget-contact-note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  box-shadow: 4px 4px 0 var(--coral);
+}
+
+.widget-contact-label {
+  padding: 0.38rem 0.52rem;
+  background: var(--ochre);
+  color: var(--ink);
+  font-size: 0.56rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.widget-contact-note strong { font-weight: 850; }
 .product-footer > div { flex-wrap: wrap; }
 .widget-heading > p, .widget-setup { color: var(--ink); }
 
@@ -2677,6 +2712,7 @@ a {
   .privacy-tab:nth-child(2), .privacy-tab:nth-child(3) { margin-left: 0; }
   .demo-heading, .widget-heading { display: block; }
   .demo-notice, .widget-heading > p { margin-top: 1.5rem; }
+  .widget-setup { grid-template-columns: 1fr; align-items: start; }
   .site-footer.product-footer { display: block; }
   .product-footer > div { margin-top: 1rem; }
 }

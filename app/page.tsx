@@ -75,7 +75,16 @@ export default function Home() {
           <p>Choose the surface that feels native to your site; the private scheduling rules stay the same.</p>
         </div>
         <WidgetOptionsShowcase />
-        <p className="widget-setup">Use the embed position that suits your layout, then <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.</p>
+        <div className="widget-setup">
+          <p>
+            Use the embed position that suits your layout, then{" "}
+            <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.
+          </p>
+          <p className="widget-contact-note">
+            <span className="widget-contact-label">Custom fit</span>
+            <span>For custom widgets or integrations, <strong>contact us.</strong></span>
+          </p>
+        </div>
       </section>
 
       <footer className="site-footer product-footer">

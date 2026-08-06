@@ -39,6 +39,8 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /No appointment will be created/i);
   assert.match(html, /Always close, never in the way/i);
   assert.match(html, /A booking section with presence/i);
+  assert.match(html, /For custom widgets or integrations,/i);
+  assert.match(html, /contact us\./i);
   assert.match(html, /Cedar House/i);
   assert.match(html, /aria-pressed="true"/i);
   assert.match(html, /Start real booking/i);

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Home from "../app/page";
 import { WidgetOptionsShowcase } from "../app/home/WidgetOptionsShowcase";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -105,6 +106,23 @@ describe("WidgetOptionsShowcase", () => {
     expect(controls[0].getAttribute("aria-pressed")).toBe("false");
     expect(controls[1].getAttribute("aria-pressed")).toBe("true");
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("homepage widget setup note", () => {
+  it("presents custom work as information until a contact route exists", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    await act(async () => root?.render(createElement(Home)));
+
+    const setup = container.querySelector<HTMLElement>(".widget-setup");
+    const contact = container.querySelector<HTMLElement>(".widget-contact-note");
+
+    expect(setup?.textContent).toContain("Use the embed position that suits your layout");
+    expect(setup?.querySelector('a[href="/workspace/sign-in"]')).not.toBeNull();
+    expect(contact?.textContent).toContain("For custom widgets or integrations, contact us.");
+    expect(contact?.querySelector("a, button, [tabindex]")).toBeNull();
   });
 });
 
