@@ -2,7 +2,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { RuntimeConfig } from "../../runtime/local/contracts";
-import { exportCommand, migrationCommand, serveCommand } from "../../runtime/local/wrangler";
+import { exportCommand, importCommand, integrityCommand, migrationCommand, serveCommand } from "../../runtime/local/wrangler";
 
 const config: RuntimeConfig = {
   host: "127.0.0.1",
@@ -48,5 +48,19 @@ describe("Wrangler command construction", () => {
     ]));
     expect(migration.args.join(" ")).not.toContain("SETUP-SECRET");
     expect(exported.args.join(" ")).not.toContain("SETUP-SECRET");
+  });
+
+  it("constructs restore and integrity commands against the selected persistence directory", () => {
+    const imported = importCommand(config, "C:\\Daymark\\restore.sql");
+    const integrity = integrityCommand(config);
+
+    expect(imported.args).toEqual(expect.arrayContaining([
+      "d1", "execute", "DB", "--local", "--file", "C:\\Daymark\\restore.sql",
+      "--persist-to", config.paths.dataDir,
+    ]));
+    expect(integrity.args).toEqual(expect.arrayContaining([
+      "d1", "execute", "DB", "--local", "--json", "--command",
+      "PRAGMA integrity_check; SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1;",
+    ]));
   });
 });

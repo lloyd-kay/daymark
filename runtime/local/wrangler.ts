@@ -85,3 +85,36 @@ export function exportCommand(config: RuntimeConfig, outputFile: string): Comman
     config.paths.dataDir,
   ]);
 }
+
+export function importCommand(config: RuntimeConfig, inputFile: string): CommandSpec {
+  const base = baseCommand(config);
+  return command(config, [
+    "d1",
+    "execute",
+    "DB",
+    "--local",
+    "--file",
+    inputFile,
+    "--config",
+    base.configFile,
+    "--persist-to",
+    config.paths.dataDir,
+  ]);
+}
+
+export function integrityCommand(config: RuntimeConfig): CommandSpec {
+  const base = baseCommand(config);
+  return command(config, [
+    "d1",
+    "execute",
+    "DB",
+    "--local",
+    "--json",
+    "--command",
+    "PRAGMA integrity_check; SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1;",
+    "--config",
+    base.configFile,
+    "--persist-to",
+    config.paths.dataDir,
+  ]);
+}
