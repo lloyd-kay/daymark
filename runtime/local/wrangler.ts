@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { CommandSpec, RuntimeConfig } from "./contracts";
@@ -25,8 +26,32 @@ function baseCommand(config: RuntimeConfig): Pick<CommandSpec, "file" | "cwd" | 
     env: runtimeEnvironment(config),
     secretValues: [config.setupCode],
     wranglerCli: pathApi.join(config.paths.appDir, "node_modules", "wrangler", "bin", "wrangler.js"),
-    configFile: pathApi.join(config.paths.appDir, "runtime", "local", "wrangler.local.json"),
+    configFile: pathApi.join(config.paths.dataDir, "wrangler.local.json"),
   };
+}
+
+export async function writeRuntimeConfig(config: RuntimeConfig): Promise<string> {
+  const pathApi = pathApiFor(config.paths.appDir);
+  const configFile = pathApiFor(config.paths.dataDir).join(config.paths.dataDir, "wrangler.local.json");
+  const contents = {
+    name: "daymark-local",
+    main: pathApi.join(config.paths.appDir, "dist", "server", "index.js"),
+    compatibility_date: "2026-05-15",
+    compatibility_flags: ["nodejs_compat"],
+    assets: {
+      directory: pathApi.join(config.paths.appDir, "dist", "client"),
+    },
+    d1_databases: [{
+      binding: "DB",
+      database_name: "daymark-local",
+      database_id: "00000000-0000-4000-8000-000000000000",
+      migrations_dir: pathApi.join(config.paths.appDir, "drizzle"),
+    }],
+  };
+
+  await mkdir(config.paths.dataDir, { recursive: true });
+  await writeFile(configFile, `${JSON.stringify(contents, null, 2)}\n`, "utf8");
+  return configFile;
 }
 
 function command(config: RuntimeConfig, args: string[]): CommandSpec {

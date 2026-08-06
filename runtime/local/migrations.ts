@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises";
 
 import type { CommandResult, CommandSpec, RuntimeConfig } from "./contracts";
 import { runCommand } from "./process";
-import { migrationCommand } from "./wrangler";
+import { migrationCommand, writeRuntimeConfig } from "./wrangler";
 
 export interface MigrationResult {
   appliedCount: number;
@@ -33,6 +33,7 @@ export async function applyMigrations(
     throw new Error(`No committed Daymark migrations were found in ${migrationsDir}`);
   }
 
+  await writeRuntimeConfig(config);
   await (dependencies.run ?? runCommand)(migrationCommand(config));
 
   return {

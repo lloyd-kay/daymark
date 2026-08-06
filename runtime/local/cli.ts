@@ -13,6 +13,7 @@ type RuntimeCommand = typeof COMMANDS[number];
 
 export interface ParsedArgs {
   command: RuntimeCommand;
+  host?: "127.0.0.1" | "0.0.0.0";
   port?: number;
   appDir?: string;
   dataDir?: string;
@@ -21,7 +22,7 @@ export interface ParsedArgs {
   manifest?: string;
 }
 
-const VALUE_OPTIONS = new Set(["--port", "--app-dir", "--data-dir", "--backup-dir", "--log-dir", "--manifest"]);
+const VALUE_OPTIONS = new Set(["--host", "--port", "--app-dir", "--data-dir", "--backup-dir", "--log-dir", "--manifest"]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0] as RuntimeCommand | undefined;
@@ -36,7 +37,12 @@ export function parseArgs(argv: string[]): ParsedArgs {
     const value = argv[index + 1];
     if (!value) throw new Error(`${option} requires a value`);
 
-    if (option === "--port") {
+    if (option === "--host") {
+      if (value !== "127.0.0.1" && value !== "0.0.0.0") {
+        throw new Error("Host must be 127.0.0.1 or 0.0.0.0");
+      }
+      parsed.host = value;
+    } else if (option === "--port") {
       const port = Number(value);
       if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) {
         throw new Error("Port must be between 1024 and 65535");
@@ -62,7 +68,7 @@ export function resolveConfig(parsed: ParsedArgs, env: NodeJS.ProcessEnv = proce
   const stateRoot = path.resolve(env.DAYMARK_STATE_DIR ?? path.join(appDir, ".daymark"));
 
   return {
-    host: "127.0.0.1",
+    host: parsed.host ?? "127.0.0.1",
     port: parsed.port ?? Number(env.DAYMARK_PORT ?? 3210),
     setupCode,
     paths: {
@@ -107,7 +113,8 @@ async function main(argv: string[]): Promise<void> {
 
   await applyMigrations(config);
   const runtime = await startRuntime(config);
-  writeJson({ status: "running", url: `http://${config.host}:${config.port}`, health: runtime.health });
+  const localHost = config.host === "0.0.0.0" ? "127.0.0.1" : config.host;
+  writeJson({ status: "running", url: `http://${localHost}:${config.port}`, health: runtime.health });
 
   const stop = () => void runtime.stop();
   process.once("SIGINT", stop);

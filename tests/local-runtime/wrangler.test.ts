@@ -1,8 +1,10 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { RuntimeConfig } from "../../runtime/local/contracts";
-import { exportCommand, importCommand, integrityCommand, migrationCommand, serveCommand } from "../../runtime/local/wrangler";
+import { exportCommand, importCommand, integrityCommand, migrationCommand, serveCommand, writeRuntimeConfig } from "../../runtime/local/wrangler";
 
 const config: RuntimeConfig = {
   host: "127.0.0.1",
@@ -26,7 +28,7 @@ describe("Wrangler command construction", () => {
       path.win32.join(config.paths.appDir, "node_modules", "wrangler", "bin", "wrangler.js"),
       "dev",
       "--config",
-      path.win32.join(config.paths.appDir, "runtime", "local", "wrangler.local.json"),
+      path.win32.join(config.paths.dataDir, "wrangler.local.json"),
       "--persist-to",
       config.paths.dataDir,
       "--ip",
@@ -36,6 +38,12 @@ describe("Wrangler command construction", () => {
     ]);
     expect(command.env?.DAYMARK_SETUP_CODE).toBe("SETUP-SECRET");
     expect(command.secretValues).toEqual(["SETUP-SECRET"]);
+  });
+
+  it("uses an explicitly selected container bind address", () => {
+    const command = serveCommand({ ...config, host: "0.0.0.0" });
+    const ipIndex = command.args.indexOf("--ip");
+    expect(command.args[ipIndex + 1]).toBe("0.0.0.0");
   });
 
   it("constructs local migration and export commands without placing secrets in arguments", () => {
@@ -62,5 +70,25 @@ describe("Wrangler command construction", () => {
       "d1", "execute", "DB", "--local", "--json", "--command",
       "PRAGMA integrity_check; SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1;",
     ]));
+  });
+
+  it("writes runtime-generated Wrangler state beside mutable data", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "daymark-wrangler-config-"));
+    const localConfig: RuntimeConfig = {
+      ...config,
+      paths: {
+        ...config.paths,
+        appDir: path.join(root, "app"),
+        dataDir: path.join(root, "state", "data"),
+      },
+    };
+
+    const configFile = await writeRuntimeConfig(localConfig);
+    const written = JSON.parse(await readFile(configFile, "utf8"));
+
+    expect(configFile).toBe(path.join(localConfig.paths.dataDir, "wrangler.local.json"));
+    expect(written.main).toBe(path.join(localConfig.paths.appDir, "dist", "server", "index.js"));
+    expect(written.assets.directory).toBe(path.join(localConfig.paths.appDir, "dist", "client"));
+    expect(written.d1_databases[0].migrations_dir).toBe(path.join(localConfig.paths.appDir, "drizzle"));
   });
 });

@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 
 import type { RuntimeConfig } from "./contracts";
 import { redactText } from "./process";
-import { serveCommand } from "./wrangler";
+import { serveCommand, writeRuntimeConfig } from "./wrangler";
 
 export interface RuntimeHealth {
   status: "ok";
@@ -58,6 +58,7 @@ export async function waitForHealth(
 }
 
 export async function startRuntime(config: RuntimeConfig): Promise<RuntimeHandle> {
+  await writeRuntimeConfig(config);
   const command = serveCommand(config);
   const child = spawn(command.file, command.args, {
     cwd: command.cwd,
@@ -82,7 +83,7 @@ export async function startRuntime(config: RuntimeConfig): Promise<RuntimeHandle
   let health: RuntimeHealth;
   try {
     health = await Promise.race([
-      waitForHealth(`http://${config.host}:${config.port}/api/health`),
+      waitForHealth(`http://${config.host === "0.0.0.0" ? "127.0.0.1" : config.host}:${config.port}/api/health`),
       exited.then((code) => {
         throw new Error(`Daymark exited before becoming healthy (${code ?? "unknown"}): ${redactText(diagnostics, secrets)}`);
       }),

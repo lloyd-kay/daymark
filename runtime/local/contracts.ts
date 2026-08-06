@@ -6,7 +6,7 @@ export interface RuntimePaths {
 }
 
 export interface RuntimeConfig {
-  host: "127.0.0.1";
+  host: "127.0.0.1" | "0.0.0.0";
   port: number;
   paths: RuntimePaths;
   setupCode: string;

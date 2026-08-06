@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { DAYMARK_VERSION, EXPECTED_LATEST_MIGRATION } from "../../lib/runtime-health";
 import type { CommandResult, CommandSpec, RuntimeConfig } from "./contracts";
-import { migrationCommand, exportCommand, importCommand, integrityCommand } from "./wrangler";
+import { migrationCommand, exportCommand, importCommand, integrityCommand, writeRuntimeConfig } from "./wrangler";
 import { runCommand } from "./process";
 
 interface StoredBackupManifest {
@@ -99,6 +99,7 @@ export async function createBackup(
   const manifestPath = path.join(config.paths.backupDir, manifestName);
   const manifestPartial = `${manifestPath}.partial`;
 
+  await writeRuntimeConfig(config);
   await run(exportCommand(config, sqlPartial));
   const sql = await readFile(sqlPartial);
   if (sql.byteLength === 0) throw new Error("Backup export was empty");
@@ -155,6 +156,7 @@ export async function restoreBackup(
   };
 
   await mkdir(stagedDataDir, { recursive: false });
+  await writeRuntimeConfig(stagedConfig);
   const sqlPath = path.join(path.dirname(manifestFile), source.sqlFile);
   await run(importCommand(stagedConfig, sqlPath));
   await run(migrationCommand(stagedConfig));

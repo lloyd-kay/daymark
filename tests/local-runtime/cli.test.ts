@@ -8,6 +8,11 @@ describe("local runtime CLI", () => {
     expect(parseArgs(["start", "--port", "3210"])).toEqual({ command: "start", port: 3210 });
   });
 
+  it("allows an explicit container bind while keeping other host values invalid", () => {
+    expect(parseArgs(["start", "--host", "0.0.0.0"])).toEqual({ command: "start", host: "0.0.0.0" });
+    expect(() => parseArgs(["start", "--host", "192.168.1.10"])).toThrow("Host must be 127.0.0.1 or 0.0.0.0");
+  });
+
   it("rejects privileged, malformed, and unknown ports", () => {
     expect(() => parseArgs(["start", "--port", "80"])).toThrow("Port must be between 1024 and 65535");
     expect(() => parseArgs(["start", "--port", "nope"])).toThrow("Port must be between 1024 and 65535");

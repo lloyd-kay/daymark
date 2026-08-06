@@ -1,3 +1,5 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -16,34 +18,39 @@ describe("local migrations", () => {
   });
 
   it("reports the final migration after a successful apply", async () => {
+    const stateRoot = await mkdtemp(path.join(os.tmpdir(), "daymark-migration-test-"));
     const calls: string[][] = [];
-    const result = await applyMigrations(runtimeConfig(), {
-      migrationsDir: path.join(repositoryRoot, "drizzle"),
-      run: async (command): Promise<CommandResult> => {
-        calls.push(command.args);
-        return { exitCode: 0, stdout: "Migrations applied", stderr: "" };
-      },
-    });
+    try {
+      const result = await applyMigrations(runtimeConfig(stateRoot), {
+        migrationsDir: path.join(repositoryRoot, "drizzle"),
+        run: async (command): Promise<CommandResult> => {
+          calls.push(command.args);
+          return { exitCode: 0, stdout: "Migrations applied", stderr: "" };
+        },
+      });
 
-    expect(result).toEqual({
-      appliedCount: 3,
-      latestMigration: "0002_daymark_company_workspaces.sql",
-    });
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toEqual(expect.arrayContaining(["d1", "migrations", "apply", "DB", "--local"]));
+      expect(result).toEqual({
+        appliedCount: 3,
+        latestMigration: "0002_daymark_company_workspaces.sql",
+      });
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toEqual(expect.arrayContaining(["d1", "migrations", "apply", "DB", "--local"]));
+    } finally {
+      await rm(stateRoot, { recursive: true, force: true });
+    }
   });
 });
 
-function runtimeConfig(): RuntimeConfig {
+function runtimeConfig(stateRoot: string): RuntimeConfig {
   return {
     host: "127.0.0.1",
     port: 3210,
     setupCode: "SETUP-SECRET",
     paths: {
       appDir: repositoryRoot,
-      dataDir: path.join(repositoryRoot, ".test-data"),
-      backupDir: path.join(repositoryRoot, ".test-backups"),
-      logDir: path.join(repositoryRoot, ".test-logs"),
+      dataDir: path.join(stateRoot, "data"),
+      backupDir: path.join(stateRoot, "backups"),
+      logDir: path.join(stateRoot, "logs"),
     },
   };
 }
