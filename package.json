@@ -9,6 +9,9 @@
     "dev": "node scripts/with-wrangler-log.mjs dev",
     "build": "node scripts/with-wrangler-log.mjs build",
     "start": "node scripts/with-wrangler-log.mjs start",
+    "runtime:start": "node --import tsx runtime/local/cli.ts start",
+    "runtime:migrate": "node --import tsx runtime/local/cli.ts migrate",
+    "runtime:backup": "node --import tsx runtime/local/cli.ts backup",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "unit": "vitest run",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
@@ -18,7 +21,9 @@
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.28.0",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "tsx": "4.23.9",
+    "wrangler": "4.92.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
@@ -43,8 +48,7 @@
     "typescript-eslint": "8.59.3",
     "vinext": "1.0.0-beta.2",
     "vite": "8.0.13",
-    "vitest": "^4.1.10",
-    "wrangler": "4.92.0"
+    "vitest": "^4.1.10"
   },
   "type": "module"
 }
