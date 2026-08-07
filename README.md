@@ -28,15 +28,22 @@ This repository is a working public preview. It is not yet a hosted service, and
 | **Cloudflare** | Managed edge hosting | D1 in your account | Cloudflare route or domain | Intermediate |
 | **Manual source** | Developers changing Daymark | Local D1 tools | Local unless configured | Advanced |
 
+On a phone or narrow screen, choose from this shorter list:
+
+- **Use Windows installer** if you want the complete app on one Windows computer with minimal setup.
+- **Use Docker Compose** if you already operate a home server, VPS, or NAS.
+- **Use Cloudflare** if you are comfortable managing Workers, D1, secrets, and a domain.
+- **Use Manual source** only if you are developing Daymark or maintaining a custom server.
+
 > [!IMPORTANT]
-> The Windows installer is an unsigned preview. Until a reviewed installer is attached to a GitHub Release, build artifacts are available only from successful repository workflow runs or a local build. There is deliberately no made-up download link.
+> The Windows installer is an unsigned preview and is **not yet available as a public download**. A maintainer or invited tester can build it locally or receive the installer and matching checksum directly for testing. Everyone else should wait for a reviewed GitHub Release; there is deliberately no made-up download link.
 
 <a id="windows-installer"></a>
 ## Windows installer
 
 This is the simplest route. One `.exe` contains Daymark Control, the booking app, its local database runtime, service support, backup tools, and the optional temporary-link helper. It does not require Docker or a separate Node.js installation.
 
-1. Obtain `Daymark-Setup-x64-<version>.exe` and its `SHA256SUMS.txt` from a reviewed build.
+1. As a maintainer or invited tester, obtain `Daymark-Setup-x64-<version>.exe` and its `SHA256SUMS.txt` for the exact reviewed commit.
 2. Verify the file, run it as an administrator, and acknowledge the expected unsigned-preview notice.
 3. Open Daymark Control, reveal the protected first-time setup code, then create the first company.
 
@@ -50,12 +57,17 @@ This route packages Daymark and its database tools into a container and keeps bu
 ```powershell
 # PowerShell
 Copy-Item .env.example .env.local
+$bytes = New-Object byte[] 20
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$setupCode = -join ($bytes | ForEach-Object { $_.ToString("x2") })
+(Get-Content .env.local) -replace 'replace-with-a-long-random-one-time-code', $setupCode | Set-Content .env.local
+$setupCode = $null
 docker compose build
 docker compose up -d
 docker compose ps
 ```
 
-Generate the private setup code before starting. Follow the [Docker Compose guide](docs/install/docker.md) for the safe commands and reverse-proxy requirements.
+Follow the [Docker Compose guide](docs/install/docker.md) for the POSIX-shell equivalent, backup commands, and reverse-proxy requirements.
 
 <a id="cloudflare"></a>
 ## Cloudflare
@@ -93,4 +105,4 @@ A healthy local runtime answers at `http://127.0.0.1:3210/api/health` with statu
 - Appointments older than 30 days are removed by the application; backups and external logs need matching retention rules.
 - Temporary Quick Tunnel addresses are for testing only, not real client bookings.
 
-Continue with [security guidance](docs/security.md), [troubleshooting](docs/troubleshooting.md), or the [Windows release checklist](docs/windows-release-checklist.md). The project licence is pending until a deliberate `LICENSE` file is selected and committed.
+Continue with the [architecture overview](docs/architecture.md), [backup guide](docs/backups.md), [security guidance](docs/security.md), [troubleshooting](docs/troubleshooting.md), or the [Windows release checklist](docs/windows-release-checklist.md). If you want to help improve Daymark, read [CONTRIBUTING.md](CONTRIBUTING.md). The project licence is pending until a deliberate `LICENSE` file is selected and committed.

@@ -76,3 +76,39 @@ test("all local documentation links resolve and troubleshooting stays safe", () 
   }
   assert.doesNotMatch(troubleshooting, /delete `%ProgramData%\\Daymark`/i);
 });
+
+test("README keeps architecture, backup, security, and contribution guidance discoverable", () => {
+  const readme = read("README.md");
+  for (const target of [
+    "docs/architecture.md",
+    "docs/backups.md",
+    "docs/security.md",
+    "CONTRIBUTING.md",
+  ]) {
+    assert.ok(readme.includes(`](${target})`), `README must link to ${target}`);
+    assert.ok(existsSync(path.join(repoRoot, target)), `Missing ${target}`);
+  }
+});
+
+test("unfamiliar readers get safe acquisition, mobile choices, and removal guidance", () => {
+  const readme = read("README.md");
+  const dockerSection = readme.slice(readme.indexOf("## Docker Compose"), readme.indexOf("## Cloudflare"));
+  assert.match(readme, /not yet available as a public download/i);
+  assert.match(readme, /On a phone or narrow screen/);
+  assert.ok(dockerSection.indexOf("RandomNumberGenerator") < dockerSection.indexOf("docker compose up -d"));
+
+  const windows = read("docs/install/windows.md");
+  assert.match(windows, /maintainer or invited tester/i);
+  assert.match(windows, /booking URL name.*cedar-house/is);
+
+  const cloudflare = read("docs/install/cloudflare.md");
+  assert.match(cloudflare, /## Recurring backups and restore checks/);
+  assert.match(cloudflare, /## Retire a Cloudflare deployment/);
+  assert.match(cloudflare, /PowerShell/i);
+
+  const manual = read("docs/install/manual.md");
+  assert.match(manual, /## Stop or remove a manual installation/);
+
+  const troubleshooting = read("docs/troubleshooting.md");
+  assert.match(troubleshooting, /If Daymark fails repeatedly, stop retrying/i);
+});

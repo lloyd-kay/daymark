@@ -7,9 +7,24 @@ The assisted installer is the recommended route for normal Windows users. It inc
 - Windows 10 or Windows 11, 64-bit.
 - An administrator account for the installation.
 - About 700 MB free during installation and at least 1 GB free for future data and backups.
-- The reviewed `Daymark-Setup-x64-<version>.exe` and matching `SHA256SUMS.txt`.
+- If you are a maintainer or invited tester, the reviewed `Daymark-Setup-x64-<version>.exe` and matching `SHA256SUMS.txt` for the same commit.
 
 The preview is not yet code-signed. Windows may show an **unrecognised publisher** warning. Confirm that the filename and SHA-256 match the reviewed build; do not bypass unrelated security warnings or use an installer from an unknown source.
+
+## Obtain the installer
+
+The installer is not yet a public download. If you are not a maintainer or invited tester, wait for a reviewed GitHub Release rather than accepting an `.exe` from a third party.
+
+Maintainers can build the exact checked-out commit from an elevated PowerShell window after completing the [manual development prerequisites](manual.md):
+
+```powershell
+npm ci
+npm run windows:verify-runtime
+npm run windows:stage
+npm run windows:installer
+```
+
+The final installer, `SHA256SUMS.txt`, and inspection report appear under `artifacts\release`. An invited tester should receive the installer and checksum together, plus the full commit identifier that produced them.
 
 ## Verify the installer
 
@@ -29,8 +44,8 @@ The two long hashes must match exactly. There is no direct public download until
 2. Read the unsigned-preview and data-location notice.
 3. Let the installer finish its database migration and health check.
 4. Open **Daymark Control** from the desktop shortcut.
-5. Under first setup, choose **Reveal setup code** or **Copy setup code**. Do not send this code to anyone.
-6. Open `http://127.0.0.1:3210/workspace/sign-in`, choose **First-time setup**, and enter the code, company name, booking URL name, administrator name, email, and a password of at least 12 characters.
+5. Under first setup, choose **Reveal setup code** or **Copy setup code**. The installer created this one-time private key so only the computer's owner can create the first administrator. Do not send it to anyone.
+6. Open `http://127.0.0.1:3210/workspace/sign-in`, choose **First-time setup**, and enter the code, company name, booking URL name, administrator name, email, and a password of at least 12 characters. The booking URL name is the short readable part of the client address—for example, `cedar-house` becomes `/book/cedar-house`.
 
 Your client page is `http://127.0.0.1:3210/book/{company-slug}` on this computer. Clients do not sign in; they provide an appointment address and either an email address or phone number.
 
@@ -49,7 +64,7 @@ Daymark runs only while Daymark Control is open. The app displays this warning:
 ## Public booking access
 
 - **Local only** is safest while setting up and testing on the same computer.
-- **Temporary test link** creates a changing `trycloudflare.com` address. It may stop without notice and is not for real client bookings.
+- **Temporary test link** creates a changing `trycloudflare.com` address so an invited tester can briefly open the local booking page from another device. It may stop without notice and is not for real client bookings.
 - **Permanent address** is reserved for a later setup using your own domain and Cloudflare account. Daymark does not create those resources automatically.
 
 A failure in the optional public link does not stop the local booking service.

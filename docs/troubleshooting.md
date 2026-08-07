@@ -2,6 +2,8 @@
 
 These recovery steps preserve business data. Sanitise logs before sharing them: remove appointment details, addresses, contacts, setup codes, tokens, domains, and internal network addresses.
 
+**If Daymark fails repeatedly, stop retrying. Preserve the current data, keep the latest verified backup, and read the matching issue below before changing or reinstalling anything.**
+
 <details>
 <summary><strong>Port 3210 is already in use</strong></summary>
 
