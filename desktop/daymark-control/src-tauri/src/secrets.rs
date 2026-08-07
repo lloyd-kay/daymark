@@ -90,6 +90,25 @@ pub fn ensure_setup_code() -> Result<(), ControlError> {
     Ok(())
 }
 
+pub fn prepare_data_directories() -> Result<(), ControlError> {
+    let data_root = daymark_data_root();
+    let directories = [
+        data_root.clone(),
+        data_root.join("data"),
+        data_root.join("backups"),
+        data_root.join("logs"),
+        data_root.join("secrets"),
+    ];
+
+    for directory in &directories {
+        fs::create_dir_all(directory).map_err(|_| permission_error())?;
+    }
+    for directory in directories.iter().rev() {
+        restrict_to_system_and_administrators(directory)?;
+    }
+    ensure_setup_code()
+}
+
 pub fn store_tunnel_token(token: &[u8]) -> Result<(), ControlError> {
     let secret_file = secret_directory().join("tunnel-token.dpapi");
     let secret_dir = secret_file.parent().ok_or_else(|| {
@@ -164,10 +183,14 @@ fn setup_secret_file() -> PathBuf {
 }
 
 fn secret_directory() -> PathBuf {
+    daymark_data_root().join("secrets")
+}
+
+fn daymark_data_root() -> PathBuf {
     let program_data = std::env::var_os("ProgramData")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
-    program_data.join("Daymark").join("secrets")
+    program_data.join("Daymark")
 }
 
 fn is_valid_setup_code(value: &str) -> bool {

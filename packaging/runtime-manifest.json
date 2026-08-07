@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "components": [
+    {
+      "name": "node",
+      "version": "22.23.1",
+      "fileName": "node-v22.23.1-win-x64.zip",
+      "url": "https://nodejs.org/dist/v22.23.1/node-v22.23.1-win-x64.zip",
+      "sha256": "7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29",
+      "licenseUrl": "https://github.com/nodejs/node/blob/v22.23.1/LICENSE",
+      "destination": "node"
+    },
+    {
+      "name": "winsw",
+      "version": "2.12.0",
+      "fileName": "WinSW-x64.exe",
+      "url": "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe",
+      "sha256": "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da",
+      "licenseUrl": "https://github.com/winsw/winsw/blob/v2.12.0/LICENSE.txt",
+      "destination": "DaymarkService.exe"
+    },
+    {
+      "name": "cloudflared",
+      "version": "2026.7.3",
+      "fileName": "cloudflared-windows-amd64.exe",
+      "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.7.3/cloudflared-windows-amd64.exe",
+      "sha256": "8635da433b6df8194746e88ed9d2589566c20e38bfc2a80e431a348b7c765841",
+      "licenseUrl": "https://github.com/cloudflare/cloudflared/blob/2026.7.3/LICENSE",
+      "destination": "cloudflared.exe"
+    }
+  ]
+}

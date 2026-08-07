@@ -22,16 +22,27 @@ pub fn build_runtime_invocation(
     data_root: &Path,
     setup_code: &str,
 ) -> RuntimeInvocation {
+    build_runtime_command_invocation(install_dir, data_root, setup_code, "start")
+}
+
+pub fn build_runtime_command_invocation(
+    install_dir: &Path,
+    data_root: &Path,
+    setup_code: &str,
+    command: &str,
+) -> RuntimeInvocation {
     RuntimeInvocation {
         program: install_dir.join("node").join("node.exe"),
         args: vec![
+            "--import".to_string(),
+            "tsx".to_string(),
             install_dir
                 .join("runtime")
                 .join("local")
                 .join("cli.ts")
                 .to_string_lossy()
                 .into_owned(),
-            "start".to_string(),
+            command.to_string(),
         ],
         current_dir: install_dir.to_path_buf(),
         environment: BTreeMap::from([
@@ -58,6 +69,11 @@ pub fn build_runtime_invocation(
 
 #[cfg(not(test))]
 pub fn run_runtime() -> Result<i32, ControlError> {
+    run_runtime_command("start")
+}
+
+#[cfg(not(test))]
+pub fn run_runtime_command(command: &str) -> Result<i32, ControlError> {
     let executable = std::env::current_exe().map_err(|_| launcher_error())?;
     let install_dir = executable.parent().ok_or_else(launcher_error)?;
     let data_root = std::env::var_os("ProgramData")
@@ -65,10 +81,16 @@ pub fn run_runtime() -> Result<i32, ControlError> {
         .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
         .join("Daymark");
     let mut setup_code = read_setup_code()?;
-    let mut invocation = build_runtime_invocation(install_dir, &data_root, &setup_code);
+    let mut invocation =
+        build_runtime_command_invocation(install_dir, &data_root, &setup_code, command);
     unsafe { setup_code.as_bytes_mut().fill(0) };
 
-    if !invocation.program.is_file() || !Path::new(&invocation.args[0]).is_file() {
+    if !invocation.program.is_file()
+        || invocation
+            .args
+            .get(2)
+            .is_none_or(|runtime_cli| !Path::new(runtime_cli).is_file())
+    {
         clear_invocation_secret(&mut invocation);
         return Err(launcher_error());
     }
@@ -100,7 +122,7 @@ fn launcher_error() -> ControlError {
 
 #[cfg(test)]
 mod tests {
-    use super::build_runtime_invocation;
+    use super::{build_runtime_command_invocation, build_runtime_invocation};
     use std::path::Path;
 
     #[test]
@@ -124,7 +146,43 @@ mod tests {
         );
         assert_eq!(
             invocation.args,
-            vec![r"C:\Program Files\Daymark\runtime\local\cli.ts", "start"],
+            vec![
+                "--import",
+                "tsx",
+                r"C:\Program Files\Daymark\runtime\local\cli.ts",
+                "start",
+            ],
+        );
+    }
+
+    #[test]
+    fn installer_runtime_commands_keep_the_setup_code_out_of_arguments() {
+        let invocation = build_runtime_command_invocation(
+            Path::new(r"C:\Program Files\Daymark"),
+            Path::new(r"C:\ProgramData\Daymark"),
+            "AAAAA-AAAAA-AAAAA-AAAAA",
+            "migrate",
+        );
+
+        assert_eq!(
+            invocation.args,
+            vec![
+                "--import",
+                "tsx",
+                r"C:\Program Files\Daymark\runtime\local\cli.ts",
+                "migrate",
+            ],
+        );
+        assert!(invocation
+            .args
+            .iter()
+            .all(|argument| !argument.contains("AAAAA")));
+        assert_eq!(
+            invocation
+                .environment
+                .get("DAYMARK_SETUP_CODE")
+                .map(String::as_str),
+            Some("AAAAA-AAAAA-AAAAA-AAAAA"),
         );
     }
 }

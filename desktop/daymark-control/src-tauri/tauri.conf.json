@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../../scripts/build-windows-launcher.ps1",
     "frontendDist": "../dist"
   },
   "app": {
@@ -26,7 +26,38 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": "all"
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Daymark",
+    "shortDescription": "Private team scheduling without shared calendars",
+    "longDescription": "Daymark keeps employee calendars private while clients book clear, company-scoped appointment slots.",
+    "resources": {
+      "../../../artifacts/windows-stage/DaymarkRuntime.exe": "DaymarkRuntime.exe",
+      "../../../artifacts/windows-stage/node/": "node",
+      "../../../artifacts/windows-stage/DaymarkService.exe": "DaymarkService.exe",
+      "../../../artifacts/windows-stage/DaymarkService.xml": "DaymarkService.xml",
+      "../../../artifacts/windows-stage/cloudflared.exe": "cloudflared.exe",
+      "../../../artifacts/windows-stage/dist/": "dist",
+      "../../../artifacts/windows-stage/drizzle/": "drizzle",
+      "../../../artifacts/windows-stage/runtime/": "runtime",
+      "../../../artifacts/windows-stage/node_modules/": "node_modules",
+      "../../../artifacts/windows-stage/third-party-licenses/": "third-party-licenses"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "offlineInstaller",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["English"],
+        "compression": "lzma",
+        "startMenuFolder": "Daymark",
+        "installerHooks": "../../../packaging/windows/installer-hooks.nsh",
+        "headerImage": "../../../packaging/windows/assets/header.bmp",
+        "sidebarImage": "../../../packaging/windows/assets/sidebar.bmp"
+      }
+    }
   }
 }

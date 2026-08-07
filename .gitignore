@@ -48,3 +48,4 @@ yarn-error.log*
 /work/
 /.worktrees/
 /.superpowers/
+/artifacts/

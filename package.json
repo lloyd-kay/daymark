@@ -12,9 +12,12 @@
     "runtime:start": "node --import tsx runtime/local/cli.ts start",
     "runtime:migrate": "node --import tsx runtime/local/cli.ts migrate",
     "runtime:backup": "node --import tsx runtime/local/cli.ts backup",
+    "windows:verify-runtime": "node scripts/verify-runtime-manifest.mjs",
+    "windows:stage": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/stage-windows-runtime.ps1 -Clean",
+    "windows:installer": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-installer.ps1",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "unit": "vitest run",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern artifacts --ignore-pattern desktop/daymark-control/dist --ignore-pattern desktop/daymark-control/src-tauri/target",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "platform": "windows-x64",
+  "installRoot": "%ProgramFiles%\\Daymark",
+  "dataRoot": "%ProgramData%\\Daymark",
+  "immutable": [
+    "Daymark Control.exe",
+    "DaymarkRuntime.exe",
+    "DaymarkService.exe",
+    "DaymarkService.xml",
+    "cloudflared.exe",
+    "node",
+    "dist",
+    "drizzle",
+    "runtime",
+    "node_modules",
+    "third-party-licenses"
+  ],
+  "mutable": [
+    "data",
+    "backups",
+    "logs",
+    "secrets",
+    "control.json"
+  ],
+  "preservedOnUninstall": [
+    "data",
+    "backups",
+    "logs",
+    "secrets",
+    "control.json"
+  ]
+}
