@@ -38,6 +38,21 @@ function Assert-DaymarkAutomaticService {
     return $service
 }
 
+function Assert-DaymarkInstalledRuntime {
+    $installRoot = Join-Path $env:ProgramFiles "Daymark"
+    foreach ($relativePath in @("lib\runtime-health.ts", "package.json")) {
+        $installedPath = Join-Path $installRoot $relativePath
+        if (-not (Test-Path -LiteralPath $installedPath -PathType Leaf)) {
+            throw "The installed Daymark runtime is missing $relativePath."
+        }
+    }
+    $package = Get-Content -LiteralPath (Join-Path $installRoot "package.json") -Raw | ConvertFrom-Json
+    if ($package.version -notmatch '^\d+\.\d+\.\d+') {
+        throw "The installed Daymark runtime version metadata is invalid."
+    }
+    return $true
+}
+
 function Invoke-DaymarkInstaller {
     param([string]$Path)
     $resolved = (Resolve-Path -LiteralPath $Path).Path

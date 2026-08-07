@@ -111,13 +111,13 @@ artifacts/windows-stage/DaymarkRuntime.exe --prepare-install
 artifacts/windows-stage/DaymarkRuntime.exe --migrate
 ```
 
-Expected: both commands return exit code `0`; the disposable database records the latest committed migration.
+Expected: both commands return exit code `0`; the disposable database records the latest committed migration. This is repeatable with `npm run windows:test-staged-migration`.
 
 - [ ] **Step 4: Build and inspect the installer**
 
 Run: `npm run windows:installer`
 
-Expected: one normalized `.exe`, one matching SHA-256 entry, and `inspection.json` reports `Unsigned preview`, `x64`, and a passed payload allowlist.
+Expected: one normalized `.exe`, one matching SHA-256 entry, and `inspection.json` reports `Unsigned preview`, `x64`, and a passed staged-payload allowlist. The disposable Windows smoke test separately verifies the files installed from the actual NSIS package.
 
 - [ ] **Step 5: Run artifact checks**
 

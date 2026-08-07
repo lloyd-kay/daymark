@@ -72,7 +72,7 @@ $inspection = [ordered]@{
     sizeBytes = $installerInfo.Length
     sha256 = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
     signature = "Unsigned preview"
-    payloadAllowlistPassed = $true
+    stagedPayloadAllowlistPassed = $true
     privateDataAbsent = $true
     inspectedAt = (Get-Date).ToUniversalTime().ToString("o")
 }

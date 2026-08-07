@@ -18,6 +18,7 @@ if ($ResumeAfterRestart) {
     $checkpoint = Get-Content -LiteralPath $checkpointPath -Raw | ConvertFrom-Json
     $bootedAt = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime()
     if ($bootedAt -le [datetime]$checkpoint.bootedAt) { throw "Windows has not restarted since the Daymark checkpoint was created." }
+    $installedRuntimeDependencies = Assert-DaymarkInstalledRuntime
     Assert-DaymarkAutomaticService | Out-Null
     Wait-DaymarkHealth | Out-Null
     $request = @{
@@ -36,6 +37,7 @@ if ($ResumeAfterRestart) {
         os = $os.Caption
         osBuild = $os.BuildNumber
         serviceAutomatic = $true
+        installedRuntimeDependencies = $installedRuntimeDependencies
         health = "ok"
         bookingPersistedAcrossMachineRestart = $true
         completedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -48,6 +50,7 @@ if (-not $ManualWarningConfirmed) {
     throw "Open Daymark Control, confirm the exact manual-mode warning is visible, then rerun with -ManualWarningConfirmed."
 }
 Invoke-DaymarkInstaller $Installer
+$installedRuntimeDependencies = Assert-DaymarkInstalledRuntime
 Assert-DaymarkAutomaticService | Out-Null
 Wait-DaymarkHealth | Out-Null
 
@@ -115,6 +118,7 @@ Write-DaymarkSmokeResult @{
     osBuild = $os.BuildNumber
     installerSha256 = (Get-FileHash -LiteralPath $Installer -Algorithm SHA256).Hash.ToLowerInvariant()
     serviceAutomatic = $true
+    installedRuntimeDependencies = $installedRuntimeDependencies
     health = "ok"
     firstCompanyCreated = $true
     manualWarningConfirmed = $true

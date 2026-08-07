@@ -27,6 +27,7 @@ This checklist is for disposable test machines only. Do not run installation lif
 - Manual mode shows exactly: “Client booking links and temporary public links stop working when Daymark is closed. Availability cannot be served while this computer or Daymark is offline.”
 - A temporary public link is clearly marked as unsuitable for real client bookings.
 - The installer creates no desktop terminal window during normal service operation.
+- The installed application contains `lib\runtime-health.ts` and `package.json`; the smoke evidence reports `installedRuntimeDependencies: true`.
 - Upgrade preserves the original appointment and records a verified pre-upgrade backup.
 - Uninstall defaults to preserving `%ProgramData%\Daymark` and requires a separate destructive confirmation to delete it.
 

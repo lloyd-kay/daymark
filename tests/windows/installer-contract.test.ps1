@@ -23,6 +23,7 @@ $sidebarPath = Join-Path $repoRoot "packaging\windows\assets\sidebar.bmp"
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
 $rootPackage = Get-Content (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
 Assert-True ($rootPackage.scripts."windows:installer" -match "build-windows-installer\.ps1") "The installer command must use the safe short-path build wrapper."
+Assert-True ($rootPackage.scripts."windows:test-staged-migration" -match "staged-migration\.test\.ps1") "The packaged runtime migration test must be available as a repeatable command."
 Assert-True ($config.bundle.active -eq $true) "Tauri bundling must be active."
 Assert-True (@($config.bundle.targets) -contains "nsis") "The Windows bundle target must include NSIS."
 Assert-True ($config.bundle.windows.nsis.installMode -eq "perMachine") "The installer must be per-machine."

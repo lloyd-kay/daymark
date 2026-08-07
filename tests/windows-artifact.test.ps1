@@ -19,6 +19,6 @@ if (-not (Test-Path $inspectionPath)) { throw "The installer inspection report i
 $inspection = Get-Content $inspectionPath -Raw | ConvertFrom-Json
 if ($inspection.signature -ne "Unsigned preview") { throw "The preview must be reported as unsigned." }
 if ($inspection.architecture -ne "x64") { throw "The installer must target x64 Windows." }
-if (-not $inspection.payloadAllowlistPassed) { throw "The staged payload allowlist did not pass." }
+if (-not $inspection.stagedPayloadAllowlistPassed) { throw "The staged payload allowlist did not pass." }
 
 Write-Output "Daymark Windows artifact checks passed."

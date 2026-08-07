@@ -36,6 +36,10 @@ Assert-TextContains "install smoke surface" $installSurface @(
     "ResumeAfterRestart",
     "cloudflared",
     "ManualWarningConfirmed",
+    "Assert-DaymarkInstalledRuntime",
+    "lib\\runtime-health\.ts",
+    "package\.json",
+    "installedRuntimeDependencies",
     "ConvertTo-Json"
 )
 $commonContent = Get-Content -LiteralPath $common -Raw
