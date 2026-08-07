@@ -26,6 +26,24 @@ try {
     }
     if (-not $hashFailed) { throw "Staging did not reject a mismatched SHA-256." }
 
+    $deepDirectory = $destination
+    foreach ($index in 1..6) {
+        $deepDirectory = Join-Path $deepDirectory (("nested-{0}-" -f $index) + ("x" * 48))
+    }
+    [System.IO.Directory]::CreateDirectory("\\?\$deepDirectory") | Out-Null
+    [System.IO.File]::WriteAllText("\\?\$(Join-Path $deepDirectory 'payload.txt')", "disposable stage data")
+
+    $longPathCleanReachedManifestCheck = $false
+    try {
+        & $stageScript -Manifest $badHashManifest -Destination $destination -DownloadCache $cache -RuntimeOnly -Clean
+    }
+    catch {
+        $longPathCleanReachedManifestCheck = $_.Exception.Message -like "*SHA-256 mismatch*"
+    }
+    if (-not $longPathCleanReachedManifestCheck) {
+        throw "Staging could not safely replace a destination containing long paths."
+    }
+
     $manifest.components[0].url = "https://example.com/node.zip"
     $unapprovedManifest = Join-Path $testRoot "unapproved-host.json"
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $unapprovedManifest -Encoding UTF8
@@ -43,6 +61,6 @@ try {
 }
 finally {
     if (Test-Path $testRoot) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force
+        [System.IO.Directory]::Delete("\\?\$testRoot", $true)
     }
 }

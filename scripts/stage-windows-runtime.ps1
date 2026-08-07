@@ -22,9 +22,21 @@ if ($destinationPath.TrimEnd('\') -eq $repoPath -or $destinationPath.Length -le 
 if ($env:CI -and -not $destinationPath.StartsWith((Join-Path $repoRoot "artifacts\windows-stage"), [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "CI staging must remain inside artifacts/windows-stage."
 }
+
+function Remove-DirectoryLongPath {
+    param([string]$Path)
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    if ($resolvedPath.Length -le 3 -or $resolvedPath.TrimEnd('\') -eq $repoPath) {
+        throw "Refusing to remove a broad or unsafe staging destination."
+    }
+    if (Test-Path -LiteralPath $resolvedPath) {
+        [System.IO.Directory]::Delete("\\?\$resolvedPath", $true)
+    }
+}
+
 if (Test-Path $destinationPath) {
     if (-not $Clean) { throw "The staging destination already exists. Use -Clean to replace it." }
-    Remove-Item -LiteralPath $destinationPath -Recurse -Force
+    Remove-DirectoryLongPath $destinationPath
 }
 
 function Assert-ApprovedManifest {
@@ -203,7 +215,7 @@ try {
 catch {
     $failure = $_
     if (Test-Path $workingPath) {
-        try { [System.IO.Directory]::Delete("\\?\$workingPath", $true) }
+        try { Remove-DirectoryLongPath $workingPath }
         catch { Write-Warning "The incomplete staging folder could not be removed automatically: $workingPath" }
     }
     throw $failure
