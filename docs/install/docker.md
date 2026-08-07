@@ -33,7 +33,9 @@ Never commit `.env.local` or paste its setup code into an issue or log.
 
 ## 2. Build and start
 
-```text
+In PowerShell, Command Prompt, macOS, Linux, or Git Bash, build and start Daymark:
+
+```console
 docker compose build
 docker compose up -d
 docker compose ps
@@ -45,9 +47,9 @@ Open `http://127.0.0.1:3210/api/health`; it should report `status` as `ok`. Then
 
 The Compose file stores database state, backups, and logs in the named `daymark-data` volume. `docker compose down` does not delete the `daymark-data` volume.
 
-Create a verified SQL backup before upgrades:
+In the same terminal, create a verified SQL backup before upgrades:
 
-```text
+```console
 docker compose exec daymark node --import tsx runtime/local/cli.ts backup --app-dir /app --data-dir /var/lib/daymark/data --backup-dir /var/lib/daymark/backups --log-dir /var/lib/daymark/logs
 ```
 
@@ -64,7 +66,9 @@ Copy the resulting `.sql` and `.json` files from the volume to encrypted off-ser
 
 ## Stop or remove
 
-```text
+In that terminal, stop Daymark without deleting its volume:
+
+```console
 docker compose down
 ```
 

@@ -23,7 +23,7 @@ This repository is a working public preview. It is not yet a hosted service, and
 
 | Method | Best for | Database included | Public address | Difficulty |
 | --- | --- | ---: | --- | --- |
-| **Windows installer** | Normal Windows users | Yes | Local first; optional testing link | **Recommended** |
+| **Windows installer** | Normal Windows users (preview access limited) | Yes | Local first; optional testing link | **Recommended once released** |
 | **Docker Compose** | Home servers, VPSs, and NASs | Yes | You provide a reverse proxy or domain | Easy |
 | **Cloudflare** | Managed edge hosting | D1 in your account | Cloudflare route or domain | Intermediate |
 | **Manual source** | Developers changing Daymark | Local D1 tools | Local unless configured | Advanced |

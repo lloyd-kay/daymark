@@ -94,6 +94,7 @@ test("unfamiliar readers get safe acquisition, mobile choices, and removal guida
   const readme = read("README.md");
   const dockerSection = readme.slice(readme.indexOf("## Docker Compose"), readme.indexOf("## Cloudflare"));
   assert.match(readme, /not yet available as a public download/i);
+  assert.match(readme, /Normal Windows users \(preview access limited\)/);
   assert.match(readme, /On a phone or narrow screen/);
   assert.ok(dockerSection.indexOf("RandomNumberGenerator") < dockerSection.indexOf("docker compose up -d"));
 
@@ -108,6 +109,11 @@ test("unfamiliar readers get safe acquisition, mobile choices, and removal guida
 
   const manual = read("docs/install/manual.md");
   assert.match(manual, /## Stop or remove a manual installation/);
+
+  const docker = read("docs/install/docker.md");
+  assert.match(docker, /In PowerShell, Command Prompt, macOS, Linux, or Git Bash, build and start/);
+  assert.match(docker, /In the same terminal, create a verified SQL backup/);
+  assert.match(docker, /In that terminal, stop Daymark without deleting its volume/);
 
   const troubleshooting = read("docs/troubleshooting.md");
   assert.match(troubleshooting, /If Daymark fails repeatedly, stop retrying/i);
