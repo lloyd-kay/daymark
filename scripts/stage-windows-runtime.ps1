@@ -175,6 +175,7 @@ try {
             if (-not (Test-Path $sourceDirectory)) { throw "Required Daymark build directory is missing: $directory" }
             Copy-DirectoryLongPath $sourceDirectory (Join-Path $workingPath $directory)
         }
+        Copy-Item -LiteralPath (Join-Path $repoRoot "package.json") -Destination (Join-Path $workingPath "package.json")
         Copy-Item -LiteralPath (Join-Path $repoRoot "packaging\windows\DaymarkService.xml") -Destination (Join-Path $workingPath "DaymarkService.xml")
 
         $dependencyInstall = Join-Path ([System.IO.Path]::GetTempPath()) ("daymark-dependencies-" + [guid]::NewGuid().ToString("N"))

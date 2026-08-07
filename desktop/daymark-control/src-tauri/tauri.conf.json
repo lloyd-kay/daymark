@@ -41,6 +41,7 @@
       "../../../artifacts/windows-stage/drizzle/": "drizzle",
       "../../../artifacts/windows-stage/runtime/": "runtime",
       "../../../artifacts/windows-stage/lib/": "lib",
+      "../../../artifacts/windows-stage/package.json": "package.json",
       "../../../artifacts/windows-stage/node_modules/": "node_modules",
       "../../../artifacts/windows-stage/third-party-licenses/": "third-party-licenses"
     },

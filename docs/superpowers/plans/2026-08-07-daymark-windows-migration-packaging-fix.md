@@ -85,9 +85,14 @@ git commit -m "fix: include shared runtime in Windows package"
 - Consumes: corrected packaging declarations from Task 1.
 - Produces: a locally verified unsigned installer and matching checksum; no generated outputs are committed.
 
-- [ ] **Step 1: Rebuild the staged runtime**
+- [ ] **Step 1: Build the site and rebuild the staged runtime**
 
-Run: `npm run windows:stage`
+Run:
+
+```powershell
+npm run build
+npm run windows:stage
+```
 
 Expected: success and `artifacts/windows-stage/lib/runtime-health.ts` exists.
 

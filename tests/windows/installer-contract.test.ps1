@@ -30,6 +30,7 @@ Assert-True ($config.build.beforeBuildCommand -match "build-windows-launcher\.ps
 $resourceMap = $config.bundle.resources
 Assert-True ($resourceMap."../../../artifacts/windows-stage/DaymarkRuntime.exe" -eq "DaymarkRuntime.exe") "The installer must consume the staged release launcher."
 Assert-True ($resourceMap."../../../artifacts/windows-stage/lib/" -eq "lib") "The installer must bundle the shared runtime library."
+Assert-True ($resourceMap."../../../artifacts/windows-stage/package.json" -eq "package.json") "The installer must bundle the version metadata used by runtime health."
 Assert-True (Test-Path $stageScriptPath) "The Windows staging script is missing."
 Assert-True (Test-Path $hooksPath) "The installer hooks file is missing."
 Assert-True (Test-Path $layoutPath) "The install layout manifest is missing."
@@ -39,6 +40,7 @@ Assert-True (Test-Path $sidebarPath) "The branded installer sidebar is missing."
 $hooks = Get-Content $hooksPath -Raw
 $stageScript = Get-Content $stageScriptPath -Raw
 Assert-True ($stageScript -match 'foreach \(\$directory in @\("dist", "drizzle", "runtime", "lib"\)\)') "The Windows stage must copy the shared runtime library."
+Assert-True ($stageScript -match 'Join-Path \$repoRoot "package\.json"\) -Destination \(Join-Path \$workingPath "package\.json"') "The Windows stage must copy runtime version metadata."
 foreach ($requiredPattern in @(
     "Unsigned preview",
     "Preserve Daymark data",
@@ -57,6 +59,7 @@ $layout = Get-Content $layoutPath -Raw | ConvertFrom-Json
 Assert-True ($layout.installRoot -eq "%ProgramFiles%\Daymark") "Application files must install under Program Files."
 Assert-True ($layout.dataRoot -eq "%ProgramData%\Daymark") "Business data must remain under ProgramData."
 Assert-True (@($layout.immutable) -contains "lib") "The immutable install layout must include the shared runtime library."
+Assert-True (@($layout.immutable) -contains "package.json") "The immutable install layout must include runtime version metadata."
 Assert-True (@($layout.preservedOnUninstall) -contains "data") "Uninstall must preserve Daymark data."
 Assert-True (@($layout.preservedOnUninstall) -contains "backups") "Uninstall must preserve Daymark backups."
 
