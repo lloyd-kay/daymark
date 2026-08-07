@@ -44,8 +44,8 @@ function Assert-ApprovedManifest {
 
     if ($RuntimeManifest.schemaVersion -ne 1) { throw "Runtime manifest schema version is invalid." }
     $names = @($RuntimeManifest.components | ForEach-Object { $_.name } | Sort-Object)
-    if (($names -join ',') -ne "cloudflared,node,winsw") {
-        throw "Runtime manifest must contain node, winsw and cloudflared exactly once."
+    if (($names -join ',') -ne "cloudflared,node,vc-redist,winsw") {
+        throw "Runtime manifest must contain node, winsw, cloudflared and vc-redist exactly once."
     }
 
     $destinations = @{}
@@ -57,6 +57,9 @@ function Assert-ApprovedManifest {
         }
         elseif ($uri.Scheme -eq "https" -and $uri.Host -eq "github.com") {
             $approved = $uri.AbsolutePath -match '^/(winsw/winsw|cloudflare/cloudflared)/releases/download/'
+        }
+        elseif ($uri.Scheme -eq "https" -and $uri.Host -eq "download.visualstudio.microsoft.com") {
+            $approved = $uri.AbsolutePath -cmatch '^/download/pr/[0-9a-f-]{36}/[A-F0-9]{64}/VC_redist\.x64\.exe$'
         }
         if (-not $approved) { throw "Runtime download host or path is not approved: $($component.url)" }
         if ($component.sha256 -notmatch '^[a-f0-9]{64}$') { throw "Runtime SHA-256 is invalid: $($component.name)" }
@@ -87,7 +90,7 @@ function Save-ApprovedDownload {
                 $location = $response.Headers.Location
                 if (-not $location) { throw "Runtime download redirect did not include a location." }
                 if (-not $location.IsAbsoluteUri) { $location = New-Object Uri($current, $location) }
-                $approvedRedirectHosts = @("nodejs.org", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com")
+                $approvedRedirectHosts = @("nodejs.org", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com", "download.visualstudio.microsoft.com")
                 if ($location.Scheme -ne "https" -or $approvedRedirectHosts -notcontains $location.Host) {
                     throw "Runtime download redirect host is not approved: $($location.Host)"
                 }

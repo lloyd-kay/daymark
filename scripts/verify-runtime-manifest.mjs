@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const approvedDownloads = new Map([
   ["nodejs.org", /^\/dist\/v\d+\.\d+\.\d+\/node-v\d+\.\d+\.\d+-win-x64\.zip$/],
   ["github.com", /^\/(?:winsw\/winsw|cloudflare\/cloudflared)\/releases\/download\//],
+  ["download.visualstudio.microsoft.com", /^\/download\/pr\/[0-9a-f-]{36}\/[A-F0-9]{64}\/VC_redist\.x64\.exe$/],
 ]);
 
 export function validateRuntimeManifest(manifest) {
@@ -13,8 +14,8 @@ export function validateRuntimeManifest(manifest) {
     throw new Error("Runtime manifest must use schema version 1.");
   }
   const names = manifest.components.map(({ name }) => name).sort();
-  if (JSON.stringify(names) !== JSON.stringify(["cloudflared", "node", "winsw"])) {
-    throw new Error("Runtime manifest must contain node, winsw and cloudflared exactly once.");
+  if (JSON.stringify(names) !== JSON.stringify(["cloudflared", "node", "vc-redist", "winsw"])) {
+    throw new Error("Runtime manifest must contain node, winsw, cloudflared and vc-redist exactly once.");
   }
 
   const destinations = new Set();
@@ -24,7 +25,7 @@ export function validateRuntimeManifest(manifest) {
     if (url.protocol !== "https:" || !approvedPath?.test(url.pathname)) {
       throw new Error(`Runtime download host or path is not approved: ${component.url}`);
     }
-    if (!/^\d+(?:\.\d+){2}$/.test(component.version)) {
+    if (!/^\d+(?:\.\d+){2,3}$/.test(component.version)) {
       throw new Error(`Runtime version is not immutable: ${component.name}`);
     }
     if (!/^[a-f0-9]{64}$/.test(component.sha256)) {
