@@ -214,14 +214,28 @@ pub fn set_runtime_mode(
 }
 
 pub(crate) fn runtime_paths() -> RuntimePaths {
-    let install_dir = std::env::var_os("ProgramFiles")
+    let fallback_executable = std::env::var_os("ProgramFiles")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Program Files"))
-        .join("Daymark");
-    let data_dir = std::env::var_os("ProgramData")
+        .join("Daymark Control")
+        .join("Daymark Control.exe");
+    let executable = std::env::current_exe().unwrap_or(fallback_executable);
+    let program_data = std::env::var_os("ProgramData")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
-        .join("Daymark");
+        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
+
+    runtime_paths_from_executable(&executable, &program_data)
+}
+
+pub(crate) fn runtime_paths_from_executable(
+    executable: &Path,
+    program_data: &Path,
+) -> RuntimePaths {
+    let install_dir = executable
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from(r"C:\Program Files\Daymark Control"));
+    let data_dir = program_data.join("Daymark");
 
     RuntimePaths {
         settings_file: data_dir.join("control.json"),
@@ -281,24 +295,30 @@ fn control_error(code: &'static str, message: &'static str) -> ControlError {
 
 #[cfg(test)]
 mod tests {
-    use super::{runtime_paths, service_result};
+    use super::{runtime_paths_from_executable, service_result};
+    use std::path::{Path, PathBuf};
     use std::process::Command;
 
     #[test]
-    fn runtime_paths_keep_programs_and_business_data_separate() {
-        let paths = runtime_paths();
-        assert!(paths.install_dir.ends_with("Daymark"));
-        assert!(paths.data_dir.ends_with("Daymark"));
-        assert_ne!(paths.install_dir, paths.data_dir);
-        assert!(paths.settings_file.starts_with(&paths.data_dir));
-        assert!(paths.node_executable.starts_with(&paths.install_dir));
+    fn runtime_paths_follow_the_control_executable_and_keep_business_data_separate() {
+        let executable = Path::new(r"C:\Program Files\Daymark Control\Daymark Control.exe");
+        let program_data = Path::new(r"C:\ProgramData");
+        let paths = runtime_paths_from_executable(executable, program_data);
+
         assert_eq!(
-            paths
-                .runtime_launcher
-                .file_name()
-                .and_then(|value| value.to_str()),
-            Some("DaymarkRuntime.exe"),
+            paths.install_dir,
+            PathBuf::from(r"C:\Program Files\Daymark Control")
         );
+        assert_eq!(paths.data_dir, PathBuf::from(r"C:\ProgramData\Daymark"));
+        assert_eq!(
+            paths.service_wrapper,
+            paths.install_dir.join("DaymarkService.exe")
+        );
+        assert_eq!(
+            paths.runtime_launcher,
+            paths.install_dir.join("DaymarkRuntime.exe")
+        );
+        assert!(paths.settings_file.starts_with(&paths.data_dir));
     }
 
     #[test]

@@ -110,15 +110,21 @@ fn check_health() -> HealthCheck {
     let Some((headers, body)) = response.split_once("\r\n\r\n") else {
         return HealthCheck::NeedsAttention(None);
     };
-    let health = serde_json::from_str::<HealthResponse>(body).ok();
+    let health = parse_health_response(body);
 
-    if headers.starts_with("HTTP/1.1 200")
-        && health.as_ref().is_some_and(|value| value.status == "ok")
-    {
+    if headers.starts_with("HTTP/1.1 200") && health.as_ref().is_some_and(health_is_ready) {
         return HealthCheck::Running(health.expect("checked above"));
     }
 
     HealthCheck::NeedsAttention(health)
+}
+
+fn parse_health_response(body: &str) -> Option<HealthResponse> {
+    serde_json::from_str::<HealthResponse>(body).ok()
+}
+
+fn health_is_ready(health: &HealthResponse) -> bool {
+    health.status == "ok" && health.latest_migration.as_deref() == Some(EXPECTED_MIGRATION)
 }
 
 pub fn assert_safe_local_url(value: &str) -> Result<Url, ControlError> {
@@ -165,7 +171,26 @@ pub fn open_local_url(path: String) -> Result<(), ControlError> {
 
 #[cfg(test)]
 mod tests {
-    use super::assert_safe_local_url;
+    use super::{assert_safe_local_url, health_is_ready, parse_health_response};
+
+    #[test]
+    fn decodes_the_runtime_camel_case_health_contract() {
+        let health = parse_health_response(
+            r#"{"status":"ok","appVersion":"0.1.0","latestMigration":"0002_daymark_company_workspaces.sql"}"#,
+        )
+        .expect("valid Daymark health must decode");
+        assert_eq!(health.app_version, "0.1.0");
+        assert_eq!(
+            health.latest_migration.as_deref(),
+            Some("0002_daymark_company_workspaces.sql")
+        );
+        assert!(health_is_ready(&health));
+
+        let incomplete =
+            parse_health_response(r#"{"status":"ok","appVersion":"0.1.0","latestMigration":null}"#)
+                .expect("syntactically valid incomplete health must decode");
+        assert!(!health_is_ready(&incomplete));
+    }
 
     #[test]
     fn accepts_only_the_daymark_loopback_origin() {
