@@ -14,6 +14,7 @@ function Assert-True {
 
 $configPath = Join-Path $repoRoot "desktop\daymark-control\src-tauri\tauri.conf.json"
 $stageScriptPath = Join-Path $repoRoot "scripts\stage-windows-runtime.ps1"
+$inspectionScriptPath = Join-Path $repoRoot "scripts\inspect-windows-installer.ps1"
 $hooksPath = Join-Path $repoRoot "packaging\windows\installer-hooks.nsh"
 $layoutPath = Join-Path $repoRoot "packaging\windows\install-layout.json"
 $headerPath = Join-Path $repoRoot "packaging\windows\assets\header.bmp"
@@ -32,6 +33,7 @@ Assert-True ($resourceMap."../../../artifacts/windows-stage/DaymarkRuntime.exe" 
 Assert-True ($resourceMap."../../../artifacts/windows-stage/lib/" -eq "lib") "The installer must bundle the shared runtime library."
 Assert-True ($resourceMap."../../../artifacts/windows-stage/package.json" -eq "package.json") "The installer must bundle the version metadata used by runtime health."
 Assert-True (Test-Path $stageScriptPath) "The Windows staging script is missing."
+Assert-True (Test-Path $inspectionScriptPath) "The Windows installer inspection script is missing."
 Assert-True (Test-Path $hooksPath) "The installer hooks file is missing."
 Assert-True (Test-Path $layoutPath) "The install layout manifest is missing."
 Assert-True (Test-Path $headerPath) "The branded installer header is missing."
@@ -39,8 +41,11 @@ Assert-True (Test-Path $sidebarPath) "The branded installer sidebar is missing."
 
 $hooks = Get-Content $hooksPath -Raw
 $stageScript = Get-Content $stageScriptPath -Raw
+$inspectionScript = Get-Content $inspectionScriptPath -Raw
 Assert-True ($stageScript -match 'foreach \(\$directory in @\("dist", "drizzle", "runtime", "lib"\)\)') "The Windows stage must copy the shared runtime library."
 Assert-True ($stageScript -match 'Join-Path \$repoRoot "package\.json"\) -Destination \(Join-Path \$workingPath "package\.json"') "The Windows stage must copy runtime version metadata."
+Assert-True ($inspectionScript -match '"lib"') "The installer payload inspector must allow the shared runtime library."
+Assert-True ($inspectionScript -match '"package\.json"') "The installer payload inspector must allow runtime version metadata."
 foreach ($requiredPattern in @(
     "Unsigned preview",
     "Preserve Daymark data",

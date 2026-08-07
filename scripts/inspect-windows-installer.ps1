@@ -37,8 +37,10 @@ $allowedTopLevel = @(
     "DaymarkService.xml",
     "dist",
     "drizzle",
+    "lib",
     "node",
     "node_modules",
+    "package.json",
     "runtime",
     "third-party-licenses"
 )
