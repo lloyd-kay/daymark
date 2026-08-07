@@ -3,13 +3,18 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { BackupPanel } from "./BackupPanel";
 import type { RuntimeStatus } from "./contracts";
 import {
+  beginPermanentTunnelLogin,
   copySetupCode,
   createBackup,
   getSetupState,
   restoreBackup,
   revealSetupCode,
+  savePermanentTunnelToken,
+  startQuickTunnel,
+  stopTunnel,
   verifyBackup,
 } from "./control";
+import { PublicAccessPanel } from "./PublicAccessPanel";
 import { RuntimeModePanel } from "./RuntimeModePanel";
 import { SetupPanel } from "./SetupPanel";
 import {
@@ -32,6 +37,14 @@ const stateLabel: Record<ControlStatus["state"], string> = {
   stopped: "Stopped",
   starting: "Starting",
   needs_attention: "Needs attention",
+};
+
+const accessLabel: Record<ControlStatus["access"], string> = {
+  local: "This computer only",
+  temporary_starting: "Creating temporary link",
+  temporary: "Temporary test link",
+  permanent: "Permanent access configured",
+  error: "Local only — public access needs attention",
 };
 
 export function App({ initialStatus }: AppProps) {
@@ -134,7 +147,7 @@ export function App({ initialStatus }: AppProps) {
             </div>
             <div>
               <dt>Booking access</dt>
-              <dd>{status.access === "local" ? "This computer only" : "Public link available"}</dd>
+              <dd>{accessLabel[status.access]}</dd>
             </div>
           </dl>
           {runtimeError ? <p className="control-error" role="alert">{runtimeError}</p> : null}
@@ -158,12 +171,22 @@ export function App({ initialStatus }: AppProps) {
         <div className="file-grid" aria-label="Daymark controls">
           <RuntimeModePanel mode={status.mode} onChange={handleRuntimeMode} />
 
-          <section className="file-card file-lilac" aria-labelledby="access-heading">
-            <p className="file-number">02 / ACCESS</p>
-            <h2 id="access-heading">Private by default.</h2>
-            <p>Local access is active. Public links are created only when you ask for one.</p>
-            <button type="button" className="text-action">Manage booking access <span aria-hidden="true">→</span></button>
-          </section>
+          <PublicAccessPanel
+            access={status.access}
+            publicUrl={status.publicUrl}
+            onStartQuick={async () => {
+              if (isTauriRuntime()) await startQuickTunnel();
+            }}
+            onStop={async () => {
+              if (isTauriRuntime()) await stopTunnel();
+            }}
+            onBeginPermanentLogin={async () => {
+              if (isTauriRuntime()) await beginPermanentTunnelLogin();
+            }}
+            onSavePermanentToken={async (token) => {
+              if (isTauriRuntime()) await savePermanentTunnelToken(token);
+            }}
+          />
 
           <BackupPanel onCreate={createBackup} onVerify={verifyBackup} onRestore={restoreBackup} />
 

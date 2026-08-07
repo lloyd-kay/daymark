@@ -1,6 +1,6 @@
 export type RuntimeState = "running" | "stopped" | "starting" | "needs_attention";
 export type RuntimeMode = "service" | "manual";
-export type AccessState = "local" | "temporary" | "permanent" | "error";
+export type AccessState = "local" | "temporary_starting" | "temporary" | "permanent" | "error";
 
 export interface RuntimeStatus {
   state: RuntimeState;

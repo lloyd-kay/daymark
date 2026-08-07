@@ -24,6 +24,26 @@ describe("runtime contracts", () => {
     );
   });
 
+  it("accepts the temporary-link starting state and rejects insecure public addresses", () => {
+    const startingStatus = {
+      state: "running",
+      mode: "service",
+      access: "temporary_starting",
+      localUrl: "http://127.0.0.1:3210",
+      publicUrl: null,
+      version: "0.1.0",
+      latestMigration: "0002_daymark_company_workspaces.sql",
+      message: null,
+    };
+
+    expect(parseRuntimeStatus(startingStatus).access).toBe("temporary_starting");
+    expect(() => parseRuntimeStatus({
+      ...startingStatus,
+      access: "temporary",
+      publicUrl: "http://careful-leaf-7.trycloudflare.com",
+    })).toThrow("Daymark returned an unsafe public address");
+  });
+
   it("allows only the loopback Daymark application", () => {
     expect(assertSafeLocalUrl("http://127.0.0.1:3210/workspace/sign-in").href).toBe(
       "http://127.0.0.1:3210/workspace/sign-in",

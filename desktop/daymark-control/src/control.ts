@@ -64,3 +64,19 @@ export async function verifyBackup(path: string): Promise<BackupSummary> {
 export async function restoreBackup(path: string): Promise<void> {
   await invoke("restore_backup", { path });
 }
+
+export async function startQuickTunnel(): Promise<void> {
+  await invoke("start_quick_tunnel");
+}
+
+export async function stopTunnel(): Promise<void> {
+  await invoke("stop_tunnel");
+}
+
+export async function beginPermanentTunnelLogin(): Promise<void> {
+  await invoke("begin_permanent_tunnel_login");
+}
+
+export async function savePermanentTunnelToken(token: string): Promise<void> {
+  await invoke("save_permanent_tunnel_token", { token });
+}

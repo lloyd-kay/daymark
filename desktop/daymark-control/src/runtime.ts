@@ -5,7 +5,7 @@ import type { AccessState, RuntimeMode, RuntimeState, RuntimeStatus } from "./co
 
 const runtimeStates: RuntimeState[] = ["running", "stopped", "starting", "needs_attention"];
 const runtimeModes: RuntimeMode[] = ["service", "manual"];
-const accessStates: AccessState[] = ["local", "temporary", "permanent", "error"];
+const accessStates: AccessState[] = ["local", "temporary_starting", "temporary", "permanent", "error"];
 const localHosts = new Set(["127.0.0.1", "localhost"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -32,6 +32,22 @@ export function parseRuntimeStatus(value: unknown): RuntimeStatus {
   }
 
   assertSafeLocalUrl(value.localUrl);
+  if (value.publicUrl !== null) {
+    let publicUrl: URL;
+    try {
+      publicUrl = new URL(value.publicUrl);
+    } catch {
+      throw new Error("Daymark returned an unsafe public address");
+    }
+    if (
+      publicUrl.protocol !== "https:"
+      || !publicUrl.hostname
+      || publicUrl.username !== ""
+      || publicUrl.password !== ""
+    ) {
+      throw new Error("Daymark returned an unsafe public address");
+    }
+  }
   return value as unknown as RuntimeStatus;
 }
 

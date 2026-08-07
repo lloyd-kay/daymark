@@ -18,11 +18,12 @@ pub enum RuntimeMode {
     Manual,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 #[allow(dead_code)]
 pub enum AccessState {
     Local,
+    TemporaryStarting,
     Temporary,
     Permanent,
     Error,

@@ -4,10 +4,12 @@ use std::process::Command;
 use std::time::Duration;
 
 use serde::Deserialize;
+use tauri::State;
 use url::Url;
 
 use crate::contracts::{AccessState, ControlError, RuntimeState, RuntimeStatus};
 use crate::service::current_runtime_mode;
+use crate::tunnel::{AccessSnapshot, TunnelController};
 
 const LOCAL_ORIGIN: &str = "http://127.0.0.1:3210";
 const EXPECTED_MIGRATION: &str = "0002_daymark_company_workspaces.sql";
@@ -27,7 +29,9 @@ enum HealthCheck {
 }
 
 #[tauri::command]
-pub fn get_runtime_status() -> Result<RuntimeStatus, ControlError> {
+pub fn get_runtime_status(
+    tunnel_controller: State<'_, TunnelController>,
+) -> Result<RuntimeStatus, ControlError> {
     let (state, health, message) = match check_health() {
         HealthCheck::Running(health) => (RuntimeState::Running, Some(health), None),
         HealthCheck::Stopped => (
@@ -44,7 +48,7 @@ pub fn get_runtime_status() -> Result<RuntimeStatus, ControlError> {
         ),
     };
 
-    Ok(RuntimeStatus {
+    let local_status = RuntimeStatus {
         state,
         mode: current_runtime_mode(),
         access: AccessState::Local,
@@ -58,7 +62,25 @@ pub fn get_runtime_status() -> Result<RuntimeStatus, ControlError> {
             .and_then(|value| value.latest_migration)
             .unwrap_or_else(|| EXPECTED_MIGRATION.to_string()),
         message,
-    })
+    };
+
+    Ok(apply_access_snapshot(
+        local_status,
+        tunnel_controller.snapshot(),
+    ))
+}
+
+pub fn apply_access_snapshot(
+    mut status: RuntimeStatus,
+    access_snapshot: AccessSnapshot,
+) -> RuntimeStatus {
+    status.access = access_snapshot.access;
+    status.public_url = access_snapshot.public_url;
+    if status.access == AccessState::Error && status.state == RuntimeState::Running {
+        status.message =
+            Some("Daymark is running locally, but public access needs attention.".to_string());
+    }
+    status
 }
 
 fn check_health() -> HealthCheck {

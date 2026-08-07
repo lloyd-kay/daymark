@@ -90,6 +90,28 @@ pub fn ensure_setup_code() -> Result<(), ControlError> {
     Ok(())
 }
 
+pub fn store_tunnel_token(token: &[u8]) -> Result<(), ControlError> {
+    let secret_file = secret_directory().join("tunnel-token.dpapi");
+    let secret_dir = secret_file.parent().ok_or_else(|| {
+        secret_error(
+            "secret_path_invalid",
+            "The protected tunnel-token location is invalid.",
+        )
+    })?;
+    fs::create_dir_all(secret_dir).map_err(|_| permission_error())?;
+
+    let protected = protect_for_local_machine(token)?;
+    let temporary = secret_file.with_extension("dpapi.new");
+    fs::write(&temporary, protected).map_err(|_| permission_error())?;
+    fs::rename(&temporary, &secret_file).map_err(|_| permission_error())?;
+    if restrict_to_system_and_administrators(&secret_file).is_err() {
+        let _ = fs::remove_file(&secret_file);
+        return Err(permission_error());
+    }
+    restrict_to_system_and_administrators(secret_dir)?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_setup_state() -> Result<SetupState, ControlError> {
     ensure_setup_code()?;
@@ -138,13 +160,14 @@ pub fn read_setup_code() -> Result<String, ControlError> {
 }
 
 fn setup_secret_file() -> PathBuf {
+    secret_directory().join("setup-code.dpapi")
+}
+
+fn secret_directory() -> PathBuf {
     let program_data = std::env::var_os("ProgramData")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
-    program_data
-        .join("Daymark")
-        .join("secrets")
-        .join("setup-code.dpapi")
+    program_data.join("Daymark").join("secrets")
 }
 
 fn is_valid_setup_code(value: &str) -> bool {
@@ -181,7 +204,7 @@ fn crypt_protect(plaintext: &[u8]) -> Result<Vec<u8>, ControlError> {
     if success == 0 || output.pbData.is_null() {
         return Err(secret_error(
             "secret_protection_failed",
-            "Windows could not protect the Daymark setup code.",
+            "Windows could not protect the Daymark secret.",
         ));
     }
 
@@ -214,7 +237,7 @@ fn crypt_unprotect(ciphertext: &[u8]) -> Result<Vec<u8>, ControlError> {
     if success == 0 || output.pbData.is_null() {
         return Err(secret_error(
             "secret_unprotect_failed",
-            "Windows could not unlock the protected Daymark setup code.",
+            "Windows could not unlock the protected Daymark secret.",
         ));
     }
 

@@ -25,5 +25,6 @@ describe("Daymark Control", () => {
       "href",
       "http://127.0.0.1:3210/workspace/sign-in",
     );
+    expect(screen.getByRole("button", { name: "Create temporary test link" })).toBeEnabled();
   });
 });
