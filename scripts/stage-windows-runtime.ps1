@@ -170,7 +170,7 @@ try {
     }
 
     if (-not $RuntimeOnly) {
-        foreach ($directory in @("dist", "drizzle", "runtime")) {
+        foreach ($directory in @("dist", "drizzle", "runtime", "lib")) {
             $sourceDirectory = Join-Path $repoRoot $directory
             if (-not (Test-Path $sourceDirectory)) { throw "Required Daymark build directory is missing: $directory" }
             Copy-DirectoryLongPath $sourceDirectory (Join-Path $workingPath $directory)

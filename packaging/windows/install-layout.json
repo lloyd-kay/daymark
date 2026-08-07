@@ -13,6 +13,7 @@
     "dist",
     "drizzle",
     "runtime",
+    "lib",
     "node_modules",
     "third-party-licenses"
   ],
