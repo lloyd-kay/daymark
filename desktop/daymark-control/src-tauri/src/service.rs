@@ -1,7 +1,7 @@
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output};
+use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::contracts::{ControlError, RuntimeMode};
+use crate::elevation::{run_elevated_service_action, ServiceAction};
 
 #[derive(Clone, Debug)]
 pub struct RuntimePaths {
@@ -78,31 +79,31 @@ impl ServiceController {
 
     fn start(&self, mode: RuntimeMode) -> Result<(), ControlError> {
         match mode {
-            RuntimeMode::Service => self.run_service_action("start"),
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Start),
             RuntimeMode::Manual => self.start_manual(),
         }
     }
 
     fn stop(&self, mode: RuntimeMode) -> Result<(), ControlError> {
         match mode {
-            RuntimeMode::Service => self.run_service_action("stop"),
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Stop),
             RuntimeMode::Manual => self.stop_manual(),
         }
     }
 
-    fn run_service_action(&self, action: &str) -> Result<(), ControlError> {
-        if !self.paths.service_wrapper.exists() {
-            return Err(control_error(
-                "service_not_installed",
-                "The Daymark Windows service is not installed. Repair the Daymark installation and try again.",
-            ));
+    fn restart(&self, mode: RuntimeMode) -> Result<(), ControlError> {
+        match mode {
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Restart),
+            RuntimeMode::Manual => {
+                self.stop_manual()?;
+                self.start_manual()
+            }
         }
+    }
 
-        let output = Command::new(&self.paths.service_wrapper)
-            .arg(action)
-            .output()
-            .map_err(|_| elevation_error())?;
-        service_result(output)
+    fn run_service_action(&self, action: ServiceAction) -> Result<(), ControlError> {
+        ensure_runtime_file(&self.paths.service_wrapper)?;
+        run_elevated_service_action(&self.paths.service_wrapper, action)
     }
 
     fn start_manual(&self) -> Result<(), ControlError> {
@@ -193,6 +194,11 @@ pub fn stop_runtime(controller: State<'_, ServiceController>) -> Result<(), Cont
 }
 
 #[tauri::command]
+pub fn restart_runtime(controller: State<'_, ServiceController>) -> Result<(), ControlError> {
+    controller.restart(controller.read_mode())
+}
+
+#[tauri::command]
 pub fn set_runtime_mode(
     mode: RuntimeMode,
     controller: State<'_, ServiceController>,
@@ -256,14 +262,6 @@ fn runtime_is_reachable() -> bool {
     .is_ok()
 }
 
-fn service_result(output: Output) -> Result<(), ControlError> {
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(elevation_error())
-    }
-}
-
 fn ensure_runtime_file(path: &Path) -> Result<(), ControlError> {
     if path.is_file() {
         Ok(())
@@ -273,13 +271,6 @@ fn ensure_runtime_file(path: &Path) -> Result<(), ControlError> {
             "Daymark runtime files are missing. Repair the Daymark installation and try again.",
         ))
     }
-}
-
-fn elevation_error() -> ControlError {
-    control_error(
-        "administrator_required",
-        "Windows administrator approval is required to change the Daymark service.",
-    )
 }
 
 fn permission_error() -> ControlError {
@@ -295,9 +286,8 @@ fn control_error(code: &'static str, message: &'static str) -> ControlError {
 
 #[cfg(test)]
 mod tests {
-    use super::{runtime_paths_from_executable, service_result};
+    use super::{restart_runtime, runtime_paths_from_executable};
     use std::path::{Path, PathBuf};
-    use std::process::Command;
 
     #[test]
     fn runtime_paths_follow_the_control_executable_and_keep_business_data_separate() {
@@ -322,13 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn failed_service_actions_return_a_safe_error() {
-        let output = Command::new("cmd")
-            .args(["/C", "exit", "5"])
-            .output()
-            .expect("cmd should run in the Windows test environment");
-        let error = service_result(output).expect_err("failed service action must be reported");
-        assert_eq!(error.code, "administrator_required");
-        assert!(!error.message.contains("stderr"));
+    fn exposes_a_parameterless_restart_command() {
+        let _command = restart_runtime;
     }
 }

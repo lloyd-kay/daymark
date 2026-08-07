@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSafeLocalUrl, parseRuntimeStatus } from "./runtime";
+import { assertSafeLocalUrl, parseRuntimeStatus, runtimeActionErrorMessage } from "./runtime";
 
 describe("runtime contracts", () => {
   it("accepts a complete Daymark runtime status", () => {
@@ -54,6 +54,18 @@ describe("runtime contracts", () => {
     );
     expect(() => assertSafeLocalUrl("http://127.0.0.1:3210.evil.example/workspace")).toThrow(
       "Only the local Daymark address can be opened",
+    );
+  });
+
+  it("maps service action failures without exposing arbitrary error text", () => {
+    expect(runtimeActionErrorMessage({ code: "service_action_cancelled" })).toBe(
+      "Administrator approval was cancelled. Daymark was not changed.",
+    );
+    expect(runtimeActionErrorMessage({ code: "service_action_failed" })).toBe(
+      "Windows could not change the Daymark service. Open Recovery tools for details.",
+    );
+    expect(runtimeActionErrorMessage("untrusted backend text")).toBe(
+      "Windows could not change the Daymark service.",
     );
   });
 });

@@ -20,9 +20,10 @@ import { SetupPanel } from "./SetupPanel";
 import {
   isTauriRuntime,
   openLocalUrl,
+  restartRuntime,
+  runtimeActionErrorMessage,
   setRuntimeMode,
   startRuntime,
-  stopRuntime,
   useRuntimeStatus,
 } from "./runtime";
 
@@ -91,10 +92,10 @@ export function App({ initialStatus }: AppProps) {
     setRuntimeAction("working");
     setRuntimeError(null);
     try {
-      if (isRunning) await stopRuntime();
-      await startRuntime();
-    } catch {
-      setRuntimeError("Windows could not change the Daymark service. Administrator approval may be required.");
+      if (isRunning) await restartRuntime();
+      else await startRuntime();
+    } catch (error: unknown) {
+      setRuntimeError(runtimeActionErrorMessage(error));
     } finally {
       setRuntimeAction("idle");
     }

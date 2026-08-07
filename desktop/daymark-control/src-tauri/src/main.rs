@@ -11,6 +11,7 @@ fn main() {
             status::open_local_url,
             service::start_runtime,
             service::stop_runtime,
+            service::restart_runtime,
             service::set_runtime_mode,
             secrets::get_setup_state,
             secrets::reveal_setup_code,

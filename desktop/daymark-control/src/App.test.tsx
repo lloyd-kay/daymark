@@ -1,7 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+
+const invokeMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
 
 const stoppedStatus = {
   state: "stopped" as const,
@@ -13,6 +17,17 @@ const stoppedStatus = {
   latestMigration: "0002_daymark_company_workspaces.sql",
   message: "Daymark is ready to start.",
 };
+
+const runningStatus = {
+  ...stoppedStatus,
+  state: "running" as const,
+  message: null,
+};
+
+afterEach(() => {
+  invokeMock.mockReset();
+  Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
+});
 
 describe("Daymark Control", () => {
   it("keeps the stopped service status and primary recovery action understandable without colour", () => {
@@ -26,5 +41,25 @@ describe("Daymark Control", () => {
       "http://127.0.0.1:3210/workspace/sign-in",
     );
     expect(screen.getByRole("button", { name: "Create temporary test link" })).toBeEnabled();
+  });
+
+  it("uses one fixed restart command for a running Windows service", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    invokeMock.mockImplementation((command: string) => {
+      if (command === "get_runtime_status") return Promise.resolve(runningStatus);
+      return Promise.resolve();
+    });
+
+    render(<App initialStatus={runningStatus} />);
+    fireEvent.click(screen.getByRole("button", { name: "Restart Daymark" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("restart_runtime");
+    });
+    expect(invokeMock).not.toHaveBeenCalledWith("stop_runtime");
+    expect(invokeMock).not.toHaveBeenCalledWith("start_runtime");
   });
 });
