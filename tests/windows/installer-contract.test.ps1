@@ -17,6 +17,7 @@ $stageScriptPath = Join-Path $repoRoot "scripts\stage-windows-runtime.ps1"
 $inspectionScriptPath = Join-Path $repoRoot "scripts\inspect-windows-installer.ps1"
 $hooksPath = Join-Path $repoRoot "packaging\windows\installer-hooks.nsh"
 $layoutPath = Join-Path $repoRoot "packaging\windows\install-layout.json"
+$installGuidePath = Join-Path $repoRoot "docs\install\windows.md"
 $headerPath = Join-Path $repoRoot "packaging\windows\assets\header.bmp"
 $sidebarPath = Join-Path $repoRoot "packaging\windows\assets\sidebar.bmp"
 
@@ -33,10 +34,12 @@ $resourceMap = $config.bundle.resources
 Assert-True ($resourceMap."../../../artifacts/windows-stage/DaymarkRuntime.exe" -eq "DaymarkRuntime.exe") "The installer must consume the staged release launcher."
 Assert-True ($resourceMap."../../../artifacts/windows-stage/lib/" -eq "lib") "The installer must bundle the shared runtime library."
 Assert-True ($resourceMap."../../../artifacts/windows-stage/package.json" -eq "package.json") "The installer must bundle the version metadata used by runtime health."
+Assert-True ($resourceMap."../../../artifacts/windows-stage/vc_redist.x64.exe" -eq "vc_redist.x64.exe") "The installer must bundle the Visual C++ prerequisite."
 Assert-True (Test-Path $stageScriptPath) "The Windows staging script is missing."
 Assert-True (Test-Path $inspectionScriptPath) "The Windows installer inspection script is missing."
 Assert-True (Test-Path $hooksPath) "The installer hooks file is missing."
 Assert-True (Test-Path $layoutPath) "The install layout manifest is missing."
+Assert-True (Test-Path $installGuidePath) "The Windows installation guide is missing."
 Assert-True (Test-Path $headerPath) "The branded installer header is missing."
 Assert-True (Test-Path $sidebarPath) "The branded installer sidebar is missing."
 
@@ -47,6 +50,7 @@ Assert-True ($stageScript -match 'foreach \(\$directory in @\("dist", "drizzle",
 Assert-True ($stageScript -match 'Join-Path \$repoRoot "package\.json"\) -Destination \(Join-Path \$workingPath "package\.json"') "The Windows stage must copy runtime version metadata."
 Assert-True ($inspectionScript -match '"lib"') "The installer payload inspector must allow the shared runtime library."
 Assert-True ($inspectionScript -match '"package\.json"') "The installer payload inspector must allow runtime version metadata."
+Assert-True ($inspectionScript -match 'Get-AuthenticodeSignature\s+-LiteralPath\s+\$vcRedist') "Inspection must verify the prerequisite signature."
 foreach ($requiredPattern in @(
     "Unsigned preview",
     "Preserve Daymark data",
@@ -61,12 +65,24 @@ foreach ($requiredPattern in @(
     Assert-True ($hooks -match $requiredPattern) "Installer hooks are missing pattern: $requiredPattern"
 }
 
+$vcIndex = $hooks.IndexOf('vc_redist.x64.exe')
+$prepareIndex = $hooks.IndexOf('--prepare-install')
+$migrateIndex = $hooks.IndexOf('--migrate')
+Assert-True ($vcIndex -ge 0 -and $vcIndex -lt $prepareIndex -and $prepareIndex -lt $migrateIndex) "The Visual C++ prerequisite must run before Daymark preparation and migration."
+foreach ($acceptedCode in @("1638", "3010")) {
+    Assert-True ($hooks -match $acceptedCode) "The prerequisite policy must accept exit code $acceptedCode."
+}
+
 $layout = Get-Content $layoutPath -Raw | ConvertFrom-Json
-Assert-True ($layout.installRoot -eq "%ProgramFiles%\Daymark") "Application files must install under Program Files."
+Assert-True ($layout.installRoot -eq "%ProgramFiles%\Daymark Control") "The install layout must match Tauri's product directory."
 Assert-True ($layout.dataRoot -eq "%ProgramData%\Daymark") "Business data must remain under ProgramData."
 Assert-True (@($layout.immutable) -contains "lib") "The immutable install layout must include the shared runtime library."
 Assert-True (@($layout.immutable) -contains "package.json") "The immutable install layout must include runtime version metadata."
+Assert-True (@($layout.immutable) -contains "vc_redist.x64.exe") "The prerequisite must be part of the immutable payload."
 Assert-True (@($layout.preservedOnUninstall) -contains "data") "Uninstall must preserve Daymark data."
 Assert-True (@($layout.preservedOnUninstall) -contains "backups") "Uninstall must preserve Daymark backups."
+
+$installGuide = Get-Content $installGuidePath -Raw
+Assert-True ($installGuide -match '%ProgramFiles%\\Daymark Control') "The Windows guide must name the actual Tauri install directory."
 
 Write-Output "Daymark installer contract passed."

@@ -39,7 +39,7 @@ function Assert-DaymarkAutomaticService {
 }
 
 function Assert-DaymarkInstalledRuntime {
-    $installRoot = Join-Path $env:ProgramFiles "Daymark"
+    $installRoot = Join-Path $env:ProgramFiles "Daymark Control"
     foreach ($relativePath in @("lib\runtime-health.ts", "package.json")) {
         $installedPath = Join-Path $installRoot $relativePath
         if (-not (Test-Path -LiteralPath $installedPath -PathType Leaf)) {
@@ -51,6 +51,14 @@ function Assert-DaymarkInstalledRuntime {
         throw "The installed Daymark runtime version metadata is invalid."
     }
     return $true
+}
+
+function Assert-DaymarkVcRuntime {
+    $key = Get-ItemProperty -LiteralPath "HKLM:\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" -ErrorAction Stop
+    if ($key.Installed -ne 1) { throw "The Microsoft Visual C++ x64 runtime is not installed." }
+    $version = [version]($key.Version -replace '^v', '')
+    if ($version -lt [version]"14.51.36247.0") { throw "The Microsoft Visual C++ x64 runtime is older than Daymark requires." }
+    return $version.ToString()
 }
 
 function Invoke-DaymarkInstaller {

@@ -11,6 +11,8 @@ This checklist is for disposable test machines only. Do not run installation lif
 - Installer SHA-256:
 - Evidence folder:
 - No secrets, setup codes, passwords, client details, or tunnel tokens appear in logs: Not yet run
+- Clean-machine prerequisite state: without the Visual C++ Redistributable
+- Installed prerequisite evidence (`vcRedistVersion`): Not yet run
 
 ## Automated lifecycle matrix
 
@@ -24,6 +26,8 @@ This checklist is for disposable test machines only. Do not run installation lif
 - Windows shows the expected unrecognised-publisher warning for this unsigned preview.
 - The installer uses the Daymark header and sidebar artwork without distortion.
 - Daymark Control opens from the desktop shortcut.
+- Application files are installed under `%ProgramFiles%\Daymark Control`; business data remains under `%ProgramData%\Daymark`.
+- The smoke evidence reports `vcRedistVersion` at or above `14.51.36247.0`.
 - Manual mode shows exactly: “Client booking links and temporary public links stop working when Daymark is closed. Availability cannot be served while this computer or Daymark is offline.”
 - A temporary public link is clearly marked as unsuitable for real client bookings.
 - The installer creates no desktop terminal window during normal service operation.

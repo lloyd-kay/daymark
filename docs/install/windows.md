@@ -1,6 +1,6 @@
 # Install Daymark on Windows
 
-The assisted installer is the recommended route for normal Windows users. It includes Daymark Control, the local booking runtime, database tools, a Windows service wrapper, backups, and the optional public-link helper.
+The assisted installer is the recommended route for normal Windows users. It includes Daymark Control, the local booking runtime, the required Microsoft Visual C++ runtime, database tools, a Windows service wrapper, backups, and the optional public-link helper.
 
 ## What you need
 
@@ -71,7 +71,7 @@ A failure in the optional public link does not stop the local booking service.
 
 ## Files and backups
 
-Application files live under `%ProgramFiles%\Daymark`. Mutable files are kept separately:
+Application files live under `%ProgramFiles%\Daymark Control`. Mutable files are kept separately:
 
 - Database: `%ProgramData%\Daymark\data`
 - Verified backups: `%ProgramData%\Daymark\backups`

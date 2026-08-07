@@ -43,6 +43,7 @@
       "../../../artifacts/windows-stage/lib/": "lib",
       "../../../artifacts/windows-stage/package.json": "package.json",
       "../../../artifacts/windows-stage/node_modules/": "node_modules",
+      "../../../artifacts/windows-stage/vc_redist.x64.exe": "vc_redist.x64.exe",
       "../../../artifacts/windows-stage/third-party-licenses/": "third-party-licenses"
     },
     "windows": {

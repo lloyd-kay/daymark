@@ -42,6 +42,7 @@ $allowedTopLevel = @(
     "node_modules",
     "package.json",
     "runtime",
+    "vc_redist.x64.exe",
     "third-party-licenses"
 )
 $actualTopLevel = @(Get-ChildItem -LiteralPath $stagePath -Force | ForEach-Object { $_.Name })
@@ -66,12 +67,29 @@ if ($launcherBytes.Length -lt 1024 -or $launcherBytes[0] -ne 0x4d -or $launcherB
     throw "The staged Daymark runtime launcher is invalid."
 }
 
+$vcRedist = Join-Path $stagePath "vc_redist.x64.exe"
+$vcHash = (Get-FileHash -LiteralPath $vcRedist -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($vcHash -ne "843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c") {
+    throw "The staged Visual C++ prerequisite hash is not approved."
+}
+$vcInfo = Get-Item -LiteralPath $vcRedist
+if ($vcInfo.VersionInfo.ProductVersion -ne "14.51.36247.0") {
+    throw "The staged Visual C++ prerequisite version is not approved."
+}
+$vcSignature = Get-AuthenticodeSignature -LiteralPath $vcRedist
+if ($vcSignature.Status -ne "Valid" -or $vcSignature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation(?:,|$)") {
+    throw "The staged Visual C++ prerequisite does not have a valid Microsoft signature."
+}
+
 $inspection = [ordered]@{
     artifact = $installerInfo.Name
     architecture = "x64"
     sizeBytes = $installerInfo.Length
     sha256 = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
     signature = "Unsigned preview"
+    vcRedistVersion = $vcInfo.VersionInfo.ProductVersion
+    vcRedistSha256 = $vcHash
+    vcRedistSignature = "Valid Microsoft signature"
     stagedPayloadAllowlistPassed = $true
     privateDataAbsent = $true
     inspectedAt = (Get-Date).ToUniversalTime().ToString("o")

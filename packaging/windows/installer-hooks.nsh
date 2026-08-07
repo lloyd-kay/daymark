@@ -9,6 +9,18 @@
   ${EndIf}
 !macroend
 
+!macro DAYMARK_INSTALL_VC_RUNTIME
+  DetailPrint "Installing Microsoft Visual C++ runtime"
+  nsExec::ExecToLog '"$INSTDIR\vc_redist.x64.exe" /install /quiet /norestart'
+  Pop $0
+  ${If} $0 != 0
+  ${AndIf} $0 != 1638
+  ${AndIf} $0 != 3010
+    MessageBox MB_OK|MB_ICONSTOP "Daymark could not install the required Microsoft Visual C++ runtime (error $0).$\r$\n$\r$\nYour business data has not been deleted. Restart Windows, then run the Daymark installer again."
+    Abort
+  ${EndIf}
+!macroend
+
 !macro NSIS_HOOK_PREINSTALL
   ${IfNot} ${RunningX64}
     MessageBox MB_OK|MB_ICONSTOP "Daymark requires 64-bit Windows 10 or Windows 11."
@@ -34,6 +46,7 @@
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
+  !insertmacro DAYMARK_INSTALL_VC_RUNTIME
   DetailPrint "Preparing protected Daymark data folders"
   nsExec::ExecToLog '"$INSTDIR\DaymarkRuntime.exe" --prepare-install'
   Pop $0
