@@ -273,15 +273,22 @@ fn crypt_unprotect(ciphertext: &[u8]) -> Result<Vec<u8>, ControlError> {
 }
 
 fn restrict_to_system_and_administrators(path: &std::path::Path) -> Result<(), ControlError> {
-    let current_user = format!("*{}:(F)", current_user_sid()?);
-    let status = Command::new("icacls.exe")
+    let current_user_sid = current_user_sid()?;
+    let mut command = Command::new("icacls.exe");
+    command
         .arg(path)
         .args(["/inheritance:r", "/grant:r"])
         .arg("*S-1-5-18:(F)")
         .arg("*S-1-5-32-544:(F)")
-        .arg(current_user)
-        .status()
-        .map_err(|_| permission_error())?;
+        .arg(format!("*{current_user_sid}:(F)"));
+    if path.is_dir() {
+        command
+            .arg("*S-1-5-18:(OI)(CI)(F)")
+            .arg("*S-1-5-32-544:(OI)(CI)(F)")
+            .arg(format!("*{current_user_sid}:(OI)(CI)(F)"))
+            .args(["/T", "/C", "/Q"]);
+    }
+    let status = command.status().map_err(|_| permission_error())?;
     if status.success() {
         Ok(())
     } else {
@@ -386,8 +393,11 @@ fn secret_error(code: &'static str, message: &'static str) -> ControlError {
 mod tests {
     use super::{
         generate_setup_code, parse_current_user_sid, protect_for_local_machine,
-        unprotect_for_local_machine,
+        restrict_to_system_and_administrators, unprotect_for_local_machine,
     };
+    use std::fs;
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn generated_setup_codes_use_the_expected_private_format() {
@@ -425,5 +435,58 @@ mod tests {
             Some("S-1-5-21-100-200-300-1001".to_string()),
         );
         assert_eq!(parse_current_user_sid("unexpected output"), None);
+    }
+
+    #[test]
+    fn protected_directory_permissions_are_inherited_by_new_children() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("daymark-acl-{unique}"));
+        let child = root.join("service-created");
+        fs::create_dir(&root).expect("temporary ACL root should be created");
+
+        restrict_to_system_and_administrators(&root)
+            .expect("Daymark should protect its data directory");
+        fs::create_dir(&child).expect("an authorised process should create a child directory");
+        let output = Command::new("icacls.exe")
+            .arg(&child)
+            .output()
+            .expect("icacls should inspect the child directory");
+        let acl = String::from_utf8_lossy(&output.stdout);
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(output.status.success(), "icacls failed: {acl}");
+        assert!(
+            acl.contains("(I)(OI)(CI)(F)"),
+            "new runtime directories must inherit full-control entries: {acl}"
+        );
+    }
+
+    #[test]
+    fn protecting_an_upgrade_directory_repairs_existing_children() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("daymark-acl-upgrade-{unique}"));
+        let child = root.join("existing-runtime-data");
+        fs::create_dir_all(&child).expect("existing runtime data should be represented");
+
+        restrict_to_system_and_administrators(&root)
+            .expect("an upgrade should repair the protected data directory");
+        let output = Command::new("icacls.exe")
+            .arg(&child)
+            .output()
+            .expect("icacls should inspect the existing child directory");
+        let acl = String::from_utf8_lossy(&output.stdout);
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(output.status.success(), "icacls failed: {acl}");
+        assert!(
+            acl.contains("(OI)(CI)(F)"),
+            "upgrades must propagate full-control entries to existing runtime data: {acl}"
+        );
     }
 }

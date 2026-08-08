@@ -51,6 +51,16 @@ Assert-True ($stageScript -match 'Join-Path \$repoRoot "package\.json"\) -Destin
 Assert-True ($inspectionScript -match '"lib"') "The installer payload inspector must allow the shared runtime library."
 Assert-True ($inspectionScript -match '"package\.json"') "The installer payload inspector must allow runtime version metadata."
 Assert-True ($inspectionScript -match 'Get-AuthenticodeSignature\s+-LiteralPath\s+\$vcRedist') "Inspection must verify the prerequisite signature."
+Assert-True ($hooks -match 'MessageBox MB_OK\|MB_ICONINFORMATION "Unsigned preview[^\r\n]+" /SD IDOK') "Silent installs must not wait on the unsigned-preview information dialog."
+Assert-True ($hooks -match 'MessageBox MB_YESNO\|MB_ICONEXCLAMATION\|MB_DEFBUTTON2 "Daymark could not create the pre-upgrade backup[^\r\n]+" /SD IDNO') "Silent upgrades must abort safely instead of waiting on a failed-backup dialog."
+$preinstallStart = $hooks.IndexOf('!macro NSIS_HOOK_PREINSTALL')
+$preinstallEnd = $hooks.IndexOf('!macroend', $preinstallStart)
+$preinstall = $hooks.Substring($preinstallStart, $preinstallEnd - $preinstallStart)
+$upgradeBackupIndex = $preinstall.IndexOf('--backup')
+$upgradeStopIndex = $preinstall.IndexOf('DaymarkService.exe" stop')
+$upgradeUninstallIndex = $preinstall.IndexOf('DaymarkService.exe" uninstall')
+Assert-True ($upgradeBackupIndex -ge 0 -and $upgradeBackupIndex -lt $upgradeStopIndex) "An upgrade must preserve a verified backup before stopping a healthy service."
+Assert-True ($upgradeStopIndex -lt $upgradeUninstallIndex) "An upgrade must unregister the old service before installing the replacement."
 foreach ($requiredPattern in @(
     "Unsigned preview",
     "Preserve Daymark data",

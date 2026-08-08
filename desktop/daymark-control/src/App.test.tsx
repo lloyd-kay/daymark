@@ -24,6 +24,12 @@ const runningStatus = {
   message: null,
 };
 
+const needsAttentionStatus = {
+  ...stoppedStatus,
+  state: "needs_attention" as const,
+  message: "Daymark is running but needs attention before it can accept bookings.",
+};
+
 afterEach(() => {
   invokeMock.mockReset();
   Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
@@ -60,6 +66,25 @@ describe("Daymark Control", () => {
       expect(invokeMock).toHaveBeenCalledWith("restart_runtime");
     });
     expect(invokeMock).not.toHaveBeenCalledWith("stop_runtime");
+    expect(invokeMock).not.toHaveBeenCalledWith("start_runtime");
+  });
+
+  it("restarts a responding service that needs attention instead of starting it again", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    invokeMock.mockImplementation((command: string) => {
+      if (command === "get_runtime_status") return Promise.resolve(needsAttentionStatus);
+      return Promise.resolve();
+    });
+
+    render(<App initialStatus={needsAttentionStatus} />);
+    fireEvent.click(screen.getByRole("button", { name: "Restart Daymark" }));
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("restart_runtime");
+    });
     expect(invokeMock).not.toHaveBeenCalledWith("start_runtime");
   });
 });

@@ -65,11 +65,6 @@ async function createFixture() {
   };
 
   const run = async (command: CommandSpec): Promise<CommandResult> => {
-    const outputIndex = command.args.indexOf("--output");
-    if (outputIndex >= 0) {
-      await mkdir(path.dirname(command.args[outputIndex + 1]), { recursive: true });
-      await writeFile(command.args[outputIndex + 1], "CREATE TABLE example (id text);\n");
-    }
     if (command.args.includes("--json")) {
       return {
         exitCode: 0,
@@ -89,6 +84,10 @@ async function createFixture() {
       now: () => new Date("2026-08-06T12:34:56.000Z"),
       id: () => "fixedid",
       assertStopped: async () => undefined,
+      exportDatabase: async (_config: RuntimeConfig, outputFile: string) => {
+        await mkdir(path.dirname(outputFile), { recursive: true });
+        await writeFile(outputFile, "CREATE TABLE example (id text);\n");
+      },
     },
   };
 }

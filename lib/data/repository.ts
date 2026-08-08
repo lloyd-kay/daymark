@@ -120,14 +120,40 @@ export async function sha256(value: string): Promise<string> {
 
 export async function ensureSeedData(): Promise<void> {
   const db = await database();
-  const [existing] = await db.select({ id: employeeProfiles.id }).from(employeeProfiles).limit(1);
-  if (existing) return;
+  const seedProfileIds = PUBLIC_PROFILE_SEEDS.map((profile) => profile.id);
+  let existingProfiles = await db
+    .select({ id: employeeProfiles.id })
+    .from(employeeProfiles)
+    .where(inArray(employeeProfiles.id, seedProfileIds));
+
+  if (existingProfiles.length === 0) {
+    try {
+      await db.insert(employeeProfiles).values(
+        PUBLIC_PROFILE_SEEDS.map((profile) => ({ ...profile })),
+      );
+    } catch (error) {
+      if (!isUniqueConstraint(error)) throw error;
+    }
+    existingProfiles = await db
+      .select({ id: employeeProfiles.id })
+      .from(employeeProfiles)
+      .where(inArray(employeeProfiles.id, seedProfileIds));
+  }
+
+  if (existingProfiles.length !== PUBLIC_PROFILE_SEEDS.length) return;
+  const [existingAvailability] = await db
+    .select({ id: availabilityRules.id })
+    .from(availabilityRules)
+    .where(inArray(availabilityRules.employeeProfileId, seedProfileIds))
+    .limit(1);
+  if (existingAvailability) return;
 
   try {
-    await db.insert(employeeProfiles).values(
-      PUBLIC_PROFILE_SEEDS.map((profile) => ({ ...profile })),
+    const inserts = defaultAvailabilitySeeds().map((rule) =>
+      db.insert(availabilityRules).values(rule),
     );
-    await db.insert(availabilityRules).values(defaultAvailabilitySeeds());
+    const [first, ...rest] = inserts;
+    if (first) await db.batch([first, ...rest]);
   } catch (error) {
     if (!isUniqueConstraint(error)) throw error;
   }

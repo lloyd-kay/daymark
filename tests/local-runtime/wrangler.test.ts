@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { RuntimeConfig } from "../../runtime/local/contracts";
-import { exportCommand, importCommand, integrityCommand, migrationCommand, serveCommand, writeRuntimeConfig } from "../../runtime/local/wrangler";
+import { importCommand, integrityCommand, migrationCommand, serveCommand, writeRuntimeConfig } from "../../runtime/local/wrangler";
 
 const config: RuntimeConfig = {
   host: "127.0.0.1",
@@ -46,16 +46,11 @@ describe("Wrangler command construction", () => {
     expect(command.args[ipIndex + 1]).toBe("0.0.0.0");
   });
 
-  it("constructs local migration and export commands without placing secrets in arguments", () => {
+  it("constructs local migration commands without placing secrets in arguments", () => {
     const migration = migrationCommand(config);
-    const exported = exportCommand(config, "C:\\ProgramData\\Daymark\\backups\\backup.sql.partial");
 
     expect(migration.args).toEqual(expect.arrayContaining(["d1", "migrations", "apply", "DB", "--local"]));
-    expect(exported.args).toEqual(expect.arrayContaining([
-      "d1", "export", "DB", "--local", "--output", "C:\\ProgramData\\Daymark\\backups\\backup.sql.partial",
-    ]));
     expect(migration.args.join(" ")).not.toContain("SETUP-SECRET");
-    expect(exported.args.join(" ")).not.toContain("SETUP-SECRET");
   });
 
   it("constructs restore and integrity commands against the selected persistence directory", () => {
