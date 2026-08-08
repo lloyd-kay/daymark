@@ -33,6 +33,14 @@ describe("verified local backups", () => {
     await expect(verifyBackup(backup.manifestFile)).rejects.toThrow("Backup integrity check failed");
   });
 
+  it("records the installed migration even when the candidate contains a newer migration", async () => {
+    const fixture = await createFixture("0001_daymark_widget_auth.sql");
+
+    const backup = await createBackup(fixture.config, fixture.dependencies);
+
+    expect(backup.latestMigration).toBe("0001_daymark_widget_auth.sql");
+  });
+
   it("restores through a staged directory while preserving rollback data and a safety backup", async () => {
     const fixture = await createFixture();
     const source = await createBackup(fixture.config, fixture.dependencies);
@@ -50,7 +58,7 @@ describe("verified local backups", () => {
   });
 });
 
-async function createFixture() {
+async function createFixture(latestMigration = "0002_daymark_company_workspaces.sql") {
   const root = await mkdtemp(path.join(os.tmpdir(), "daymark-backup-test-"));
   const config: RuntimeConfig = {
     host: "127.0.0.1",
@@ -87,6 +95,7 @@ async function createFixture() {
       exportDatabase: async (_config: RuntimeConfig, outputFile: string) => {
         await mkdir(path.dirname(outputFile), { recursive: true });
         await writeFile(outputFile, "CREATE TABLE example (id text);\n");
+        return latestMigration;
       },
     },
   };

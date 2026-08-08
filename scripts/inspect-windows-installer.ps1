@@ -42,6 +42,7 @@ $allowedTopLevel = @(
     "node_modules",
     "package.json",
     "runtime",
+    "stop-daymark-processes.ps1",
     "vc_redist.x64.exe",
     "third-party-licenses"
 )

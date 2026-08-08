@@ -49,7 +49,7 @@ test("starts Daymark with persistent local D1 and reports healthy", { timeout: 6
   assert.deepEqual(await response.json(), {
     status: "ok",
     appVersion: "0.1.0",
-    latestMigration: "0002_daymark_company_workspaces.sql",
+    latestMigration: "0003_daymark_seed_recovery.sql",
   });
 
   const backup = await runCli([
@@ -88,6 +88,12 @@ test("repairs default availability after a partial initial seed", { timeout: 60_
   });
   try {
     const database = await databaseRuntime.getD1Database("DB");
+    await database.prepare(`
+      insert into accounts
+        (id, email, display_name, active)
+      values
+        ('account-admin', 'admin@example.test', 'Administrator', true)
+    `).run();
     await database.prepare(`
       insert into employee_profiles
         (id, workspace_id, membership_id, public_name, title, bio, accent, active, sort_order)
@@ -133,6 +139,21 @@ test("repairs default availability after a partial initial seed", { timeout: 60_
   assert.equal(response.status, 200, `${responseText}\n${stdout}\n${stderr}`);
   const result = JSON.parse(responseText);
   assert.ok(result.slots.length > 0, "the partial seed should regain default bookable times");
+});
+
+test("rejects a backup when no migrated Daymark database exists", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "daymark-runtime-empty-backup-"));
+  context.after(() => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }));
+  const backup = await runCli([
+    "backup",
+    "--app-dir", repositoryRoot,
+    "--data-dir", path.join(root, "data"),
+    "--backup-dir", path.join(root, "backups"),
+    "--log-dir", path.join(root, "logs"),
+  ]);
+
+  assert.notEqual(backup.code, 0);
+  assert.match(backup.stderr, /migrated Daymark database/i);
 });
 
 async function runCli(args) {

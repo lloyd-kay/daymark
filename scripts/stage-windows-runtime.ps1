@@ -192,6 +192,7 @@ try {
         }
         Copy-Item -LiteralPath (Join-Path $repoRoot "package.json") -Destination (Join-Path $workingPath "package.json")
         Copy-Item -LiteralPath (Join-Path $repoRoot "packaging\windows\DaymarkService.xml") -Destination (Join-Path $workingPath "DaymarkService.xml")
+        Copy-Item -LiteralPath (Join-Path $repoRoot "packaging\windows\stop-daymark-processes.ps1") -Destination (Join-Path $workingPath "stop-daymark-processes.ps1")
 
         $dependencyInstall = Join-Path ([System.IO.Path]::GetTempPath()) ("daymark-dependencies-" + [guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force $dependencyInstall | Out-Null

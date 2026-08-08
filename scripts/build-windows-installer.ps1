@@ -2,7 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $stageRoot = Join-Path $repoRoot "artifacts\windows-stage"
-if (-not (Test-Path (Join-Path $stageRoot "cloudflared.exe")) -or -not (Test-Path (Join-Path $stageRoot "node\node.exe"))) {
+if (-not (Test-Path (Join-Path $stageRoot "cloudflared.exe")) -or
+    -not (Test-Path (Join-Path $stageRoot "node\node.exe")) -or
+    -not (Test-Path (Join-Path $stageRoot "stop-daymark-processes.ps1"))) {
     throw "Run the verified Windows staging step before building the installer."
 }
 
@@ -10,10 +12,12 @@ $availableDrive = @("R", "S", "T", "U") | Where-Object { -not (Test-Path ("{0}:\
 if (-not $availableDrive) { throw "No temporary build drive is available." }
 $drive = "$availableDrive`:"
 $originalLocation = Get-Location
+$previousNsisStageRoot = $env:DAYMARK_NSIS_STAGE_ROOT
 
 try {
     & subst.exe $drive $repoRoot
     if ($LASTEXITCODE -ne 0) { throw "Windows could not create the temporary short build path." }
+    $env:DAYMARK_NSIS_STAGE_ROOT = Join-Path $drive "artifacts\windows-stage"
     Set-Location "$drive\"
 
     & npm.cmd --prefix desktop/daymark-control run tauri build -- --bundles nsis
@@ -21,6 +25,12 @@ try {
 }
 finally {
     Set-Location $originalLocation
+    if ($null -eq $previousNsisStageRoot) {
+        Remove-Item Env:\DAYMARK_NSIS_STAGE_ROOT -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:DAYMARK_NSIS_STAGE_ROOT = $previousNsisStageRoot
+    }
     & subst.exe $drive /D | Out-Null
 }
 

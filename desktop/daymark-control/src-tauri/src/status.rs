@@ -12,7 +12,7 @@ use crate::service::current_runtime_mode;
 use crate::tunnel::{AccessSnapshot, TunnelController};
 
 const LOCAL_ORIGIN: &str = "http://127.0.0.1:3210";
-const EXPECTED_MIGRATION: &str = "0002_daymark_company_workspaces.sql";
+const EXPECTED_MIGRATION: &str = "0003_daymark_seed_recovery.sql";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -176,13 +176,13 @@ mod tests {
     #[test]
     fn decodes_the_runtime_camel_case_health_contract() {
         let health = parse_health_response(
-            r#"{"status":"ok","appVersion":"0.1.0","latestMigration":"0002_daymark_company_workspaces.sql"}"#,
+            r#"{"status":"ok","appVersion":"0.1.0","latestMigration":"0003_daymark_seed_recovery.sql"}"#,
         )
         .expect("valid Daymark health must decode");
         assert_eq!(health.app_version, "0.1.0");
         assert_eq!(
             health.latest_migration.as_deref(),
-            Some("0002_daymark_company_workspaces.sql")
+            Some("0003_daymark_seed_recovery.sql")
         );
         assert!(health_is_ready(&health));
 
