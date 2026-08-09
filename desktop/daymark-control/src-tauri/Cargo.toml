@@ -1,6 +1,6 @@
 [package]
 name = "daymark-control"
-version = "0.1.0"
+version = "0.1.1"
 description = "Private local control desk for Daymark"
 authors = ["Daymark"]
 edition = "2021"

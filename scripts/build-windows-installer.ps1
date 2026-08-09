@@ -2,10 +2,17 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $stageRoot = Join-Path $repoRoot "artifacts\windows-stage"
+$bundleDirectory = Join-Path $repoRoot "desktop\daymark-control\src-tauri\target\release\bundle\nsis"
 if (-not (Test-Path (Join-Path $stageRoot "cloudflared.exe")) -or
     -not (Test-Path (Join-Path $stageRoot "node\node.exe")) -or
     -not (Test-Path (Join-Path $stageRoot "stop-daymark-processes.ps1"))) {
     throw "Run the verified Windows staging step before building the installer."
+}
+
+# Tauri keeps installers from earlier versions in the bundle directory. Remove
+# only those generated outputs so a version bump always publishes one package.
+if (Test-Path -LiteralPath $bundleDirectory) {
+    Get-ChildItem -LiteralPath $bundleDirectory -Filter "*.exe" -File | Remove-Item -Force
 }
 
 $availableDrive = @("R", "S", "T", "U") | Where-Object { -not (Test-Path ("{0}:\" -f $_)) } | Select-Object -First 1
@@ -34,7 +41,6 @@ finally {
     & subst.exe $drive /D | Out-Null
 }
 
-$bundleDirectory = Join-Path $repoRoot "desktop\daymark-control\src-tauri\target\release\bundle\nsis"
 $builtInstallers = @(Get-ChildItem $bundleDirectory -Filter "*.exe")
 if ($builtInstallers.Count -ne 1) { throw "Expected exactly one NSIS installer output." }
 
