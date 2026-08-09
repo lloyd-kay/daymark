@@ -917,8 +917,9 @@ a {
   width: 100%;
   max-width: none;
   min-height: 0;
+  display: grid;
   margin: 0;
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: 82px minmax(0, 1fr) minmax(200px, 230px);
   box-shadow: 5px 5px 0 var(--ink);
 }
 
@@ -945,10 +946,12 @@ a {
 }
 
 .embed-shell .booking-studio.is-embedded .privacy-note {
-  grid-column: 2;
+  grid-column: 3;
+  grid-row: 1;
+  align-self: start;
   width: auto;
-  margin: 0 2rem 2rem;
-  transform: none;
+  margin: clamp(2.75rem, 5vw, 4.5rem) 18px 2rem -12px;
+  transform: rotate(1.2deg);
 }
 
 .embed-shell .booking-studio.is-embedded .person-tab,
@@ -968,6 +971,7 @@ a {
 
   .embed-shell .booking-studio.is-embedded {
     min-height: 100dvh;
+    display: block;
     margin: 0;
     border-inline: 0;
     box-shadow: none;
@@ -975,6 +979,7 @@ a {
 
   .embed-shell .booking-studio.is-embedded .privacy-note {
     margin: 0 18px 24px;
+    transform: none;
   }
 }
 
