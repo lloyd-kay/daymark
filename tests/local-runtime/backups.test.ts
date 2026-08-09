@@ -15,7 +15,7 @@ describe("verified local backups", () => {
 
     expect(manifest).toMatchObject({
       formatVersion: 1,
-      appVersion: "0.1.0",
+      appVersion: "0.1.1",
       latestMigration: "0002_daymark_company_workspaces.sql",
       integrity: "verified",
     });

@@ -6,7 +6,7 @@ describe("readRuntimeHealth", () => {
   it("reports ok when the database has the final committed migration", async () => {
     await expect(readRuntimeHealth(fakeDatabase("0003_daymark_seed_recovery.sql"))).resolves.toEqual({
       status: "ok",
-      appVersion: "0.1.0",
+      appVersion: "0.1.1",
       latestMigration: "0003_daymark_seed_recovery.sql",
     });
   });
@@ -16,7 +16,7 @@ describe("readRuntimeHealth", () => {
 
     expect(result).toEqual({
       status: "needs_migration",
-      appVersion: "0.1.0",
+      appVersion: "0.1.1",
       latestMigration: "0001_daymark_widget_auth.sql",
     });
     expect(Object.keys(result).sort()).toEqual(["appVersion", "latestMigration", "status"]);
