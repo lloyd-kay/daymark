@@ -8,11 +8,13 @@ $destination = Join-Path $testRoot "stage"
 New-Item -ItemType Directory -Force $cache | Out-Null
 
 try {
-    foreach ($fileName in @("node-v22.23.1-win-x64.zip", "WinSW-x64.exe", "cloudflared-windows-amd64.exe")) {
+    foreach ($fileName in @("node-v22.23.1-win-x64.zip", "WinSW-x64.exe", "cloudflared-windows-amd64.exe", "VC_redist.x64.exe")) {
         Set-Content -LiteralPath (Join-Path $cache $fileName) -Value "not the approved runtime" -NoNewline
     }
 
     $manifest = Get-Content (Join-Path $repoRoot "packaging\runtime-manifest.json") -Raw | ConvertFrom-Json
+    $vcRedist = @($manifest.components | Where-Object name -eq "vc-redist")
+    if ($vcRedist.Count -ne 1) { throw "The runtime manifest must contain the Visual C++ prerequisite exactly once." }
     $manifest.components[0].sha256 = "0000000000000000000000000000000000000000000000000000000000000000"
     $badHashManifest = Join-Path $testRoot "bad-hash.json"
     $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $badHashManifest -Encoding UTF8
@@ -25,6 +27,24 @@ try {
         $hashFailed = $_.Exception.Message -like "*SHA-256 mismatch*"
     }
     if (-not $hashFailed) { throw "Staging did not reject a mismatched SHA-256." }
+
+    $deepDirectory = $destination
+    foreach ($index in 1..6) {
+        $deepDirectory = Join-Path $deepDirectory (("nested-{0}-" -f $index) + ("x" * 48))
+    }
+    [System.IO.Directory]::CreateDirectory("\\?\$deepDirectory") | Out-Null
+    [System.IO.File]::WriteAllText("\\?\$(Join-Path $deepDirectory 'payload.txt')", "disposable stage data")
+
+    $longPathCleanReachedManifestCheck = $false
+    try {
+        & $stageScript -Manifest $badHashManifest -Destination $destination -DownloadCache $cache -RuntimeOnly -Clean
+    }
+    catch {
+        $longPathCleanReachedManifestCheck = $_.Exception.Message -like "*SHA-256 mismatch*"
+    }
+    if (-not $longPathCleanReachedManifestCheck) {
+        throw "Staging could not safely replace a destination containing long paths."
+    }
 
     $manifest.components[0].url = "https://example.com/node.zip"
     $unapprovedManifest = Join-Path $testRoot "unapproved-host.json"
@@ -39,10 +59,24 @@ try {
     }
     if (-not $hostFailed) { throw "Staging did not reject an unapproved download host." }
 
+    $manifest = Get-Content (Join-Path $repoRoot "packaging\runtime-manifest.json") -Raw | ConvertFrom-Json
+    ($manifest.components | Where-Object name -eq "vc-redist").url = "https://download.visualstudio.microsoft.com/not-an-approved-path/VC_redist.x64.exe"
+    $unapprovedMicrosoftManifest = Join-Path $testRoot "unapproved-microsoft-path.json"
+    $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $unapprovedMicrosoftManifest -Encoding UTF8
+
+    $microsoftPathFailed = $false
+    try {
+        & $stageScript -Manifest $unapprovedMicrosoftManifest -Destination $destination -DownloadCache $cache -RuntimeOnly
+    }
+    catch {
+        $microsoftPathFailed = $_.Exception.Message -like "*not approved*"
+    }
+    if (-not $microsoftPathFailed) { throw "Staging did not reject an unapproved Microsoft download path." }
+
     Write-Output "Daymark runtime staging safety tests passed."
 }
 finally {
     if (Test-Path $testRoot) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force
+        [System.IO.Directory]::Delete("\\?\$testRoot", $true)
     }
 }

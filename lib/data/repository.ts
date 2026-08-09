@@ -15,6 +15,7 @@ import {
   employeeProfiles,
   invitations,
   memberships,
+  runtimeState,
 } from "../../db/schema";
 import { computeBookableSlots, toLondonDateKey } from "../scheduling/slots";
 import type { AvailabilityRule, BookableSlot, TimeRange } from "../scheduling/types";
@@ -34,6 +35,7 @@ import type {
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export const LEGACY_WORKSPACE_ID = "workspace-daymark";
+const INITIAL_AVAILABILITY_MARKER = "initial-availability-v1";
 
 export const PUBLIC_PROFILE_SEEDS = [
   {
@@ -120,17 +122,80 @@ export async function sha256(value: string): Promise<string> {
 
 export async function ensureSeedData(): Promise<void> {
   const db = await database();
-  const [existing] = await db.select({ id: employeeProfiles.id }).from(employeeProfiles).limit(1);
-  if (existing) return;
+  const seedProfileIds = PUBLIC_PROFILE_SEEDS.map((profile) => profile.id);
+  let createdInitialRoster = false;
+  let existingProfiles = await db
+    .select({ id: employeeProfiles.id })
+    .from(employeeProfiles)
+    .where(inArray(employeeProfiles.id, seedProfileIds));
+
+  if (existingProfiles.length === 0) {
+    try {
+      await db.insert(employeeProfiles).values(
+        PUBLIC_PROFILE_SEEDS.map((profile) => ({ ...profile })),
+      );
+      createdInitialRoster = true;
+    } catch (error) {
+      if (!isUniqueConstraint(error)) throw error;
+    }
+    existingProfiles = await db
+      .select({ id: employeeProfiles.id })
+      .from(employeeProfiles)
+      .where(inArray(employeeProfiles.id, seedProfileIds));
+  }
+
+  if (existingProfiles.length !== PUBLIC_PROFILE_SEEDS.length) return;
+  const [initializationMarker] = await db
+    .select({ key: runtimeState.key })
+    .from(runtimeState)
+    .where(eq(runtimeState.key, INITIAL_AVAILABILITY_MARKER))
+    .limit(1);
+  const [existingAvailability] = await db
+    .select({ id: availabilityRules.id })
+    .from(availabilityRules)
+    .where(inArray(availabilityRules.employeeProfileId, seedProfileIds))
+    .limit(1);
+  if (!createdInitialRoster && !shouldRepairPartialSeed({
+    seedProfileCount: existingProfiles.length,
+    expectedSeedProfileCount: PUBLIC_PROFILE_SEEDS.length,
+    hasAvailability: Boolean(existingAvailability),
+    hasInitializationMarker: Boolean(initializationMarker),
+  })) {
+    if (existingAvailability && !initializationMarker) {
+      await db.insert(runtimeState).values({
+        key: INITIAL_AVAILABILITY_MARKER,
+        value: "complete",
+      }).onConflictDoNothing();
+    }
+    return;
+  }
 
   try {
-    await db.insert(employeeProfiles).values(
-      PUBLIC_PROFILE_SEEDS.map((profile) => ({ ...profile })),
-    );
-    await db.insert(availabilityRules).values(defaultAvailabilitySeeds());
+    const inserts = [
+      ...defaultAvailabilitySeeds().map((rule) =>
+        db.insert(availabilityRules).values(rule),
+      ),
+      db.insert(runtimeState).values({
+        key: INITIAL_AVAILABILITY_MARKER,
+        value: "complete",
+      }),
+    ];
+    const [first, ...rest] = inserts;
+    if (first) await db.batch([first, ...rest]);
   } catch (error) {
     if (!isUniqueConstraint(error)) throw error;
   }
+}
+
+export function shouldRepairPartialSeed(input: {
+  seedProfileCount: number;
+  expectedSeedProfileCount: number;
+  hasAvailability: boolean;
+  hasInitializationMarker: boolean;
+}): boolean {
+  return input.seedProfileCount === input.expectedSeedProfileCount
+    && !input.hasAvailability
+    && !input.hasInitializationMarker;
 }
 
 export async function purgeExpiredAppointments(

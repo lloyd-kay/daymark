@@ -1,13 +1,22 @@
 use std::fs;
+use std::os::windows::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::ptr::{copy_nonoverlapping, null, null_mut};
 
 use serde::Serialize;
-use windows_sys::Win32::Foundation::{GlobalFree, LocalFree, HANDLE};
+use windows_sys::Win32::Foundation::{GlobalFree, LocalFree, ERROR_SUCCESS, HANDLE};
+use windows_sys::Win32::Security::Authorization::{
+    ConvertStringSecurityDescriptorToSecurityDescriptorW, SetNamedSecurityInfoW,
+    SDDL_REVISION_1, SE_FILE_OBJECT,
+};
 use windows_sys::Win32::Security::Cryptography::{
     BCryptGenRandom, CryptProtectData, CryptUnprotectData, BCRYPT_USE_SYSTEM_PREFERRED_RNG,
     CRYPTPROTECT_LOCAL_MACHINE, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
+};
+use windows_sys::Win32::Security::{
+    GetSecurityDescriptorDacl, DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION,
+    PSECURITY_DESCRIPTOR,
 };
 use windows_sys::Win32::System::DataExchange::{
     CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
@@ -273,16 +282,84 @@ fn crypt_unprotect(ciphertext: &[u8]) -> Result<Vec<u8>, ControlError> {
 }
 
 fn restrict_to_system_and_administrators(path: &std::path::Path) -> Result<(), ControlError> {
-    let current_user = format!("*{}:(F)", current_user_sid()?);
-    let status = Command::new("icacls.exe")
-        .arg(path)
-        .args(["/inheritance:r", "/grant:r"])
-        .arg("*S-1-5-18:(F)")
-        .arg("*S-1-5-32-544:(F)")
-        .arg(current_user)
-        .status()
-        .map_err(|_| permission_error())?;
-    if status.success() {
+    let current_user_sid = current_user_sid()?;
+    apply_protected_dacl_tree(path, &current_user_sid)
+}
+
+fn apply_protected_dacl_tree(
+    path: &std::path::Path,
+    current_user_sid: &str,
+) -> Result<(), ControlError> {
+    let metadata = fs::symlink_metadata(path).map_err(|_| permission_error())?;
+    let is_directory = metadata.is_dir();
+    apply_protected_dacl(path, current_user_sid, is_directory)?;
+
+    if is_directory {
+        for entry in fs::read_dir(path).map_err(|_| permission_error())? {
+            let entry = entry.map_err(|_| permission_error())?;
+            apply_protected_dacl_tree(&entry.path(), current_user_sid)?;
+        }
+    }
+    Ok(())
+}
+
+fn apply_protected_dacl(
+    path: &std::path::Path,
+    current_user_sid: &str,
+    is_directory: bool,
+) -> Result<(), ControlError> {
+    let inheritance = if is_directory { "OICI" } else { "" };
+    let sddl = format!(
+        "D:P(A;{inheritance};FA;;;SY)(A;{inheritance};FA;;;BA)(A;{inheritance};FA;;;{current_user_sid})"
+    );
+    let sddl_wide: Vec<u16> = sddl.encode_utf16().chain(std::iter::once(0)).collect();
+    let path_wide: Vec<u16> = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut descriptor: PSECURITY_DESCRIPTOR = null_mut();
+    let converted = unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl_wide.as_ptr(),
+            SDDL_REVISION_1,
+            &mut descriptor,
+            null_mut(),
+        )
+    };
+    if converted == 0 || descriptor.is_null() {
+        return Err(permission_error());
+    }
+
+    let mut dacl_present = 0;
+    let mut dacl_defaulted = 0;
+    let mut dacl = null_mut();
+    let dacl_read = unsafe {
+        GetSecurityDescriptorDacl(
+            descriptor,
+            &mut dacl_present,
+            &mut dacl,
+            &mut dacl_defaulted,
+        )
+    };
+    let result = if dacl_read == 0 || dacl_present == 0 || dacl.is_null() {
+        None
+    } else {
+        Some(unsafe {
+            SetNamedSecurityInfoW(
+                path_wide.as_ptr() as *mut u16,
+                SE_FILE_OBJECT,
+                DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+                null_mut(),
+                null_mut(),
+                dacl,
+                null_mut(),
+            )
+        })
+    };
+    unsafe { LocalFree(descriptor as _) };
+
+    if result == Some(ERROR_SUCCESS) {
         Ok(())
     } else {
         Err(permission_error())
@@ -386,8 +463,11 @@ fn secret_error(code: &'static str, message: &'static str) -> ControlError {
 mod tests {
     use super::{
         generate_setup_code, parse_current_user_sid, protect_for_local_machine,
-        unprotect_for_local_machine,
+        restrict_to_system_and_administrators, unprotect_for_local_machine,
     };
+    use std::fs;
+    use std::process::Command;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn generated_setup_codes_use_the_expected_private_format() {
@@ -425,5 +505,107 @@ mod tests {
             Some("S-1-5-21-100-200-300-1001".to_string()),
         );
         assert_eq!(parse_current_user_sid("unexpected output"), None);
+    }
+
+    #[test]
+    fn protected_directory_permissions_are_inherited_by_new_children() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("daymark-acl-{unique}"));
+        let child = root.join("service-created");
+        fs::create_dir(&root).expect("temporary ACL root should be created");
+
+        restrict_to_system_and_administrators(&root)
+            .expect("Daymark should protect its data directory");
+        fs::create_dir(&child).expect("an authorised process should create a child directory");
+        let output = Command::new("icacls.exe")
+            .arg(&child)
+            .output()
+            .expect("icacls should inspect the child directory");
+        let acl = String::from_utf8_lossy(&output.stdout);
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(output.status.success(), "icacls failed: {acl}");
+        assert!(
+            acl.contains("(I)(OI)(CI)(F)"),
+            "new runtime directories must inherit full-control entries: {acl}"
+        );
+    }
+
+    #[test]
+    fn protecting_an_upgrade_directory_repairs_existing_children() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("daymark-acl-upgrade-{unique}"));
+        let child = root.join("existing-runtime-data");
+        fs::create_dir_all(&child).expect("existing runtime data should be represented");
+
+        restrict_to_system_and_administrators(&root)
+            .expect("an upgrade should repair the protected data directory");
+        let output = Command::new("icacls.exe")
+            .arg(&child)
+            .output()
+            .expect("icacls should inspect the existing child directory");
+        let acl = String::from_utf8_lossy(&output.stdout);
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(output.status.success(), "icacls failed: {acl}");
+        assert!(
+            acl.contains("(OI)(CI)(F)"),
+            "upgrades must propagate full-control entries to existing runtime data: {acl}"
+        );
+    }
+
+    #[test]
+    fn protecting_an_upgrade_directory_removes_unapproved_explicit_principals() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("daymark-acl-unapproved-{unique}"));
+        let child = root.join("existing-runtime-data");
+        fs::create_dir_all(&child).expect("existing runtime data should be represented");
+        let granted = Command::new("icacls.exe")
+            .arg(&root)
+            .args(["/grant", "*S-1-1-0:(OI)(CI)(F)", "*S-1-5-32-545:(OI)(CI)(M)", "/T", "/C", "/Q"])
+            .status()
+            .expect("icacls should add the unsafe upgrade fixture grants");
+        assert!(granted.success());
+
+        restrict_to_system_and_administrators(&root)
+            .expect("an upgrade should replace the protected directory ACL");
+        let script = r#"
+$paths = @($env:DAYMARK_TEST_ACL_ROOT, $env:DAYMARK_TEST_ACL_CHILD)
+foreach ($path in $paths) {
+  (Get-Acl -LiteralPath $path).Access | ForEach-Object {
+    $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value
+  }
+}
+"#;
+        let output = Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .env("DAYMARK_TEST_ACL_ROOT", &root)
+            .env("DAYMARK_TEST_ACL_CHILD", &child)
+            .output()
+            .expect("PowerShell should inspect the effective ACL principals");
+        let principals = String::from_utf8_lossy(&output.stdout);
+
+        let _ = fs::remove_dir_all(&root);
+        assert!(output.status.success(), "ACL inspection failed: {principals}");
+        assert!(!principals.contains("S-1-1-0"), "Everyone must be removed: {principals}");
+        assert!(!principals.contains("S-1-5-32-545"), "Users must be removed: {principals}");
+    }
+
+    #[test]
+    fn permission_repair_never_resets_objects_to_inherited_access() {
+        let source = include_str!("secrets.rs");
+        assert!(
+            !source.contains(".arg(\"/reset\")"),
+            "permission repair must replace the protected DACL directly"
+        );
     }
 }

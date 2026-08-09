@@ -11,6 +11,7 @@ import {
   projectScheduleEntry,
   retentionCutoffIso,
   sha256,
+  shouldRepairPartialSeed,
   toPublicEmployee,
 } from "../lib/data/repository";
 import type { CreateBookingInput, ScheduleEntry } from "../lib/data/contracts";
@@ -165,6 +166,21 @@ describe("initial roster", () => {
       "Priya Shah",
       "Jon Bell",
     ]);
+  });
+
+  it("repairs missing default availability only before the durable marker exists", () => {
+    expect(shouldRepairPartialSeed({
+      seedProfileCount: 4,
+      expectedSeedProfileCount: 4,
+      hasAvailability: false,
+      hasInitializationMarker: false,
+    })).toBe(true);
+    expect(shouldRepairPartialSeed({
+      seedProfileCount: 4,
+      expectedSeedProfileCount: 4,
+      hasAvailability: false,
+      hasInitializationMarker: true,
+    })).toBe(false);
   });
 });
 

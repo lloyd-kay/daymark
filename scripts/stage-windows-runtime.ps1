@@ -22,9 +22,21 @@ if ($destinationPath.TrimEnd('\') -eq $repoPath -or $destinationPath.Length -le 
 if ($env:CI -and -not $destinationPath.StartsWith((Join-Path $repoRoot "artifacts\windows-stage"), [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "CI staging must remain inside artifacts/windows-stage."
 }
+
+function Remove-DirectoryLongPath {
+    param([string]$Path)
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    if ($resolvedPath.Length -le 3 -or $resolvedPath.TrimEnd('\') -eq $repoPath) {
+        throw "Refusing to remove a broad or unsafe staging destination."
+    }
+    if (Test-Path -LiteralPath $resolvedPath) {
+        [System.IO.Directory]::Delete("\\?\$resolvedPath", $true)
+    }
+}
+
 if (Test-Path $destinationPath) {
     if (-not $Clean) { throw "The staging destination already exists. Use -Clean to replace it." }
-    Remove-Item -LiteralPath $destinationPath -Recurse -Force
+    Remove-DirectoryLongPath $destinationPath
 }
 
 function Assert-ApprovedManifest {
@@ -32,8 +44,8 @@ function Assert-ApprovedManifest {
 
     if ($RuntimeManifest.schemaVersion -ne 1) { throw "Runtime manifest schema version is invalid." }
     $names = @($RuntimeManifest.components | ForEach-Object { $_.name } | Sort-Object)
-    if (($names -join ',') -ne "cloudflared,node,winsw") {
-        throw "Runtime manifest must contain node, winsw and cloudflared exactly once."
+    if (($names -join ',') -ne "cloudflared,node,vc-redist,winsw") {
+        throw "Runtime manifest must contain node, winsw, cloudflared and vc-redist exactly once."
     }
 
     $destinations = @{}
@@ -45,6 +57,9 @@ function Assert-ApprovedManifest {
         }
         elseif ($uri.Scheme -eq "https" -and $uri.Host -eq "github.com") {
             $approved = $uri.AbsolutePath -match '^/(winsw/winsw|cloudflare/cloudflared)/releases/download/'
+        }
+        elseif ($uri.Scheme -eq "https" -and $uri.Host -eq "download.visualstudio.microsoft.com") {
+            $approved = $uri.AbsolutePath -cmatch '^/download/pr/[0-9a-f-]{36}/[A-F0-9]{64}/VC_redist\.x64\.exe$'
         }
         if (-not $approved) { throw "Runtime download host or path is not approved: $($component.url)" }
         if ($component.sha256 -notmatch '^[a-f0-9]{64}$') { throw "Runtime SHA-256 is invalid: $($component.name)" }
@@ -75,7 +90,7 @@ function Save-ApprovedDownload {
                 $location = $response.Headers.Location
                 if (-not $location) { throw "Runtime download redirect did not include a location." }
                 if (-not $location.IsAbsoluteUri) { $location = New-Object Uri($current, $location) }
-                $approvedRedirectHosts = @("nodejs.org", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com")
+                $approvedRedirectHosts = @("nodejs.org", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com", "download.visualstudio.microsoft.com")
                 if ($location.Scheme -ne "https" -or $approvedRedirectHosts -notcontains $location.Host) {
                     throw "Runtime download redirect host is not approved: $($location.Host)"
                 }
@@ -170,12 +185,14 @@ try {
     }
 
     if (-not $RuntimeOnly) {
-        foreach ($directory in @("dist", "drizzle", "runtime")) {
+        foreach ($directory in @("dist", "drizzle", "runtime", "lib")) {
             $sourceDirectory = Join-Path $repoRoot $directory
             if (-not (Test-Path $sourceDirectory)) { throw "Required Daymark build directory is missing: $directory" }
             Copy-DirectoryLongPath $sourceDirectory (Join-Path $workingPath $directory)
         }
+        Copy-Item -LiteralPath (Join-Path $repoRoot "package.json") -Destination (Join-Path $workingPath "package.json")
         Copy-Item -LiteralPath (Join-Path $repoRoot "packaging\windows\DaymarkService.xml") -Destination (Join-Path $workingPath "DaymarkService.xml")
+        Copy-Item -LiteralPath (Join-Path $repoRoot "packaging\windows\stop-daymark-processes.ps1") -Destination (Join-Path $workingPath "stop-daymark-processes.ps1")
 
         $dependencyInstall = Join-Path ([System.IO.Path]::GetTempPath()) ("daymark-dependencies-" + [guid]::NewGuid().ToString("N"))
         New-Item -ItemType Directory -Force $dependencyInstall | Out-Null
@@ -202,7 +219,7 @@ try {
 catch {
     $failure = $_
     if (Test-Path $workingPath) {
-        try { [System.IO.Directory]::Delete("\\?\$workingPath", $true) }
+        try { Remove-DirectoryLongPath $workingPath }
         catch { Write-Warning "The incomplete staging folder could not be removed automatically: $workingPath" }
     }
     throw $failure

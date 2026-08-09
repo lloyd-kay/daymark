@@ -19,6 +19,9 @@ if (-not (Test-Path $inspectionPath)) { throw "The installer inspection report i
 $inspection = Get-Content $inspectionPath -Raw | ConvertFrom-Json
 if ($inspection.signature -ne "Unsigned preview") { throw "The preview must be reported as unsigned." }
 if ($inspection.architecture -ne "x64") { throw "The installer must target x64 Windows." }
-if (-not $inspection.payloadAllowlistPassed) { throw "The staged payload allowlist did not pass." }
+if (-not $inspection.stagedPayloadAllowlistPassed) { throw "The staged payload allowlist did not pass." }
+if ($inspection.vcRedistSignature -ne "Valid Microsoft signature") { throw "The Visual C++ prerequisite signature was not verified." }
+if ($inspection.vcRedistSha256 -ne "843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c") { throw "The Visual C++ prerequisite hash changed." }
+if ($inspection.vcRedistVersion -ne "14.51.36247.0") { throw "The Visual C++ prerequisite version changed." }
 
 Write-Output "Daymark Windows artifact checks passed."

@@ -1,6 +1,6 @@
 {
   "name": "site-creator-vinext-starter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -14,6 +14,7 @@
     "runtime:backup": "node --import tsx runtime/local/cli.ts backup",
     "windows:verify-runtime": "node scripts/verify-runtime-manifest.mjs",
     "windows:stage": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/stage-windows-runtime.ps1 -Clean",
+    "windows:test-staged-migration": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/windows/staged-migration.test.ps1",
     "windows:installer": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows-installer.ps1",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "unit": "vitest run",
@@ -23,6 +24,7 @@
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.28.0",
+    "miniflare": "4.20260515.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "tsx": "4.23.9",

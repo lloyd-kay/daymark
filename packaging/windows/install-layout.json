@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "platform": "windows-x64",
-  "installRoot": "%ProgramFiles%\\Daymark",
+  "installRoot": "%ProgramFiles%\\Daymark Control",
   "dataRoot": "%ProgramData%\\Daymark",
   "immutable": [
     "Daymark Control.exe",
@@ -9,10 +9,13 @@
     "DaymarkService.exe",
     "DaymarkService.xml",
     "cloudflared.exe",
+    "vc_redist.x64.exe",
     "node",
     "dist",
     "drizzle",
     "runtime",
+    "lib",
+    "package.json",
     "node_modules",
     "third-party-licenses"
   ],

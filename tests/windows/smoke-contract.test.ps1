@@ -36,6 +36,13 @@ Assert-TextContains "install smoke surface" $installSurface @(
     "ResumeAfterRestart",
     "cloudflared",
     "ManualWarningConfirmed",
+    "Assert-DaymarkInstalledRuntime",
+    "lib\\runtime-health\.ts",
+    "package\.json",
+    "installedRuntimeDependencies",
+    "Assert-DaymarkVcRuntime",
+    "vcRedistVersion",
+    "Daymark Control",
     "ConvertTo-Json"
 )
 $commonContent = Get-Content -LiteralPath $common -Raw
@@ -62,6 +69,9 @@ Assert-Contains $checklist @(
     "Windows 11 x64",
     "installer SHA-256",
     "No secrets",
+    "without the Visual C\+\+ Redistributable",
+    "vcRedistVersion",
+    "Daymark Control",
     "Not yet run"
 )
 

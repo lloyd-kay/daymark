@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Daymark Control",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.daymark.control",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -40,7 +40,10 @@
       "../../../artifacts/windows-stage/dist/": "dist",
       "../../../artifacts/windows-stage/drizzle/": "drizzle",
       "../../../artifacts/windows-stage/runtime/": "runtime",
+      "../../../artifacts/windows-stage/lib/": "lib",
+      "../../../artifacts/windows-stage/package.json": "package.json",
       "../../../artifacts/windows-stage/node_modules/": "node_modules",
+      "../../../artifacts/windows-stage/vc_redist.x64.exe": "vc_redist.x64.exe",
       "../../../artifacts/windows-stage/third-party-licenses/": "third-party-licenses"
     },
     "windows": {

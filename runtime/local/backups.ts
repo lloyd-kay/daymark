@@ -3,9 +3,10 @@ import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 
-import { DAYMARK_VERSION, EXPECTED_LATEST_MIGRATION } from "../../lib/runtime-health";
+import { DAYMARK_VERSION } from "../../lib/runtime-health";
 import type { CommandResult, CommandSpec, RuntimeConfig } from "./contracts";
-import { migrationCommand, exportCommand, importCommand, integrityCommand, writeRuntimeConfig } from "./wrangler";
+import { exportLocalDatabase } from "./database-export";
+import { migrationCommand, importCommand, integrityCommand, writeRuntimeConfig } from "./wrangler";
 import { runCommand } from "./process";
 
 interface StoredBackupManifest {
@@ -33,6 +34,7 @@ export interface BackupDependencies {
   now?: () => Date;
   id?: () => string;
   assertStopped?: (config: RuntimeConfig) => Promise<void>;
+  exportDatabase?: (config: RuntimeConfig, outputFile: string) => Promise<string>;
 }
 
 function sha256(value: Buffer): string {
@@ -85,8 +87,6 @@ export async function createBackup(
   config: RuntimeConfig,
   dependencies: BackupDependencies = {},
 ): Promise<BackupManifest> {
-  if (!EXPECTED_LATEST_MIGRATION) throw new Error("Daymark has no committed migration to record");
-  const run = dependencies.run ?? runCommand;
   const now = dependencies.now?.() ?? new Date();
   const id = dependencies.id?.() ?? randomUUID().slice(0, 8);
   await mkdir(config.paths.backupDir, { recursive: true });
@@ -100,7 +100,7 @@ export async function createBackup(
   const manifestPartial = `${manifestPath}.partial`;
 
   await writeRuntimeConfig(config);
-  await run(exportCommand(config, sqlPartial));
+  const latestMigration = await (dependencies.exportDatabase ?? exportLocalDatabase)(config, sqlPartial);
   const sql = await readFile(sqlPartial);
   if (sql.byteLength === 0) throw new Error("Backup export was empty");
   await rename(sqlPartial, sqlPath);
@@ -109,7 +109,7 @@ export async function createBackup(
     formatVersion: 1,
     createdAt: now.toISOString(),
     appVersion: DAYMARK_VERSION,
-    latestMigration: EXPECTED_LATEST_MIGRATION,
+    latestMigration,
     sqlFile,
     sha256: sha256(sql),
     integrity: "verified",

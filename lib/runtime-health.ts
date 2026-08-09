@@ -19,6 +19,9 @@ export interface RuntimeHealth {
   latestMigration: string | null;
 }
 
+export const COMMITTED_MIGRATIONS = migrationJournal.entries.map(
+  (entry) => `${entry.tag}.sql`,
+);
 const latestJournalEntry = migrationJournal.entries.at(-1);
 
 export const EXPECTED_LATEST_MIGRATION = latestJournalEntry ? `${latestJournalEntry.tag}.sql` : null;

@@ -93,6 +93,24 @@ export async function stopRuntime(): Promise<void> {
   await invoke("stop_runtime");
 }
 
+export async function restartRuntime(): Promise<void> {
+  await invoke("restart_runtime");
+}
+
+export function runtimeActionErrorMessage(value: unknown): string {
+  const code = isRecord(value) && typeof value.code === "string" ? value.code : null;
+  if (code === "service_action_cancelled") {
+    return "Administrator approval was cancelled. Daymark was not changed.";
+  }
+  if (code === "service_action_failed") {
+    return "Windows could not change the Daymark service. Open Recovery tools for details.";
+  }
+  if (code === "service_elevation_failed") {
+    return "Windows could not request administrator approval.";
+  }
+  return "Windows could not change the Daymark service.";
+}
+
 export async function setRuntimeMode(mode: RuntimeMode): Promise<void> {
   await invoke("set_runtime_mode", { mode });
 }

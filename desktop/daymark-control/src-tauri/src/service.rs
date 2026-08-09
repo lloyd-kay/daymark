@@ -1,7 +1,7 @@
 use std::fs;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output};
+use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::contracts::{ControlError, RuntimeMode};
+use crate::elevation::{run_elevated_service_action, ServiceAction};
 
 #[derive(Clone, Debug)]
 pub struct RuntimePaths {
@@ -78,31 +79,31 @@ impl ServiceController {
 
     fn start(&self, mode: RuntimeMode) -> Result<(), ControlError> {
         match mode {
-            RuntimeMode::Service => self.run_service_action("start"),
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Start),
             RuntimeMode::Manual => self.start_manual(),
         }
     }
 
     fn stop(&self, mode: RuntimeMode) -> Result<(), ControlError> {
         match mode {
-            RuntimeMode::Service => self.run_service_action("stop"),
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Stop),
             RuntimeMode::Manual => self.stop_manual(),
         }
     }
 
-    fn run_service_action(&self, action: &str) -> Result<(), ControlError> {
-        if !self.paths.service_wrapper.exists() {
-            return Err(control_error(
-                "service_not_installed",
-                "The Daymark Windows service is not installed. Repair the Daymark installation and try again.",
-            ));
+    fn restart(&self, mode: RuntimeMode) -> Result<(), ControlError> {
+        match mode {
+            RuntimeMode::Service => self.run_service_action(ServiceAction::Restart),
+            RuntimeMode::Manual => {
+                self.stop_manual()?;
+                self.start_manual()
+            }
         }
+    }
 
-        let output = Command::new(&self.paths.service_wrapper)
-            .arg(action)
-            .output()
-            .map_err(|_| elevation_error())?;
-        service_result(output)
+    fn run_service_action(&self, action: ServiceAction) -> Result<(), ControlError> {
+        ensure_runtime_file(&self.paths.service_wrapper)?;
+        run_elevated_service_action(&self.paths.service_wrapper, action)
     }
 
     fn start_manual(&self) -> Result<(), ControlError> {
@@ -193,6 +194,11 @@ pub fn stop_runtime(controller: State<'_, ServiceController>) -> Result<(), Cont
 }
 
 #[tauri::command]
+pub fn restart_runtime(controller: State<'_, ServiceController>) -> Result<(), ControlError> {
+    controller.restart(controller.read_mode())
+}
+
+#[tauri::command]
 pub fn set_runtime_mode(
     mode: RuntimeMode,
     controller: State<'_, ServiceController>,
@@ -214,14 +220,28 @@ pub fn set_runtime_mode(
 }
 
 pub(crate) fn runtime_paths() -> RuntimePaths {
-    let install_dir = std::env::var_os("ProgramFiles")
+    let fallback_executable = std::env::var_os("ProgramFiles")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(r"C:\Program Files"))
-        .join("Daymark");
-    let data_dir = std::env::var_os("ProgramData")
+        .join("Daymark Control")
+        .join("Daymark Control.exe");
+    let executable = std::env::current_exe().unwrap_or(fallback_executable);
+    let program_data = std::env::var_os("ProgramData")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"))
-        .join("Daymark");
+        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
+
+    runtime_paths_from_executable(&executable, &program_data)
+}
+
+pub(crate) fn runtime_paths_from_executable(
+    executable: &Path,
+    program_data: &Path,
+) -> RuntimePaths {
+    let install_dir = executable
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from(r"C:\Program Files\Daymark Control"));
+    let data_dir = program_data.join("Daymark");
 
     RuntimePaths {
         settings_file: data_dir.join("control.json"),
@@ -242,14 +262,6 @@ fn runtime_is_reachable() -> bool {
     .is_ok()
 }
 
-fn service_result(output: Output) -> Result<(), ControlError> {
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(elevation_error())
-    }
-}
-
 fn ensure_runtime_file(path: &Path) -> Result<(), ControlError> {
     if path.is_file() {
         Ok(())
@@ -259,13 +271,6 @@ fn ensure_runtime_file(path: &Path) -> Result<(), ControlError> {
             "Daymark runtime files are missing. Repair the Daymark installation and try again.",
         ))
     }
-}
-
-fn elevation_error() -> ControlError {
-    control_error(
-        "administrator_required",
-        "Windows administrator approval is required to change the Daymark service.",
-    )
 }
 
 fn permission_error() -> ControlError {
@@ -281,34 +286,33 @@ fn control_error(code: &'static str, message: &'static str) -> ControlError {
 
 #[cfg(test)]
 mod tests {
-    use super::{runtime_paths, service_result};
-    use std::process::Command;
+    use super::{restart_runtime, runtime_paths_from_executable};
+    use std::path::{Path, PathBuf};
 
     #[test]
-    fn runtime_paths_keep_programs_and_business_data_separate() {
-        let paths = runtime_paths();
-        assert!(paths.install_dir.ends_with("Daymark"));
-        assert!(paths.data_dir.ends_with("Daymark"));
-        assert_ne!(paths.install_dir, paths.data_dir);
-        assert!(paths.settings_file.starts_with(&paths.data_dir));
-        assert!(paths.node_executable.starts_with(&paths.install_dir));
+    fn runtime_paths_follow_the_control_executable_and_keep_business_data_separate() {
+        let executable = Path::new(r"C:\Program Files\Daymark Control\Daymark Control.exe");
+        let program_data = Path::new(r"C:\ProgramData");
+        let paths = runtime_paths_from_executable(executable, program_data);
+
         assert_eq!(
-            paths
-                .runtime_launcher
-                .file_name()
-                .and_then(|value| value.to_str()),
-            Some("DaymarkRuntime.exe"),
+            paths.install_dir,
+            PathBuf::from(r"C:\Program Files\Daymark Control")
         );
+        assert_eq!(paths.data_dir, PathBuf::from(r"C:\ProgramData\Daymark"));
+        assert_eq!(
+            paths.service_wrapper,
+            paths.install_dir.join("DaymarkService.exe")
+        );
+        assert_eq!(
+            paths.runtime_launcher,
+            paths.install_dir.join("DaymarkRuntime.exe")
+        );
+        assert!(paths.settings_file.starts_with(&paths.data_dir));
     }
 
     #[test]
-    fn failed_service_actions_return_a_safe_error() {
-        let output = Command::new("cmd")
-            .args(["/C", "exit", "5"])
-            .output()
-            .expect("cmd should run in the Windows test environment");
-        let error = service_result(output).expect_err("failed service action must be reported");
-        assert_eq!(error.code, "administrator_required");
-        assert!(!error.message.contains("stderr"));
+    fn exposes_a_parameterless_restart_command() {
+        let _command = restart_runtime;
     }
 }

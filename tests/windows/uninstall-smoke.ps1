@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "smoke-common.ps1")
 $os = Assert-DaymarkDisposableMachine $ConfirmDisposableMachine.IsPresent
-$installRoot = "$env:ProgramFiles\Daymark"
+$installRoot = "$env:ProgramFiles\Daymark Control"
 $dataRoot = "$env:ProgramData\Daymark"
 $uninstaller = Join-Path $installRoot "uninstall.exe"
 if (-not (Test-Path -LiteralPath $uninstaller)) { throw "The Daymark uninstall.exe could not be found." }

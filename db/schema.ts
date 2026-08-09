@@ -16,6 +16,12 @@ const timestamps = {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 };
 
+export const runtimeState = sqliteTable("runtime_state", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const workspaces = sqliteTable(
   "workspaces",
   {

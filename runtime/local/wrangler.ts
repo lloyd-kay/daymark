@@ -3,6 +3,8 @@ import path from "node:path";
 
 import type { CommandSpec, RuntimeConfig } from "./contracts";
 
+export const LOCAL_DATABASE_ID = "00000000-0000-4000-8000-000000000000";
+
 function pathApiFor(root: string): typeof path.win32 | typeof path.posix {
   return /^[A-Za-z]:[\\/]/.test(root) ? path.win32 : path.posix;
 }
@@ -47,7 +49,7 @@ export async function writeRuntimeConfig(config: RuntimeConfig): Promise<string>
     d1_databases: [{
       binding: "DB",
       database_name: "daymark-local",
-      database_id: "00000000-0000-4000-8000-000000000000",
+      database_id: LOCAL_DATABASE_ID,
       migrations_dir: pathApi.join(config.paths.appDir, "drizzle"),
     }],
   };
@@ -91,22 +93,6 @@ export function migrationCommand(config: RuntimeConfig): CommandSpec {
     "apply",
     "DB",
     "--local",
-    "--config",
-    base.configFile,
-    "--persist-to",
-    config.paths.dataDir,
-  ]);
-}
-
-export function exportCommand(config: RuntimeConfig, outputFile: string): CommandSpec {
-  const base = baseCommand(config);
-  return command(config, [
-    "d1",
-    "export",
-    "DB",
-    "--local",
-    "--output",
-    outputFile,
     "--config",
     base.configFile,
     "--persist-to",

@@ -20,9 +20,10 @@ import { SetupPanel } from "./SetupPanel";
 import {
   isTauriRuntime,
   openLocalUrl,
+  restartRuntime,
+  runtimeActionErrorMessage,
   setRuntimeMode,
   startRuntime,
-  stopRuntime,
   useRuntimeStatus,
 } from "./runtime";
 
@@ -53,6 +54,7 @@ export function App({ initialStatus }: AppProps) {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [setupConfigured, setSetupConfigured] = useState(true);
   const isRunning = status.state === "running";
+  const canRestart = status.state === "running" || status.state === "needs_attention";
   const administratorUrl = `${status.localUrl}/workspace/sign-in`;
 
   useEffect(() => {
@@ -91,10 +93,10 @@ export function App({ initialStatus }: AppProps) {
     setRuntimeAction("working");
     setRuntimeError(null);
     try {
-      if (isRunning) await stopRuntime();
-      await startRuntime();
-    } catch {
-      setRuntimeError("Windows could not change the Daymark service. Administrator approval may be required.");
+      if (canRestart) await restartRuntime();
+      else await startRuntime();
+    } catch (error: unknown) {
+      setRuntimeError(runtimeActionErrorMessage(error));
     } finally {
       setRuntimeAction("idle");
     }
@@ -158,7 +160,7 @@ export function App({ initialStatus }: AppProps) {
               disabled={runtimeAction === "working"}
               onClick={handleRuntimeAction}
             >
-              {runtimeAction === "working" ? "Working…" : isRunning ? "Restart Daymark" : "Start Daymark"}
+              {runtimeAction === "working" ? "Working…" : canRestart ? "Restart Daymark" : "Start Daymark"}
               <span aria-hidden="true">↗</span>
             </button>
             <a className="button button-paper" href={administratorUrl} onClick={handleAdministratorLink}>

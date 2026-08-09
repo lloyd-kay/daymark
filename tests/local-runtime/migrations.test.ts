@@ -14,6 +14,7 @@ describe("local migrations", () => {
       "0000_icy_doorman.sql",
       "0001_daymark_widget_auth.sql",
       "0002_daymark_company_workspaces.sql",
+      "0003_daymark_seed_recovery.sql",
     ]);
   });
 
@@ -30,8 +31,8 @@ describe("local migrations", () => {
       });
 
       expect(result).toEqual({
-        appliedCount: 3,
-        latestMigration: "0002_daymark_company_workspaces.sql",
+        appliedCount: 4,
+        latestMigration: "0003_daymark_seed_recovery.sql",
       });
       expect(calls).toHaveLength(1);
       expect(calls[0]).toEqual(expect.arrayContaining(["d1", "migrations", "apply", "DB", "--local"]));

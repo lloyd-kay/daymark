@@ -10,8 +10,8 @@ const initialStatus = {
   access: "local" as const,
   localUrl: "http://127.0.0.1:3210",
   publicUrl: null,
-  version: "0.1.0",
-  latestMigration: "0002_daymark_company_workspaces.sql",
+  version: "0.1.1",
+  latestMigration: "0003_daymark_seed_recovery.sql",
   message: "Daymark is ready to start.",
 };
 

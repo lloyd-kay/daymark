@@ -1,6 +1,6 @@
 [package]
 name = "daymark-control"
-version = "0.1.0"
+version = "0.1.1"
 description = "Private local control desk for Daymark"
 authors = ["Daymark"]
 edition = "2021"
@@ -24,10 +24,15 @@ tauri = { version = "2", features = [] }
 url = "2"
 windows-sys = { version = "0.61", features = [
   "Win32_Foundation",
+  "Win32_Security_Authorization",
   "Win32_Security_Cryptography",
   "Win32_System_DataExchange",
   "Win32_System_Memory",
   "Win32_System_Ole",
+  "Win32_System_Registry",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
 ] }
 
 [features]
