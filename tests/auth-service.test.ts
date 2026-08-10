@@ -199,6 +199,10 @@ describe("authentication service", () => {
         iterations: 210_000,
       },
       mustChangePassword: false,
+      embedPreference: {
+        defaultMode: "floating",
+        defaultServiceScope: "all",
+      },
     });
     expect(result).toEqual({
       status: 200,
@@ -209,6 +213,61 @@ describe("authentication service", () => {
       },
       session: { token, expiresAt: "2026-08-12T12:00:00.000Z" },
     });
+  });
+
+  it.each([
+    ["DM1-C-F-2ZE7", "floating"],
+    ["dm1-c-i-355c", "inline"],
+  ] as const)("maps setup profile %s into the first workspace %s default", async (setupProfileCode, defaultMode) => {
+    const deps = dependencies();
+    deps.hashOpaqueValue.mockResolvedValueOnce("same").mockResolvedValueOnce("same");
+
+    await createAuthService(deps).setup(
+      {
+        setupCode: "expected",
+        setupProfileCode,
+        workspaceName: "Cedar House",
+        workspaceSlug: "cedar-house",
+        displayName: "Maya Chen",
+        email: "maya@example.com",
+        password: "a secure password",
+      },
+      "expected",
+      now,
+    );
+
+    expect(deps.createInitialWorkspaceAdministrator).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embedPreference: { defaultMode, defaultServiceScope: "all" },
+      }),
+    );
+  });
+
+  it("rejects an invalid setup profile before password hashing or workspace creation", async () => {
+    const deps = dependencies();
+    deps.hashOpaqueValue.mockResolvedValueOnce("same").mockResolvedValueOnce("same");
+
+    const result = await createAuthService(deps).setup(
+      {
+        setupCode: "expected",
+        setupProfileCode: "DM1-C-F-2ZE8",
+        workspaceName: "Cedar House",
+        workspaceSlug: "cedar-house",
+        displayName: "Maya Chen",
+        email: "maya@example.com",
+        password: "a secure password",
+      },
+      "expected",
+      now,
+    );
+
+    expect(result).toEqual({
+      status: 400,
+      body: { ok: false, error: "That setup code looks incomplete or mistyped." },
+    });
+    expect(deps.hashPassword).not.toHaveBeenCalled();
+    expect(deps.createInitialWorkspaceAdministrator).not.toHaveBeenCalled();
+    expect(JSON.stringify(result.body)).not.toContain("DM1-C-F-2ZE8");
   });
 
   it("rejects permanent passwords outside the 12 to 128 character range", async () => {

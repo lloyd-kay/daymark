@@ -1,5 +1,9 @@
 import type { CredentialRecord, SessionActorRecord } from "../data/contracts";
 import {
+  decodeSetupProfile,
+  SetupProfileError,
+} from "../setup-profile";
+import {
   normalizeWorkspaceSlug,
   workspaceSlugError,
 } from "../workspaces/slug";
@@ -48,6 +52,10 @@ export type AuthDependencies = {
     displayName: string;
     verifier: PasswordVerifier;
     mustChangePassword: false;
+    embedPreference: {
+      defaultMode: "floating" | "inline";
+      defaultServiceScope: "all";
+    };
   }): Promise<{ accountId: string; workspaceSlug: string }>;
   findCredentialByEmail(
     email: string,
@@ -116,6 +124,7 @@ export function createAuthService(dependencies: AuthDependencies) {
         displayName: string;
         email: string;
         password: string;
+        setupProfileCode?: string;
       },
       expectedSetupCode: string,
       now = new Date(),
@@ -129,6 +138,17 @@ export function createAuthService(dependencies: AuthDependencies) {
       }
       if (await dependencies.administratorExists()) {
         return failure(409, "Administrator setup has already been completed.");
+      }
+
+      let defaultMode: "floating" | "inline" = "floating";
+      if (input.setupProfileCode !== undefined) {
+        try {
+          defaultMode = decodeSetupProfile(input.setupProfileCode).layout;
+        } catch (error) {
+          return error instanceof SetupProfileError
+            ? setupProfileFailure(error)
+            : failure(400, "That setup code is not valid.");
+        }
       }
 
       const displayName = input.displayName.trim();
@@ -158,6 +178,10 @@ export function createAuthService(dependencies: AuthDependencies) {
         displayName,
         verifier,
         mustChangePassword: false,
+        embedPreference: {
+          defaultMode,
+          defaultServiceScope: "all",
+        },
       });
       const result = await issueSession(account.accountId, false, now);
       result.body.workspaceSlug = account.workspaceSlug;
@@ -238,6 +262,16 @@ export function createAuthService(dependencies: AuthDependencies) {
 
 function failure(status: number, error: string): AuthResult {
   return { status, body: { ok: false, error } };
+}
+
+function setupProfileFailure(error: SetupProfileError): AuthResult {
+  if (error.code === "invalid_checksum") {
+    return failure(400, "That setup code looks incomplete or mistyped.");
+  }
+  if (error.code === "unsupported_version") {
+    return failure(400, "Update Daymark before importing this setup code.");
+  }
+  return failure(400, "That setup code is not valid.");
 }
 
 function validPassword(value: string): boolean {

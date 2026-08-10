@@ -152,13 +152,19 @@ describe("staff repository atomic write contracts", () => {
       displayName: "Local QA Admin",
       verifier,
       mustChangePassword: false,
+      embedPreference: {
+        defaultMode: "inline",
+        defaultServiceScope: "all",
+      },
     })).resolves.toEqual({
       accountId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
       workspaceSlug: "happy-smart-homes-qa",
     });
 
     expect(d1.batches).toHaveLength(1);
-    expect(d1.batches[0]).toHaveLength(12);
+    expect(d1.batches[0]).toHaveLength(13);
+    expect(d1.batches[0][0].query).toContain('insert into "workspaces"');
+    expect(d1.batches[0][1].query).toContain('insert into "workspace_embed_preferences"');
     const queries = d1.batches[0].map((statement) => statement.query).join("\n");
     expect(queries).toContain('insert into "employee_profiles"');
     expect(queries).toContain('insert into "employee_service_qualifications"');
@@ -167,13 +173,37 @@ describe("staff repository atomic write contracts", () => {
     const params = JSON.stringify(d1.batches[0].map((statement) => statement.params));
     expect(params).toContain("Maya Chen");
     expect(params).toContain("General appointment");
+    expect(params).toContain("inline");
+    expect(params).toContain("all");
     expect(params).not.toContain("DAYMARK_SETUP_CODE");
+    expect(params).not.toContain("DM1-C-I-355C");
     const availabilityStatements = d1.batches[0].filter(
       (statement) => statement.query.includes('insert into "availability_rules"'),
     );
     expect(availabilityStatements).toHaveLength(4);
     expect(Math.max(...availabilityStatements.map((statement) => statement.params.length)))
       .toBeLessThanOrEqual(50);
+  });
+
+  it("keeps workspace creation and its Embed preference in one failing D1 batch", async () => {
+    const d1 = configureD1(new Error("forced preference statement failure"));
+
+    await expect(createInitialWorkspaceAdministrator({
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
+      email: "admin@example.com",
+      displayName: "Admin User",
+      verifier,
+      mustChangePassword: false,
+      embedPreference: {
+        defaultMode: "floating",
+        defaultServiceScope: "all",
+      },
+    })).rejects.toThrow("forced preference statement failure");
+
+    expect(d1.batches).toHaveLength(1);
+    expect(d1.batches[0][0].query).toContain('insert into "workspaces"');
+    expect(d1.batches[0][1].query).toContain('insert into "workspace_embed_preferences"');
   });
 
   it("creates the global account, company membership, credential, and profile link atomically", async () => {

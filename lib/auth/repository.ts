@@ -24,6 +24,7 @@ import {
   memberships,
   runtimeState,
   services,
+  workspaceEmbedPreferences,
   workspaces,
 } from "../../db/schema";
 import type {
@@ -121,6 +122,10 @@ export async function createInitialWorkspaceAdministrator(input: {
   displayName: string;
   verifier: PasswordVerifier;
   mustChangePassword: false;
+  embedPreference: {
+    defaultMode: "floating" | "inline";
+    defaultServiceScope: "all";
+  };
 }): Promise<{ accountId: string; workspaceSlug: string }> {
   const db = await database();
   const workspaceId = crypto.randomUUID();
@@ -136,6 +141,13 @@ export async function createInitialWorkspaceAdministrator(input: {
       name: input.workspaceName,
       slug: input.workspaceSlug,
       active: true,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(workspaceEmbedPreferences).values({
+      workspaceId,
+      defaultMode: input.embedPreference.defaultMode,
+      defaultServiceScope: input.embedPreference.defaultServiceScope,
       createdAt: now,
       updatedAt: now,
     }),

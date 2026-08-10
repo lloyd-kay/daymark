@@ -421,6 +421,13 @@ describe("workspace role gates and protected details", () => {
     expect(container.textContent).toContain("+44 20 7946 0958");
     expect(container.textContent).toContain("Camera installation · 1 hr 30 min");
   });
+
+  it("opens the allowlisted Embed view supplied after a successful import", async () => {
+    const { container } = await renderWorkspace(admin, profiles, [], [], "embed");
+
+    expect(container.querySelector(".embed-panel")).not.toBeNull();
+    expect(buttonNamed(container, "Embed").classList.contains("is-active")).toBe(true);
+  });
 });
 
 describe("service qualification controls", () => {
@@ -543,6 +550,7 @@ async function renderWorkspace(
   workspaceProfiles: TeamProfile[],
   entries: ScheduleEntry[],
   initialServices: WorkspaceService[] = [],
+  initialView: "schedule" | "embed" = "schedule",
 ) {
   return render(createElement(WorkspaceClient, {
     actor,
@@ -553,6 +561,7 @@ async function renderWorkspace(
       defaultMode: "floating",
       defaultServiceScope: "all",
     } : null,
+    initialView,
     initialEntries: entries,
     initialAvailability: {
       employeeProfileId: "maya-chen",

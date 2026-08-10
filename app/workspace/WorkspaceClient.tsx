@@ -47,6 +47,7 @@ export function WorkspaceClient({
   profiles: initialProfiles,
   initialServices,
   initialEmbedPreference,
+  initialView = "schedule",
   initialEntries,
   initialAvailability,
   initialRange,
@@ -56,12 +57,13 @@ export function WorkspaceClient({
   profiles: TeamProfile[];
   initialServices: WorkspaceService[];
   initialEmbedPreference: WorkspaceEmbedPreference | null;
+  initialView?: "schedule" | "embed";
   initialEntries: ScheduleEntry[];
   initialAvailability: EmployeeAvailability | null;
   initialRange: { from: string; to: string };
   nowIso: string;
 }) {
-  const [view, setView] = useState<WorkspaceView>("schedule");
+  const [view, setView] = useState<WorkspaceView>(initialView);
   const [profiles, setProfiles] = useState(initialProfiles);
   const [services, setServices] = useState(initialServices);
   const [entries, setEntries] = useState(initialEntries);

@@ -2,6 +2,7 @@
 
 import { ArrowRight, KeyRound, LockKeyhole } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { navigate } from "../../../lib/browser-navigation";
 
 type AuthView = "sign-in" | "setup";
 
@@ -11,12 +12,16 @@ export function SignInPanel({
   workspaceSlug,
   setupAllowed = true,
   redirectPath,
+  initialView = "sign-in",
+  setupProfileCode,
 }: {
   workspaceSlug?: string;
   setupAllowed?: boolean;
   redirectPath?: string;
+  initialView?: AuthView;
+  setupProfileCode?: string;
 } = {}) {
-  const [view, setView] = useState<AuthView>("sign-in");
+  const [view, setView] = useState<AuthView>(initialView);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -37,6 +42,7 @@ export function SignInPanel({
           displayName: String(form.get("displayName") ?? ""),
           email: String(form.get("email") ?? ""),
           password: String(form.get("password") ?? ""),
+          ...(setupProfileCode ? { setupProfileCode } : {}),
         };
 
     try {
@@ -47,11 +53,11 @@ export function SignInPanel({
       });
       if (!response.ok) throw new Error("authentication failed");
       const result = await response.json() as { workspaceSlug?: string };
-      window.location.assign(
+      navigate(
         redirectPath && view === "sign-in"
           ? redirectPath
           : view === "setup" && result.workspaceSlug
-          ? `/workspace/${encodeURIComponent(result.workspaceSlug)}`
+          ? `/workspace/${encodeURIComponent(result.workspaceSlug)}${setupProfileCode ? "?view=embed" : ""}`
           : workspaceSlug
             ? `/workspace/${encodeURIComponent(workspaceSlug)}`
             : "/workspace",
@@ -74,6 +80,12 @@ export function SignInPanel({
           ? "Employees see only their own calendar. Administrators can coordinate the full team."
           : "Create the first administrator account using the private setup code supplied with this site."}
       </p>
+
+      {view === "setup" && !setupProfileCode ? (
+        <a className="quiet-link setup-profile-import-link" href="/setup-profile/import">
+          Import setup code
+        </a>
+      ) : null}
 
       {setupAllowed ? (
         <div className="auth-view-switch" aria-label="Authentication options">

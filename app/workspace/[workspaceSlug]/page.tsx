@@ -27,10 +27,13 @@ export const metadata: Metadata = {
 
 export default async function CompanyWorkspacePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceSlug: string }> | { workspaceSlug: string };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceSlug: rawSlug } = await params;
+  const query = searchParams ? await searchParams : {};
   const workspaceSlug = normalizeWorkspaceSlug(rawSlug);
   const actor = await getWorkspaceActor(workspaceSlug);
   if (!actor) {
@@ -106,6 +109,7 @@ export default async function CompanyWorkspacePage({
       profiles={profiles}
       initialServices={initialServices}
       initialEmbedPreference={initialEmbedPreference}
+      initialView={actor.role === "admin" && query.view === "embed" ? "embed" : "schedule"}
       initialEntries={entries}
       initialAvailability={availability}
       initialRange={{ from, to }}

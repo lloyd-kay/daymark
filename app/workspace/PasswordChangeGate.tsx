@@ -2,10 +2,17 @@
 
 import { ArrowRight, KeyRound } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { navigate } from "../../lib/browser-navigation";
 
 const GENERIC_ERROR = "We couldn't update your password. Check the details and try again.";
 
-export function PasswordChangeGate({ displayName }: { displayName: string }) {
+export function PasswordChangeGate({
+  displayName,
+  redirectPath = "/workspace",
+}: {
+  displayName: string;
+  redirectPath?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -23,7 +30,7 @@ export function PasswordChangeGate({ displayName }: { displayName: string }) {
         body: JSON.stringify({ password, confirmation }),
       });
       if (!response.ok) throw new Error("password change failed");
-      window.location.assign("/workspace");
+      navigate(redirectPath);
     } catch {
       setStatus(GENERIC_ERROR);
       setLoading(false);
