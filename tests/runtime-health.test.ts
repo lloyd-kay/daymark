@@ -4,10 +4,10 @@ import { readRuntimeHealth } from "../lib/runtime-health";
 
 describe("readRuntimeHealth", () => {
   it("reports ok when the database has the final committed migration", async () => {
-    await expect(readRuntimeHealth(fakeDatabase("0004_daymark_service_catalog.sql"))).resolves.toEqual({
+    await expect(readRuntimeHealth(fakeDatabase("0005_daymark_embed_preferences.sql"))).resolves.toEqual({
       status: "ok",
       appVersion: "0.1.1",
-      latestMigration: "0004_daymark_service_catalog.sql",
+      latestMigration: "0005_daymark_embed_preferences.sql",
     });
   });
 
