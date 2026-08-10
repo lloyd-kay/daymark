@@ -221,7 +221,7 @@ describe("Embed service resolution", () => {
 });
 
 describe("DemoBookingFlow", () => {
-  it("completes a non-Maya demonstration without a network request or widget event", async () => {
+  it("filters the smart-home catalogue and completes locally without a widget event", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const complete = vi.fn();
     window.addEventListener("daymark:complete", complete);
@@ -229,6 +229,26 @@ describe("DemoBookingFlow", () => {
 
     try {
       view = await render(createElement(DemoBookingFlow));
+      expect(view.container.textContent).toContain("Which service do you need?");
+      const camera = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Camera installation"));
+      expect(camera).toBeDefined();
+      await click(camera!);
+      expect(view.container.textContent).toContain("Maya Chen");
+      expect(view.container.textContent).toContain("Jon Bell");
+      expect(view.container.textContent).not.toContain("Theo Brooks");
+      expect(view.container.textContent).not.toContain("Priya Shah");
+
+      await click(view.container.querySelector<HTMLButtonElement>(".back-button")!);
+      const alarm = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Alarm installation"));
+      expect(alarm).toBeDefined();
+      await click(alarm!);
+      expect(view.container.textContent).toContain("Theo Brooks");
+      expect(view.container.textContent).toContain("Priya Shah");
+      expect(view.container.textContent).not.toContain("Maya Chen");
+      expect(view.container.textContent).not.toContain("Jon Bell");
+
       const theo = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".person-tab"))
         .find((button) => button.textContent?.includes("Theo Brooks"));
       expect(theo).toBeDefined();
@@ -248,6 +268,7 @@ describe("DemoBookingFlow", () => {
       expect(text).toContain("Demonstration complete");
       expect(text).toContain("No appointment was created.");
       expect(text).toContain("Theo Brooks");
+      expect(text).toContain("Alarm installation (2 hours)");
       expect(text).toContain("Demo reference");
       expect(text).toContain("DEMO-ONLY");
       expect(text).not.toContain("Appointment confirmed");

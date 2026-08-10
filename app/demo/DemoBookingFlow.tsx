@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  DEMO_EMPLOYEES,
-  DEMO_SERVICE,
-  demoBookingTransport,
-} from "../../lib/booking/transport";
+import { DEMO_SERVICES, demoBookingTransport } from "../../lib/booking/demo";
 import { BookingFlow } from "../booking/BookingFlow";
 
 export function DemoBookingFlow() {
   return (
     <BookingFlow
-      initialServices={[DEMO_SERVICE]}
-      initialServiceId={DEMO_SERVICE.id}
-      initialEmployees={DEMO_EMPLOYEES}
+      initialServices={DEMO_SERVICES}
+      initialEmployees={[]}
       transport={demoBookingTransport}
       demonstration
     />

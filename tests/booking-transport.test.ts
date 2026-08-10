@@ -1,23 +1,44 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   BookingTransportError,
-  DEMO_SERVICE,
-  demoBookingTransport,
   liveBookingTransport as createLiveBookingTransport,
 } from "../lib/booking/transport";
+import {
+  DEMO_SERVICES,
+  demoBookingTransport,
+} from "../lib/booking/demo";
 
 const liveBookingTransport = createLiveBookingTransport("cedar-house");
 
 describe("demonstration booking transport", () => {
-  it("keeps every demo transport operation in-memory with London-current dates", async () => {
+  it("offers the exact smart-home catalogue and service-qualified installers", async () => {
+    expect(DEMO_SERVICES.map(({ id, durationMinutes }) => ({ id, durationMinutes }))).toEqual([
+      { id: "service-demo-camera-installation", durationMinutes: 90 },
+      { id: "service-demo-alarm-installation", durationMinutes: 120 },
+    ]);
+    expect((await demoBookingTransport.loadEmployees("service-demo-camera-installation"))
+      .map((employee) => employee.publicName)).toEqual(["Maya Chen", "Jon Bell"]);
+    expect((await demoBookingTransport.loadEmployees("service-demo-alarm-installation"))
+      .map((employee) => employee.publicName)).toEqual(["Theo Brooks", "Priya Shah"]);
+  });
+
+  it.each([
+    ["service-demo-camera-installation", "maya-chen", "Camera installation", 90],
+    ["service-demo-alarm-installation", "theo-brooks", "Alarm installation", 120],
+  ] as const)("keeps %s in memory and uses its duration", async (
+    serviceId,
+    employeeId,
+    serviceName,
+    durationMinutes,
+  ) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-03-10T12:00:00.000Z"));
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     try {
-      const slots = await demoBookingTransport.loadSlots(DEMO_SERVICE.id, "maya-chen", "2030-03-10");
+      const slots = await demoBookingTransport.loadSlots(serviceId, employeeId, "2030-03-10");
       const booking = await demoBookingTransport.createBooking({
-        serviceId: DEMO_SERVICE.id,
-        employeeId: "maya-chen",
+        serviceId,
+        employeeId,
         startAt: slots.slots[0].startAt,
         clientName: "Demo Visitor",
         clientAddress: "14 Sample Street, London",
@@ -27,9 +48,13 @@ describe("demonstration booking transport", () => {
       });
       expect(booking.reference).toBe("DEMO-ONLY");
       expect(booking).toMatchObject({
-        serviceName: "General consultation",
-        serviceDurationMinutes: 30,
+        serviceName,
+        serviceDurationMinutes: durationMinutes,
       });
+      expect(Date.parse(slots.slots[0].endAt) - Date.parse(slots.slots[0].startAt))
+        .toBe(durationMinutes * 60_000);
+      expect(Date.parse(booking.endAt) - Date.parse(booking.startAt))
+        .toBe(durationMinutes * 60_000);
       expect(slots.dateKeys[0]).toBe("2030-03-10");
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
@@ -42,9 +67,10 @@ describe("demonstration booking transport", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-03-10T12:00:00.000Z"));
     try {
-      const maya = await demoBookingTransport.loadSlots(DEMO_SERVICE.id, "maya-chen", "2030-03-10");
-      const mayaAgain = await demoBookingTransport.loadSlots(DEMO_SERVICE.id, "maya-chen", "2030-03-10");
-      const theo = await demoBookingTransport.loadSlots(DEMO_SERVICE.id, "theo-brooks", "2030-03-10");
+      const cameraId = "service-demo-camera-installation";
+      const maya = await demoBookingTransport.loadSlots(cameraId, "maya-chen", "2030-03-10");
+      const mayaAgain = await demoBookingTransport.loadSlots(cameraId, "maya-chen", "2030-03-10");
+      const jon = await demoBookingTransport.loadSlots(cameraId, "jon-bell", "2030-03-10");
 
       expect(maya.dateKeys).toEqual([
         "2030-03-10",
@@ -60,17 +86,18 @@ describe("demonstration booking transport", () => {
       )).toBe(true);
       expect(maya.slots).toEqual(mayaAgain.slots);
       expect(maya.slots.map((slot) => slot.startAt)).not.toEqual(
-        theo.slots.map((slot) => slot.startAt),
+        jon.slots.map((slot) => slot.startAt),
       );
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("labels the selected fixed demo employee and uses a safe fallback for unknown ids", async () => {
-    const slots = await demoBookingTransport.loadSlots(DEMO_SERVICE.id, "theo-brooks", "2026-08-06");
+  it("rejects unknown services and installers who are not qualified for the service", async () => {
+    const serviceId = "service-demo-alarm-installation";
+    const slots = await demoBookingTransport.loadSlots(serviceId, "theo-brooks", "2026-08-06");
     const input = {
-      serviceId: DEMO_SERVICE.id,
+      serviceId,
       startAt: slots.slots[0].startAt,
       clientName: "Demo Visitor",
       clientAddress: "14 Sample Street, London",
@@ -81,8 +108,12 @@ describe("demonstration booking transport", () => {
 
     await expect(demoBookingTransport.createBooking({ ...input, employeeId: "theo-brooks" }))
       .resolves.toMatchObject({ employeeName: "Theo Brooks", reference: "DEMO-ONLY" });
-    await expect(demoBookingTransport.createBooking({ ...input, employeeId: "unknown" }))
-      .resolves.toMatchObject({ employeeName: "Daymark demonstration", reference: "DEMO-ONLY" });
+    await expect(demoBookingTransport.createBooking({ ...input, employeeId: "maya-chen" }))
+      .rejects.toThrow("not available for this service");
+    await expect(demoBookingTransport.loadSlots(serviceId, "maya-chen", "2026-08-06"))
+      .rejects.toThrow("not available for this service");
+    await expect(demoBookingTransport.loadEmployees("unknown-service"))
+      .rejects.toThrow("service is not available");
   });
 });
 
