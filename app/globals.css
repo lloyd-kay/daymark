@@ -2154,6 +2154,327 @@ a {
   font-weight: 750;
 }
 
+.services-panel {
+  max-width: 1180px;
+}
+
+.services-heading > div > p:last-child {
+  max-width: 660px;
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.service-create-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) repeat(2, minmax(150px, 1fr)) minmax(130px, 0.55fr);
+  gap: 13px;
+  align-items: end;
+  margin-bottom: 28px;
+  padding: clamp(1.2rem, 2.6vw, 2rem);
+  border: 1px solid var(--ink);
+  background: var(--sky);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.service-create-copy {
+  grid-row: span 2;
+  align-self: start;
+  padding-right: 12px;
+}
+
+.service-create-copy h3 {
+  margin: 7px 0 9px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 560;
+  line-height: 1;
+}
+
+.service-create-copy > p:last-child {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.service-create-form label,
+.service-edit-form label,
+.qualification-row > label,
+.certificate-fields label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.service-create-form label > span,
+.service-edit-form label > span,
+.qualification-row label > span,
+.qualification-heading small {
+  font-size: 0.57rem;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.service-create-form input,
+.service-create-form select,
+.service-create-form textarea,
+.service-edit-form input,
+.service-edit-form select,
+.service-edit-form textarea,
+.qualification-row input,
+.qualification-row select {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper-light);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.service-create-form textarea,
+.service-edit-form textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.service-description-field {
+  grid-column: 2 / span 2;
+}
+
+.service-create-form .workspace-primary {
+  min-height: 41px;
+}
+
+.service-card-list {
+  display: grid;
+  gap: 24px;
+}
+
+.service-empty-state {
+  display: grid;
+  gap: 5px;
+  padding: 32px;
+  border: 1px dashed var(--ink);
+  background: var(--paper-light);
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.service-empty-state strong {
+  color: var(--ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.5rem;
+}
+
+.service-admin-card {
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+.service-admin-card.is-inactive {
+  opacity: 0.78;
+}
+
+.service-admin-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 21px 23px;
+  border-bottom: 1px solid var(--ink);
+  background: #f7d9cf;
+}
+
+.service-admin-card > header h3 {
+  margin: 8px 0 5px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  font-weight: 550;
+  line-height: 0.95;
+}
+
+.service-admin-card > header code {
+  color: var(--ink-soft);
+  font-size: 0.66rem;
+}
+
+.service-admin-card .status-chip {
+  display: inline-block;
+  margin: 0;
+}
+
+.service-power-button,
+.service-edit-form > button,
+.qualification-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.service-power-button:disabled,
+.service-edit-form > button:disabled,
+.qualification-save:disabled,
+.service-create-form button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.service-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr)) minmax(120px, 0.55fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 20px 23px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.service-edit-form .service-description-field {
+  grid-column: 1 / span 3;
+}
+
+.service-edit-form > button {
+  min-height: 41px;
+  background: var(--ink);
+  color: var(--paper-light);
+}
+
+.qualification-section {
+  padding: 22px 23px 25px;
+}
+
+.qualification-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.qualification-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.qualification-heading strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 560;
+}
+
+.qualification-heading > span {
+  padding: 5px 8px;
+  border: 1px solid var(--ink);
+  background: var(--sage);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.qualification-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.qualification-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.qualification-person,
+.qualification-person > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qualification-person {
+  grid-column: 1 / -1;
+}
+
+.qualification-person > div {
+  display: grid;
+  gap: 2px;
+}
+
+.qualification-person strong,
+.qualification-person small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qualification-person small {
+  color: var(--ink-soft);
+  font-size: 0.61rem;
+}
+
+.qualification-status {
+  margin-left: auto;
+  padding: 4px 6px;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  font-size: 0.54rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.qualification-status.status-current { background: var(--sage); }
+.qualification-status.status-expires-soon { background: var(--ochre); }
+.qualification-status.status-expired { background: var(--coral); }
+.qualification-status.status-inactive { color: var(--ink-soft); }
+
+.certificate-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 8px;
+  border-left: 3px solid var(--lilac);
+  background: var(--paper-light);
+  font-size: 0.62rem;
+}
+
+.certificate-summary span { color: var(--ink-soft); }
+
+.certificate-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.qualification-save {
+  min-height: 40px;
+  background: var(--ink);
+  color: var(--paper-light);
+}
+
 .embed-panel {
   max-width: 1120px;
 }
@@ -2340,8 +2661,21 @@ a {
 
   .settings-layout,
   .team-cards,
-  .embed-configurator {
+  .embed-configurator,
+  .qualification-grid {
     grid-template-columns: 1fr;
+  }
+
+  .service-create-form,
+  .service-edit-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-create-copy,
+  .service-description-field,
+  .service-edit-form .service-description-field {
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
   .block-panel {
@@ -2432,8 +2766,38 @@ a {
   }
 
   .staff-account-form,
-  .embed-code {
+  .embed-code,
+  .service-create-form,
+  .service-edit-form,
+  .certificate-fields {
     grid-template-columns: 1fr;
+  }
+
+  .service-admin-card > header,
+  .qualification-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .service-power-button,
+  .service-create-form .workspace-primary,
+  .service-edit-form > button {
+    width: 100%;
+  }
+
+  .service-description-field,
+  .service-edit-form .service-description-field {
+    grid-column: 1;
+  }
+
+  .qualification-row {
+    grid-template-columns: 1fr;
+  }
+
+  .qualification-person,
+  .certificate-summary,
+  .certificate-fields {
+    grid-column: 1;
   }
 
   .staff-account-form button,

@@ -4,10 +4,15 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EmbedPanel, buildEmbedSnippet } from "../app/workspace/EmbedPanel";
+import { ServicesPanel } from "../app/workspace/ServicesPanel";
 import { TeamAccessPanel } from "../app/workspace/TeamAccessPanel";
 import { WorkspaceClient } from "../app/workspace/WorkspaceClient";
 import type { WorkspaceActor } from "../lib/auth/membership";
-import type { ScheduleEntry, TeamProfile } from "../lib/data/contracts";
+import type {
+  ScheduleEntry,
+  TeamProfile,
+  WorkspaceService,
+} from "../lib/data/contracts";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
@@ -65,6 +70,19 @@ const employee: WorkspaceActor = {
   email: "maya@example.com",
   displayName: "Maya Chen",
   mustChangePassword: false,
+};
+
+const cameraService: WorkspaceService = {
+  id: "service-camera",
+  workspaceId: "workspace-cedar",
+  slug: "camera-installation",
+  name: "Camera installation",
+  category: "Smart security",
+  description: "Install and configure a camera.",
+  durationMinutes: 90,
+  active: true,
+  sortOrder: 1,
+  qualifications: [],
 };
 
 let roots: Root[] = [];
@@ -231,13 +249,15 @@ describe("embed configuration", () => {
 });
 
 describe("workspace role gates and protected details", () => {
-  it("excludes Team and Embed from employees and includes both for administrators", async () => {
-    const adminView = await renderWorkspace(admin, profiles, []);
+  it("excludes Team, Services, and Embed from employees and includes them for administrators", async () => {
+    const adminView = await renderWorkspace(admin, profiles, [], [cameraService]);
     expect(findButton(adminView.container, "Team")).not.toBeNull();
+    expect(findButton(adminView.container, "Services")).not.toBeNull();
     expect(findButton(adminView.container, "Embed")).not.toBeNull();
 
     const employeeView = await renderWorkspace(employee, [profiles[0]], []);
     expect(findButton(employeeView.container, "Team")).toBeNull();
+    expect(findButton(employeeView.container, "Services")).toBeNull();
     expect(findButton(employeeView.container, "Embed")).toBeNull();
   });
 
@@ -265,14 +285,123 @@ describe("workspace role gates and protected details", () => {
   });
 });
 
+describe("service qualification controls", () => {
+  it("submits a certificate-backed qualification and refreshes protected data", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
+      .mockResolvedValueOnce(jsonResponse(200, {
+        services: [{
+          ...cameraService,
+          qualifications: [{
+            id: "qualification-camera-maya",
+            employeeProfileId: "maya-chen",
+            serviceId: "service-camera",
+            active: true,
+            method: "certificate",
+            certificateName: "Eufy Alarm Installer",
+            certificateReference: "CERT-1042",
+            issuedOn: "2026-01-10",
+            expiresOn: "2027-01-10",
+            current: true,
+          }],
+        }],
+      }));
+    const { container } = await render(createElement(ServicesPanel, {
+      workspaceSlug: "cedar-house",
+      profiles,
+      initialServices: [cameraService],
+    }));
+
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>("select[name='qualification-maya-chen']")!,
+      "certificate",
+    );
+    await changeInput(
+      container.querySelector<HTMLInputElement>("input[name='certificate-name-maya-chen']")!,
+      "Eufy Alarm Installer",
+    );
+    await changeInput(
+      container.querySelector<HTMLInputElement>("input[name='certificate-reference-maya-chen']")!,
+      "CERT-1042",
+    );
+    await changeInput(
+      container.querySelector<HTMLInputElement>("input[name='certificate-issued-maya-chen']")!,
+      "2026-01-10",
+    );
+    await changeInput(
+      container.querySelector<HTMLInputElement>("input[name='certificate-expiry-maya-chen']")!,
+      "2027-01-10",
+    );
+    await act(async () => buttonNamed(container, "Save Maya Chen qualification").click());
+
+    expect(fetch).toHaveBeenNthCalledWith(1, "/api/workspace/services?workspace=cedar-house", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "set-qualification",
+        serviceId: "service-camera",
+        employeeProfileId: "maya-chen",
+        active: true,
+        method: "certificate",
+        certificateName: "Eufy Alarm Installer",
+        certificateReference: "CERT-1042",
+        issuedOn: "2026-01-10",
+        expiresOn: "2027-01-10",
+      }),
+    });
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "/api/workspace/services?workspace=cedar-house",
+      { cache: "no-store" },
+    );
+    expect(container.textContent).toContain("Current");
+    expect(container.textContent).toContain("Eufy Alarm Installer");
+  });
+
+  it("requires confirmation before removing an existing qualification", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const qualifiedService: WorkspaceService = {
+      ...cameraService,
+      qualifications: [{
+        id: "qualification-camera-maya",
+        employeeProfileId: "maya-chen",
+        serviceId: "service-camera",
+        active: true,
+        method: "manual",
+        certificateName: null,
+        certificateReference: null,
+        issuedOn: null,
+        expiresOn: null,
+        current: true,
+      }],
+    };
+    const { container } = await render(createElement(ServicesPanel, {
+      workspaceSlug: "cedar-house",
+      profiles,
+      initialServices: [qualifiedService],
+    }));
+
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>("select[name='qualification-maya-chen']")!,
+      "none",
+    );
+    await act(async () => buttonNamed(container, "Save Maya Chen qualification").click());
+
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
 async function renderWorkspace(
   actor: WorkspaceActor,
   workspaceProfiles: TeamProfile[],
   entries: ScheduleEntry[],
+  initialServices: WorkspaceService[] = [],
 ) {
   return render(createElement(WorkspaceClient, {
     actor,
     profiles: workspaceProfiles,
+    initialServices,
     initialEntries: entries,
     initialAvailability: {
       employeeProfileId: "maya-chen",
@@ -322,4 +451,13 @@ async function changeInput(input: HTMLInputElement, value: string) {
   )?.set;
   setter?.call(input, value);
   await act(async () => input.dispatchEvent(new Event("input", { bubbles: true })));
+}
+
+async function changeSelect(select: HTMLSelectElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLSelectElement.prototype,
+    "value",
+  )?.set;
+  setter?.call(select, value);
+  await act(async () => select.dispatchEvent(new Event("change", { bubbles: true })));
 }

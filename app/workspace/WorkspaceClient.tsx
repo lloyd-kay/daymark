@@ -14,6 +14,7 @@ import {
   Settings2,
   ShieldCheck,
   UsersRound,
+  Wrench,
   X,
 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
@@ -22,11 +23,13 @@ import type {
   EmployeeAvailability,
   ScheduleEntry,
   TeamProfile,
+  WorkspaceService,
 } from "../../lib/data/contracts";
 import { EmbedPanel } from "./EmbedPanel";
+import { ServicesPanel } from "./ServicesPanel";
 import { TeamAccessPanel } from "./TeamAccessPanel";
 
-type WorkspaceView = "schedule" | "availability" | "team" | "embed";
+type WorkspaceView = "schedule" | "availability" | "team" | "services" | "embed";
 
 const WEEKDAYS = [
   [1, "Mon"],
@@ -41,6 +44,7 @@ const WEEKDAYS = [
 export function WorkspaceClient({
   actor,
   profiles: initialProfiles,
+  initialServices,
   initialEntries,
   initialAvailability,
   initialRange,
@@ -48,6 +52,7 @@ export function WorkspaceClient({
 }: {
   actor: WorkspaceActor;
   profiles: TeamProfile[];
+  initialServices: WorkspaceService[];
   initialEntries: ScheduleEntry[];
   initialAvailability: EmployeeAvailability | null;
   initialRange: { from: string; to: string };
@@ -264,6 +269,9 @@ export function WorkspaceClient({
             <>
               <button className={view === "team" ? "is-active" : ""} onClick={() => setView("team")}>
                 <UsersRound size={16} /> Team
+              </button>
+              <button className={view === "services" ? "is-active" : ""} onClick={() => setView("services")}>
+                <Wrench size={16} /> Services
               </button>
               <button className={view === "embed" ? "is-active" : ""} onClick={() => setView("embed")}>
                 <Code2 size={16} /> Embed
@@ -496,6 +504,10 @@ export function WorkspaceClient({
 
           {view === "team" && actor.role === "admin" ? (
             <TeamAccessPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} onProfilesChange={setProfiles} />
+          ) : null}
+
+          {view === "services" && actor.role === "admin" ? (
+            <ServicesPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} initialServices={initialServices} />
           ) : null}
 
           {view === "embed" && actor.role === "admin" ? (
