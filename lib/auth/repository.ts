@@ -20,6 +20,7 @@ import {
   invitations,
   loginAttempts,
   memberships,
+  services,
   workspaces,
 } from "../../db/schema";
 import type {
@@ -29,6 +30,7 @@ import type {
   WorkspaceMembershipRecord,
 } from "../data/contracts";
 import type { PasswordVerifier } from "./password";
+import { generalServiceValues } from "../services/defaults";
 
 const IDLE_SESSION_MS = 12 * 60 * 60 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -121,6 +123,11 @@ export async function createInitialWorkspaceAdministrator(input: {
       name: input.workspaceName,
       slug: input.workspaceSlug,
       active: true,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(services).values({
+      ...generalServiceValues(workspaceId),
       createdAt: now,
       updatedAt: now,
     }),

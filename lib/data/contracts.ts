@@ -1,4 +1,34 @@
 import type { AvailabilityRule, BookableSlot } from "../scheduling/types";
+import type { QualificationMethod } from "../services/eligibility";
+
+export type PublicService = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  durationMinutes: number;
+};
+
+export type EmployeeServiceQualification = {
+  id: string;
+  employeeProfileId: string;
+  serviceId: string;
+  method: QualificationMethod;
+  certificateName: string | null;
+  certificateReference: string | null;
+  issuedOn: string | null;
+  expiresOn: string | null;
+  active: boolean;
+  current: boolean;
+};
+
+export type WorkspaceService = PublicService & {
+  workspaceId: string;
+  active: boolean;
+  sortOrder: number;
+  qualifications: EmployeeServiceQualification[];
+};
 
 export type PublicEmployee = {
   id: string;

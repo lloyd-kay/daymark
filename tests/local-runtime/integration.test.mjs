@@ -49,7 +49,7 @@ test("starts Daymark with persistent local D1 and reports healthy", { timeout: 6
   assert.deepEqual(await response.json(), {
     status: "ok",
     appVersion: "0.1.0",
-    latestMigration: "0003_daymark_seed_recovery.sql",
+    latestMigration: "0004_daymark_service_catalog.sql",
   });
 
   const backup = await runCli([

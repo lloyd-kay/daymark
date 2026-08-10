@@ -12,10 +12,12 @@ import {
   availabilityRules,
   blockedPeriods,
   credentials,
+  employeeServiceQualifications,
   employeeProfiles,
   invitations,
   memberships,
   runtimeState,
+  services,
 } from "../../db/schema";
 import { computeBookableSlots, toLondonDateKey } from "../scheduling/slots";
 import type { AvailabilityRule, BookableSlot, TimeRange } from "../scheduling/types";
@@ -31,6 +33,10 @@ import type {
   ScheduleScope,
   TeamProfile,
 } from "./contracts";
+import {
+  generalQualificationValues,
+  generalServiceValues,
+} from "../services/defaults";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -145,6 +151,7 @@ export async function ensureSeedData(): Promise<void> {
   }
 
   if (existingProfiles.length !== PUBLIC_PROFILE_SEEDS.length) return;
+  await ensureGeneralServiceAccess(db);
   const [initializationMarker] = await db
     .select({ key: runtimeState.key })
     .from(runtimeState)
@@ -185,6 +192,19 @@ export async function ensureSeedData(): Promise<void> {
   } catch (error) {
     if (!isUniqueConstraint(error)) throw error;
   }
+}
+
+async function ensureGeneralServiceAccess(
+  db: Awaited<ReturnType<typeof database>>,
+): Promise<void> {
+  await db
+    .insert(services)
+    .values(generalServiceValues(LEGACY_WORKSPACE_ID))
+    .onConflictDoNothing();
+  await db
+    .insert(employeeServiceQualifications)
+    .values(PUBLIC_PROFILE_SEEDS.map(generalQualificationValues))
+    .onConflictDoNothing();
 }
 
 export function shouldRepairPartialSeed(input: {
