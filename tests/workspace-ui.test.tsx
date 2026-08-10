@@ -86,6 +86,43 @@ const cameraService: WorkspaceService = {
   qualifications: [],
 };
 
+const qualifiedCamera: WorkspaceService = {
+  ...cameraService,
+  qualifications: [{
+    id: "qualification-camera-maya",
+    employeeProfileId: "maya-chen",
+    serviceId: cameraService.id,
+    active: true,
+    method: "manual",
+    certificateName: null,
+    certificateReference: null,
+    issuedOn: null,
+    expiresOn: null,
+    current: true,
+  }],
+};
+
+const alarmService: WorkspaceService = {
+  ...cameraService,
+  id: "service-alarm",
+  slug: "alarm-installation-v2",
+  name: "Alarm installation",
+  durationMinutes: 120,
+  sortOrder: 2,
+  qualifications: [{
+    id: "qualification-alarm-theo",
+    employeeProfileId: "theo-brooks",
+    serviceId: "service-alarm",
+    active: true,
+    method: "manual",
+    certificateName: null,
+    certificateReference: null,
+    issuedOn: null,
+    expiresOn: null,
+    current: true,
+  }],
+};
+
 let roots: Root[] = [];
 
 beforeEach(() => {
@@ -239,6 +276,7 @@ describe("embed configuration", () => {
       workspaceId: "workspace-cedar",
       defaultMode: "inline",
       defaultServiceScope: "all",
+      defaultServiceId: null,
     };
     const { container } = await render(createElement(EmbedPanel, {
       profiles,
@@ -247,11 +285,43 @@ describe("embed configuration", () => {
     }));
 
     expect(container.querySelector<HTMLInputElement>('input[value="inline"]')?.checked).toBe(true);
+    expect(container.querySelector<HTMLInputElement>('input[value="catalogue"]')?.checked).toBe(true);
     expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
       .toContain('data-mode="inline"');
     expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
       .toContain('data-service="all"');
-    expect(container.textContent).toContain("Workspace default: Inline widget");
+    expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+      .toBe(`${window.location.origin}/book/cedar-house`);
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Inline widget · Show all services");
+  });
+
+  it("restores a persisted page-specific service by stable ID and current public slug", async () => {
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      services: [qualifiedCamera, alarmService],
+      workspaceSlug: "cedar-house",
+      initialPreference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-camera",
+      },
+    }));
+
+    expect(container.querySelector<HTMLInputElement>('input[value="floating"]')?.checked).toBe(true);
+    expect(container.querySelector<HTMLInputElement>('input[value="preselected"]')?.checked).toBe(true);
+    expect(container.querySelector<HTMLSelectElement>('select[name="embed-service"]')?.value)
+      .toBe("service-camera");
+    expect([...container.querySelectorAll<HTMLSelectElement>(
+      'select[name="embed-employee"] option',
+    )].map((option) => option.value)).toEqual(["all", "maya-chen"]);
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="camera-installation"');
+    expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+      .toBe(`${window.location.origin}/book/cedar-house?service=camera-installation`);
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Floating widget · Camera installation");
   });
 
   it("keeps snippet experimentation separate until the administrator saves a default", async () => {
@@ -260,25 +330,36 @@ describe("embed configuration", () => {
       preference: {
         workspaceId: "workspace-cedar",
         defaultMode: "inline",
-        defaultServiceScope: "all",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-alarm",
       },
     }));
     const { container } = await render(createElement(EmbedPanel, {
       profiles,
+      services: [qualifiedCamera, alarmService],
       workspaceSlug: "cedar-house",
       initialPreference: {
         workspaceId: "workspace-cedar",
         defaultMode: "floating",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     }));
 
     await act(async () => {
       container.querySelector<HTMLInputElement>('input[value="inline"]')!.click();
+      container.querySelector<HTMLInputElement>('input[value="preselected"]')!.click();
     });
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>('select[name="embed-service"]')!,
+      "service-alarm",
+    );
     expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
       .toContain('data-mode="inline"');
-    expect(container.textContent).toContain("Workspace default: Floating widget");
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="alarm-installation-v2"');
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Floating widget · Show all services");
 
     await act(async () => buttonNamed(container, "Save as workspace default").click());
 
@@ -287,13 +368,67 @@ describe("embed configuration", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "set-default", defaultMode: "inline" }),
+        body: JSON.stringify({
+          action: "set-default",
+          defaultMode: "inline",
+          defaultServiceScope: "service",
+          serviceId: "service-alarm",
+        }),
       },
     );
-    expect(container.textContent).toContain("Workspace default: Inline widget");
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Inline widget · Alarm installation");
     expect(container.textContent).toContain("Workspace default saved.");
     expect(container.querySelector<HTMLAnchorElement>('a[href="/setup-profile/import"]'))
       .not.toBeNull();
+  });
+
+  it("saves a catalogue default with an explicit null service ID", async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(jsonResponse(200, {
+      ok: true,
+      preference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "inline",
+        defaultServiceScope: "all",
+        defaultServiceId: null,
+      },
+    }));
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      services: [qualifiedCamera],
+      workspaceSlug: "cedar-house",
+      initialPreference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-camera",
+      },
+    }));
+
+    await act(async () => {
+      container.querySelector<HTMLInputElement>('input[value="inline"]')!.click();
+      container.querySelector<HTMLInputElement>('input[value="catalogue"]')!.click();
+    });
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="all"');
+    expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+      .toBe(`${window.location.origin}/book/cedar-house`);
+
+    await act(async () => buttonNamed(container, "Save as workspace default").click());
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/workspace/embed-preferences?workspace=cedar-house",
+      expect.objectContaining({
+        body: JSON.stringify({
+          action: "set-default",
+          defaultMode: "inline",
+          defaultServiceScope: "all",
+          serviceId: null,
+        }),
+      }),
+    );
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Inline widget · Show all services");
   });
 
   it("retains the previous default and offers retry after a failed save", async () => {
@@ -307,6 +442,7 @@ describe("embed configuration", () => {
         workspaceId: "workspace-cedar",
         defaultMode: "floating",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     }));
 
@@ -316,7 +452,8 @@ describe("embed configuration", () => {
       await Promise.resolve();
     });
 
-    expect(container.textContent).toContain("Workspace default: Floating widget");
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Floating widget · Show all services");
     expect(container.textContent).toContain("The workspace default could not be saved. Try again.");
     expect(buttonNamed(container, "Save as workspace default").disabled).toBe(false);
   });
@@ -353,7 +490,7 @@ describe("embed configuration", () => {
     });
     await changeSelect(
       container.querySelector<HTMLSelectElement>('select[name="embed-service"]')!,
-      "camera-installation",
+      "service-camera",
     );
 
     const calendarOptions = [...container.querySelectorAll<HTMLSelectElement>(
@@ -364,6 +501,91 @@ describe("embed configuration", () => {
       .toContain('data-service="camera-installation"');
     expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
       .toBe(`${window.location.origin}/book/cedar-house?service=camera-installation`);
+  });
+
+  it.each([
+    ["missing", "service-missing", [qualifiedCamera]],
+    ["inactive", "service-camera", [{ ...qualifiedCamera, active: false }, alarmService]],
+  ] as const)(
+    "blocks public output for a persisted %s service without falling back",
+    async (_label, defaultServiceId, services) => {
+      const { container } = await render(createElement(EmbedPanel, {
+        profiles,
+        services: [...services],
+        workspaceSlug: "cedar-house",
+        initialPreference: {
+          workspaceId: "workspace-cedar",
+          defaultMode: "floating",
+          defaultServiceScope: "service",
+          defaultServiceId,
+        },
+      }));
+
+      expect(container.querySelector<HTMLInputElement>('input[value="preselected"]')?.checked)
+        .toBe(true);
+      expect(container.querySelector('[role="alert"]')?.textContent)
+        .toContain("saved service is unavailable");
+      expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+        .toBe("");
+      expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+        .toBe("");
+      expect(buttonNamed(container, "Copy snippet").disabled).toBe(true);
+      expect(container.querySelector(".embed-default-summary")?.textContent)
+        .toBe("Workspace default: Floating widget · Unavailable service");
+      expect(container.querySelector<HTMLSelectElement>('select[name="embed-service"]')?.value)
+        .toBe(defaultServiceId);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("repairs an unavailable persisted mapping only after an active service is chosen and saved", async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(jsonResponse(200, {
+      ok: true,
+      preference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-camera",
+      },
+    }));
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      services: [qualifiedCamera],
+      workspaceSlug: "cedar-house",
+      initialPreference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-missing",
+      },
+    }));
+
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>('select[name="embed-service"]')!,
+      "service-camera",
+    );
+
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="camera-installation"');
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Floating widget · Unavailable service");
+
+    await act(async () => buttonNamed(container, "Save as workspace default").click());
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/workspace/embed-preferences?workspace=cedar-house",
+      expect.objectContaining({
+        body: JSON.stringify({
+          action: "set-default",
+          defaultMode: "floating",
+          defaultServiceScope: "service",
+          serviceId: "service-camera",
+        }),
+      }),
+    );
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Floating widget · Camera installation");
   });
 
   it("retains the snippet and shows safe feedback when clipboard access is unavailable", async () => {
@@ -560,6 +782,7 @@ async function renderWorkspace(
       workspaceId: actor.workspaceId,
       defaultMode: "floating",
       defaultServiceScope: "all",
+      defaultServiceId: null,
     } : null,
     initialView,
     initialEntries: entries,

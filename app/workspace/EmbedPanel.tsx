@@ -27,14 +27,27 @@ export function EmbedPanel({
   initialPreference?: WorkspaceEmbedPreference | null;
 }) {
   const initialMode = initialPreference?.defaultMode ?? "floating";
+  const initialJourney: BookingJourney = initialPreference?.defaultServiceScope === "service"
+    ? "preselected"
+    : "catalogue";
+  const firstActiveServiceId = services.find(
+    (item) => item.active && validServiceSlug(item.slug),
+  )?.id ?? "";
+  const initialServiceId = initialJourney === "preselected"
+    ? initialPreference?.defaultServiceId ?? ""
+    : firstActiveServiceId;
+  const initialSavedPreference: WorkspaceEmbedPreference = initialPreference ?? {
+    workspaceId: "",
+    defaultMode: initialMode,
+    defaultServiceScope: "all",
+    defaultServiceId: null,
+  };
   const [mode, setMode] = useState<EmbedMode>(initialMode);
-  const [savedDefaultMode, setSavedDefaultMode] = useState<EmbedMode>(initialMode);
+  const [savedPreference, setSavedPreference] = useState(initialSavedPreference);
   const [savingDefault, setSavingDefault] = useState(false);
   const [defaultMessage, setDefaultMessage] = useState("");
-  const [journey, setJourney] = useState<BookingJourney>("catalogue");
-  const [service, setService] = useState(
-    () => services.find((item) => item.active && validServiceSlug(item.slug))?.slug ?? "",
-  );
+  const [journey, setJourney] = useState<BookingJourney>(initialJourney);
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId);
   const [employee, setEmployee] = useState("all");
   const [copied, setCopied] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
@@ -49,38 +62,60 @@ export function EmbedPanel({
     () => services.filter((item) => item.active && validServiceSlug(item.slug)),
     [services],
   );
-  const selectedService = activeServices.find((item) => item.slug === service)
-    ?? activeServices[0]
-    ?? null;
-  const configuredService = journey === "preselected"
+  const selectedService = activeServices.find(
+    (candidate) => candidate.id === selectedServiceId,
+  ) ?? null;
+  const configuredServiceSlug = journey === "preselected"
     ? selectedService?.slug ?? ""
     : "all";
-  const eligibleProfiles = useMemo(() => {
-    if (journey !== "preselected" || !selectedService) return publicProfiles;
+  const savedService = savedPreference.defaultServiceScope === "service"
+    ? activeServices.find(
+        (candidate) => candidate.id === savedPreference.defaultServiceId,
+      ) ?? null
+    : null;
+  const savedModeLabel = savedPreference.defaultMode === "inline"
+    ? "Inline widget"
+    : "Floating widget";
+  const savedJourneyLabel = savedPreference.defaultServiceScope === "service"
+    ? savedService?.name ?? "Unavailable service"
+    : "Show all services";
+  const draftServiceScope = journey === "preselected" ? "service" : "all";
+  const draftServiceId = journey === "preselected" ? selectedServiceId || null : null;
+  const defaultSelectionValid = journey === "catalogue" || selectedService !== null;
+  const defaultIsDirty = mode !== savedPreference.defaultMode
+    || draftServiceScope !== savedPreference.defaultServiceScope
+    || draftServiceId !== savedPreference.defaultServiceId;
+  const unavailableSavedSelection = journey === "preselected"
+    && !selectedService
+    && savedPreference.defaultServiceScope === "service"
+    && savedPreference.defaultServiceId === draftServiceId;
+  const eligibleProfiles = (() => {
+    if (journey !== "preselected") return publicProfiles;
+    if (!selectedService) return [];
     const eligibleIds = new Set(
       selectedService.qualifications
         .filter((qualification) => qualification.active && qualification.current)
         .map((qualification) => qualification.employeeProfileId),
     );
     return publicProfiles.filter((profile) => eligibleIds.has(profile.id));
-  }, [journey, publicProfiles, selectedService]);
+  })();
   const configuredEmployee = employee === "all"
     || eligibleProfiles.some((profile) => profile.id === employee)
     ? employee
     : "all";
 
-  const snippet = origin && configuredService
+  const snippet = origin && configuredServiceSlug
     ? buildEmbedSnippet(
         origin,
         mode,
         configuredEmployee,
-        configuredService,
+        configuredServiceSlug,
         DEFAULT_LABEL,
         workspaceSlug,
       )
     : "";
-  const directLink = origin && configuredService
-    ? buildDirectBookingLink(origin, workspaceSlug, configuredService)
+  const directLink = origin && configuredServiceSlug
+    ? buildDirectBookingLink(origin, workspaceSlug, configuredServiceSlug)
     : "";
 
   async function copySnippet() {
@@ -97,6 +132,7 @@ export function EmbedPanel({
   }
 
   async function saveWorkspaceDefault() {
+    if (!defaultSelectionValid || !defaultIsDirty) return;
     setSavingDefault(true);
     setDefaultMessage("");
     try {
@@ -105,7 +141,12 @@ export function EmbedPanel({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "set-default", defaultMode: mode }),
+          body: JSON.stringify({
+            action: "set-default",
+            defaultMode: mode,
+            defaultServiceScope: draftServiceScope,
+            serviceId: journey === "preselected" ? selectedService?.id ?? null : null,
+          }),
         },
       );
       const body = await response.json() as {
@@ -115,7 +156,7 @@ export function EmbedPanel({
       if (!response.ok || !body.preference) {
         throw new Error(body.error ?? "The workspace default could not be saved. Try again.");
       }
-      setSavedDefaultMode(body.preference.defaultMode);
+      setSavedPreference(body.preference);
       setDefaultMessage("Workspace default saved.");
     } catch (error) {
       setDefaultMessage(
@@ -172,14 +213,12 @@ export function EmbedPanel({
             </label>
           </fieldset>
           <div className="embed-default-control">
-            <p>
-              Workspace default: {savedDefaultMode === "inline"
-                ? "Inline widget"
-                : "Floating widget"}
+            <p className="embed-default-summary">
+              Workspace default: {savedModeLabel} · {savedJourneyLabel}
             </p>
             <button
               type="button"
-              disabled={savingDefault || mode === savedDefaultMode}
+              disabled={savingDefault || !defaultSelectionValid || !defaultIsDirty}
               onClick={saveWorkspaceDefault}
             >
               {savingDefault ? "Saving default…" : "Save as workspace default"}
@@ -201,6 +240,7 @@ export function EmbedPanel({
                   setJourney("catalogue");
                   setEmployee("all");
                   setCopied(false);
+                  setDefaultMessage("");
                 }}
               />
               <span>Show all services</span>
@@ -216,6 +256,7 @@ export function EmbedPanel({
                   setJourney("preselected");
                   setEmployee("all");
                   setCopied(false);
+                  setDefaultMessage("");
                 }}
               />
               <span>Preselect a service</span>
@@ -226,18 +267,30 @@ export function EmbedPanel({
               <span>Service</span>
               <select
                 name="embed-service"
-                value={selectedService?.slug ?? ""}
+                value={selectedServiceId}
                 onChange={(event) => {
-                  setService(event.target.value);
+                  setSelectedServiceId(event.target.value);
                   setEmployee("all");
                   setCopied(false);
+                  setDefaultMessage("");
                 }}
               >
+                {!selectedService && selectedServiceId ? (
+                  <option value={selectedServiceId} disabled>Unavailable saved service</option>
+                ) : null}
+                {!selectedServiceId ? <option value="">Choose a service</option> : null}
                 {activeServices.map((item) => (
-                  <option key={item.id} value={item.slug}>{item.name}</option>
+                  <option key={item.id} value={item.id}>{item.name}</option>
                 ))}
               </select>
             </label>
+          ) : null}
+          {journey === "preselected" && !selectedService ? (
+            <p className="enrol-error embed-service-alert" role="alert">
+              {unavailableSavedSelection
+                ? "The saved service is unavailable. Choose an active service and save the workspace default."
+                : "Choose an active service before saving or publishing this setup."}
+            </p>
           ) : null}
           <label className="embed-employee-select">
             <span>Calendar</span>
