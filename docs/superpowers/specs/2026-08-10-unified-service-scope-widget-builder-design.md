@@ -1,7 +1,7 @@
 # Unified service scope and widget setup builder
 
 **Date:** 2026-08-10
-**Status:** Awaiting written-spec review
+**Status:** Approved
 **Restore point:** `restore-2026-08-10-before-service-scope-builder` at `d41a95c511054c2d365f96b29f3049256a9d4862`
 **Cold data backup:** `C:\Users\Lloyd\Files\Daymark-restore-points\2026-08-10-before-service-scope-builder\.daymark`
 
