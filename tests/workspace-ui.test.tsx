@@ -199,17 +199,19 @@ describe("embed configuration", () => {
       "https://appointments.daymark.test",
       "floating",
       "maya-chen",
+      "camera-installation",
       "Book an appointment",
     )).toBe(
-      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="maya-chen" data-label="Book an appointment"></script>',
+      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="maya-chen" data-service="camera-installation" data-label="Book an appointment"></script>',
     );
     expect(buildEmbedSnippet(
       'https://appointments.daymark.test/" onload="alert(1)',
       "inline",
       'maya-chen" onload="alert(1)',
+      'camera" onload="alert(1)',
       'Book "now" & return',
     )).toBe(
-      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="inline" data-employee="all" data-label="Book &quot;now&quot; &amp; return"></script>',
+      '<script src="https://appointments.daymark.test/daymark-widget.js" data-workspace="daymark" data-mode="inline" data-employee="all" data-service="all" data-label="Book &quot;now&quot; &amp; return"></script>',
     );
   });
 
@@ -226,9 +228,54 @@ describe("embed configuration", () => {
     const options = [...container.querySelectorAll("option")].map((option) => option.value);
     expect(options).toEqual(["all", "maya-chen", "theo-brooks"]);
     expect(container.querySelector("textarea")?.value).toBe(
-      `<script src="${window.location.origin}/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="all" data-label="Book an appointment"></script>`,
+      `<script src="${window.location.origin}/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="all" data-service="all" data-label="Book an appointment"></script>`,
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("switches between catalogue and preselected service links and filters unqualified calendars", async () => {
+    const qualifiedCamera: WorkspaceService = {
+      ...cameraService,
+      qualifications: [{
+        id: "qualification-camera-maya",
+        employeeProfileId: "maya-chen",
+        serviceId: cameraService.id,
+        active: true,
+        method: "manual",
+        certificateName: null,
+        certificateReference: null,
+        issuedOn: null,
+        expiresOn: null,
+        current: true,
+      }],
+    };
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      services: [qualifiedCamera],
+      workspaceSlug: "cedar-house",
+    }));
+
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="all"');
+    expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+      .toBe(`${window.location.origin}/book/cedar-house`);
+
+    await act(async () => {
+      container.querySelector<HTMLInputElement>('input[value="preselected"]')!.click();
+    });
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>('select[name="embed-service"]')!,
+      "camera-installation",
+    );
+
+    const calendarOptions = [...container.querySelectorAll<HTMLSelectElement>(
+      'select[name="embed-employee"] option',
+    )].map((option) => option.value);
+    expect(calendarOptions).toEqual(["all", "maya-chen"]);
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="camera-installation"');
+    expect(container.querySelector<HTMLInputElement>("#daymark-direct-booking-link")?.value)
+      .toBe(`${window.location.origin}/book/cedar-house?service=camera-installation`);
   });
 
   it("retains the snippet and shows safe feedback when clipboard access is unavailable", async () => {
@@ -290,6 +337,7 @@ describe("workspace role gates and protected details", () => {
 
 describe("service qualification controls", () => {
   it("submits a certificate-backed qualification and refreshes protected data", async () => {
+    const onServicesChange = vi.fn();
     vi.mocked(fetch)
       .mockResolvedValueOnce(jsonResponse(200, { ok: true }))
       .mockResolvedValueOnce(jsonResponse(200, {
@@ -313,6 +361,7 @@ describe("service qualification controls", () => {
       workspaceSlug: "cedar-house",
       profiles,
       initialServices: [cameraService],
+      onServicesChange,
     }));
 
     await changeSelect(
@@ -359,6 +408,12 @@ describe("service qualification controls", () => {
     );
     expect(container.textContent).toContain("Current");
     expect(container.textContent).toContain("Eufy Alarm Installer");
+    expect(onServicesChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: cameraService.id,
+        qualifications: [expect.objectContaining({ current: true })],
+      }),
+    ]);
   });
 
   it("requires confirmation before removing an existing qualification", async () => {

@@ -18,16 +18,21 @@
       ? script.dataset.workspace
       : "";
     if (!workspace) {
-      var unavailable = document.createElement("span");
-      unavailable.className = "daymark-widget-unavailable";
-      unavailable.textContent = "Booking unavailable.";
-      script.insertAdjacentElement("afterend", unavailable);
+      showUnavailable();
       return;
     }
     var mode = script.dataset.mode === "inline" ? "inline" : "floating";
     var employee = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/.test(script.dataset.employee || "")
       ? script.dataset.employee
       : "all";
+    var service = script.dataset.service || "all";
+    if (
+      service !== "all" &&
+      !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(service)
+    ) {
+      showUnavailable();
+      return;
+    }
     var rawLabel = (script.dataset.label || "").trim();
     var label = rawLabel.length >= 1 && rawLabel.length <= 80
       ? rawLabel
@@ -52,7 +57,7 @@
     iframe.title = "Daymark appointment booking";
     iframe.setAttribute("sandbox", "allow-scripts allow-forms allow-same-origin");
     iframe.setAttribute("loading", "eager");
-    iframe.src = origin + "/embed?workspace=" + encodeURIComponent(workspace) + "&employee=" + encodeURIComponent(employee) + "&channel=" + encodeURIComponent(channel);
+    iframe.src = origin + "/embed?workspace=" + encodeURIComponent(workspace) + "&employee=" + encodeURIComponent(employee) + "&service=" + encodeURIComponent(service) + "&channel=" + encodeURIComponent(channel);
     iframe.style.height = "680px";
     frameMount.appendChild(iframe);
 
@@ -227,7 +232,9 @@
       var message = document.createElement("p");
       message.textContent = "Booking is taking longer than expected.";
       var link = document.createElement("a");
-      link.href = origin + "/book/" + encodeURIComponent(workspace);
+      link.href = origin + "/book/" + encodeURIComponent(workspace) + (
+        service === "all" ? "" : "?service=" + encodeURIComponent(service)
+      );
       link.target = "_top";
       link.textContent = "Book directly with Daymark";
       fallback.appendChild(message);
@@ -241,6 +248,13 @@
       sentinel.tabIndex = 0;
       sentinel.dataset.daymarkFocus = position;
       return sentinel;
+    }
+
+    function showUnavailable() {
+      var unavailable = document.createElement("span");
+      unavailable.className = "daymark-widget-unavailable";
+      unavailable.textContent = "Booking unavailable.";
+      script.insertAdjacentElement("afterend", unavailable);
     }
 
     function installStyles() {

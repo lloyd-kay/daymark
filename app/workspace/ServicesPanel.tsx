@@ -14,10 +14,12 @@ export function ServicesPanel({
   workspaceSlug = "daymark",
   profiles,
   initialServices,
+  onServicesChange,
 }: {
   workspaceSlug?: string;
   profiles: TeamProfile[];
   initialServices: WorkspaceService[];
+  onServicesChange?: (services: WorkspaceService[]) => void;
 }) {
   const [services, setServices] = useState(initialServices);
   const [name, setName] = useState("");
@@ -37,7 +39,9 @@ export function ServicesPanel({
     if (!response.ok) {
       throw new Error(body.error ?? "Services could not be refreshed.");
     }
-    setServices(body.services ?? []);
+    const refreshedServices = body.services ?? [];
+    setServices(refreshedServices);
+    onServicesChange?.(refreshedServices);
   }
 
   async function mutate(body: MutationBody, successMessage: string) {

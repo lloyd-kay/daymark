@@ -60,6 +60,7 @@ export function WorkspaceClient({
 }) {
   const [view, setView] = useState<WorkspaceView>("schedule");
   const [profiles, setProfiles] = useState(initialProfiles);
+  const [services, setServices] = useState(initialServices);
   const [entries, setEntries] = useState(initialEntries);
   const [range, setRange] = useState(initialRange);
   const [scheduleFilter, setScheduleFilter] = useState(
@@ -510,11 +511,20 @@ export function WorkspaceClient({
           ) : null}
 
           {view === "services" && actor.role === "admin" ? (
-            <ServicesPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} initialServices={initialServices} />
+            <ServicesPanel
+              workspaceSlug={actor.workspaceSlug}
+              profiles={profiles}
+              initialServices={services}
+              onServicesChange={setServices}
+            />
           ) : null}
 
           {view === "embed" && actor.role === "admin" ? (
-            <EmbedPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} />
+            <EmbedPanel
+              workspaceSlug={actor.workspaceSlug}
+              profiles={profiles}
+              services={services}
+            />
           ) : null}
         </section>
       </div>

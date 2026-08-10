@@ -2158,7 +2158,9 @@ a {
 
 .staff-account-form label > span,
 .embed-controls legend,
+.embed-service-select > span,
 .embed-employee-select > span,
+.embed-direct-link label,
 .embed-code label {
   font-size: 0.58rem;
   text-transform: uppercase;
@@ -2167,7 +2169,9 @@ a {
 }
 
 .staff-account-form input,
+.embed-service-select select,
 .embed-employee-select select,
+.embed-direct-link input,
 .embed-code textarea {
   min-width: 0;
   padding: 9px 10px;
@@ -2591,6 +2595,10 @@ a {
   border: 0;
 }
 
+.embed-controls fieldset + fieldset {
+  margin-top: 24px;
+}
+
 .embed-controls legend {
   margin-bottom: 9px;
 }
@@ -2626,6 +2634,12 @@ a {
   outline-offset: 3px;
 }
 
+.embed-controls fieldset input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.embed-service-select,
 .embed-employee-select {
   display: grid;
   gap: 7px;
@@ -2737,6 +2751,46 @@ a {
   align-self: start;
   background: var(--coral);
   color: var(--ink);
+}
+
+.embed-direct-link {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px dashed var(--ink);
+  background: var(--paper-light);
+}
+
+.embed-direct-link > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.embed-direct-link a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 11px;
+  border: 1px solid var(--ink);
+  background: var(--lilac);
+  color: var(--ink);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.embed-direct-link p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+}
+
+.embed-direct-link a:focus-visible,
+.embed-direct-link input:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
 }
 
 @media (max-width: 1000px) {
@@ -2856,6 +2910,7 @@ a {
 
   .staff-account-form,
   .embed-code,
+  .embed-direct-link > div,
   .service-create-form,
   .service-edit-form,
   .certificate-fields {

@@ -7,33 +7,53 @@ import {
 } from "../lib/widget/protocol";
 
 describe("widget boundaries", () => {
-  it("supports both modes and rejects unsafe employee identifiers", () => {
+  it("supports both modes and service journeys while rejecting unsafe identifiers", () => {
     expect(normalizeWidgetConfig({ mode: "floating", employee: "maya-chen" })).toEqual({
       mode: "floating",
       employee: "maya-chen",
+      service: "all",
       label: "Book an appointment",
     });
-    expect(normalizeWidgetConfig({ mode: "unknown", employee: "<script>" })).toEqual({
+    expect(normalizeWidgetConfig({
+      mode: "inline",
+      employee: "all",
+      service: "ring-doorbell-installation",
+    })).toEqual({
+      mode: "inline",
+      employee: "all",
+      service: "ring-doorbell-installation",
+      label: "Book an appointment",
+    });
+    expect(normalizeWidgetConfig({
+      mode: "unknown",
+      employee: "<script>",
+      service: "javascript:alert(1)",
+    })).toEqual({
       mode: "floating",
       employee: "all",
+      service: "all",
       label: "Book an appointment",
     });
     expect(normalizeWidgetConfig({
       mode: "inline",
       employee: "theo-brooks",
+      service: "all",
       label: "  Meet the team  ",
     })).toEqual({
       mode: "inline",
       employee: "theo-brooks",
+      service: "all",
       label: "Meet the team",
     });
     expect(normalizeWidgetConfig({
       mode: "floating",
       employee: "-unsafe",
+      service: "-unsafe",
       label: "x".repeat(81),
     })).toEqual({
       mode: "floating",
       employee: "all",
+      service: "all",
       label: "Book an appointment",
     });
   });

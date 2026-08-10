@@ -8,6 +8,7 @@ import { DemoBookingFlow } from "../app/demo/DemoBookingFlow";
 import { EmbedBridge } from "../app/embed/EmbedBridge";
 import type { BookingTransport } from "../lib/booking/transport";
 import type { PublicEmployee, PublicService } from "../lib/data/contracts";
+import { resolveWidgetBooking } from "../lib/widget/booking-selection";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -151,6 +152,71 @@ describe("BookingFlow embed lifecycle", () => {
     expect(standalone.container.textContent).toContain("Your time is marked.");
     await act(async () => standalone.root.unmount());
     window.removeEventListener("daymark:complete", complete);
+  });
+});
+
+describe("Embed service resolution", () => {
+  it("keeps catalogue mode unlocked while limiting services for a fixed employee", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn();
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "all" },
+      { listServices, listEmployees },
+    )).resolves.toEqual({
+      initialServices: [service],
+      initialEmployees: [],
+      initialEmployeeId: "maya-chen",
+    });
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).not.toHaveBeenCalled();
+  });
+
+  it("locks an explicit service and validates a fixed employee against its qualified team", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn().mockResolvedValue([employee]);
+
+    const booking = await resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "camera-installation" },
+      { listServices, listEmployees },
+    );
+
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).toHaveBeenCalledWith(scope, service.id);
+    expect(booking).toMatchObject({
+      initialServices: [service],
+      initialServiceId: service.id,
+      initialEmployees: [employee],
+      initialEmployeeId: "maya-chen",
+    });
+  });
+
+  it("keeps catalogue mode explicit and rejects an unavailable employee-service pair", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([]);
+    const listEmployees = vi.fn().mockResolvedValue([]);
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "theo-brooks", service: "camera-installation" },
+      { listServices, listEmployees },
+    )).resolves.toBeNull();
   });
 });
 

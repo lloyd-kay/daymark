@@ -2,21 +2,29 @@
 
 import { Code2, Copy } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import type { TeamProfile } from "../../lib/data/contracts";
+import type { TeamProfile, WorkspaceService } from "../../lib/data/contracts";
+import { validServiceSlug } from "../../lib/services/eligibility";
 
 type EmbedMode = "floating" | "inline";
+type BookingJourney = "catalogue" | "preselected";
 
 const EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
 const DEFAULT_LABEL = "Book an appointment";
 
 export function EmbedPanel({
   profiles,
+  services = [],
   workspaceSlug = "daymark",
 }: {
   profiles: TeamProfile[];
+  services?: WorkspaceService[];
   workspaceSlug?: string;
 }) {
   const [mode, setMode] = useState<EmbedMode>("floating");
+  const [journey, setJourney] = useState<BookingJourney>("catalogue");
+  const [service, setService] = useState(
+    () => services.find((item) => item.active && validServiceSlug(item.slug))?.slug ?? "",
+  );
   const [employee, setEmployee] = useState("all");
   const [copied, setCopied] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
@@ -27,9 +35,42 @@ export function EmbedPanel({
     ),
     [profiles],
   );
+  const activeServices = useMemo(
+    () => services.filter((item) => item.active && validServiceSlug(item.slug)),
+    [services],
+  );
+  const selectedService = activeServices.find((item) => item.slug === service)
+    ?? activeServices[0]
+    ?? null;
+  const configuredService = journey === "preselected"
+    ? selectedService?.slug ?? ""
+    : "all";
+  const eligibleProfiles = useMemo(() => {
+    if (journey !== "preselected" || !selectedService) return publicProfiles;
+    const eligibleIds = new Set(
+      selectedService.qualifications
+        .filter((qualification) => qualification.active && qualification.current)
+        .map((qualification) => qualification.employeeProfileId),
+    );
+    return publicProfiles.filter((profile) => eligibleIds.has(profile.id));
+  }, [journey, publicProfiles, selectedService]);
+  const configuredEmployee = employee === "all"
+    || eligibleProfiles.some((profile) => profile.id === employee)
+    ? employee
+    : "all";
 
-  const snippet = origin
-    ? buildEmbedSnippet(origin, mode, employee, DEFAULT_LABEL, workspaceSlug)
+  const snippet = origin && configuredService
+    ? buildEmbedSnippet(
+        origin,
+        mode,
+        configuredEmployee,
+        configuredService,
+        DEFAULT_LABEL,
+        workspaceSlug,
+      )
+    : "";
+  const directLink = origin && configuredService
+    ? buildDirectBookingLink(origin, workspaceSlug, configuredService)
     : "";
 
   async function copySnippet() {
@@ -80,14 +121,65 @@ export function EmbedPanel({
               <span>Inline panel</span>
             </label>
           </fieldset>
+          <fieldset>
+            <legend>Booking journey</legend>
+            <label>
+              <input
+                type="radio"
+                name="embed-journey"
+                value="catalogue"
+                checked={journey === "catalogue"}
+                onChange={() => {
+                  setJourney("catalogue");
+                  setEmployee("all");
+                  setCopied(false);
+                }}
+              />
+              <span>Show all services</span>
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="embed-journey"
+                value="preselected"
+                checked={journey === "preselected"}
+                disabled={activeServices.length === 0}
+                onChange={() => {
+                  setJourney("preselected");
+                  setEmployee("all");
+                  setCopied(false);
+                }}
+              />
+              <span>Preselect a service</span>
+            </label>
+          </fieldset>
+          {journey === "preselected" ? (
+            <label className="embed-service-select">
+              <span>Service</span>
+              <select
+                name="embed-service"
+                value={selectedService?.slug ?? ""}
+                onChange={(event) => {
+                  setService(event.target.value);
+                  setEmployee("all");
+                  setCopied(false);
+                }}
+              >
+                {activeServices.map((item) => (
+                  <option key={item.id} value={item.slug}>{item.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="embed-employee-select">
             <span>Calendar</span>
             <select
-              value={employee}
+              name="embed-employee"
+              value={configuredEmployee}
               onChange={(event) => { setEmployee(event.target.value); setCopied(false); }}
             >
               <option value="all">All available team members</option>
-              {publicProfiles.map((profile) => (
+              {eligibleProfiles.map((profile) => (
                 <option key={profile.id} value={profile.id}>{profile.publicName}</option>
               ))}
             </select>
@@ -105,9 +197,12 @@ export function EmbedPanel({
             <div className="embed-inline-preview">
               <small>DAYMARK</small>
               <strong>Choose a time that works.</strong>
-              <span>{employee === "all"
+              <span>{selectedService && journey === "preselected"
+                ? `${selectedService.name} · `
+                : ""}
+              {configuredEmployee === "all"
                 ? "All available team members"
-                : publicProfiles.find((profile) => profile.id === employee)?.publicName}
+                : eligibleProfiles.find((profile) => profile.id === configuredEmployee)?.publicName}
               </span>
             </div>
           )}
@@ -122,6 +217,17 @@ export function EmbedPanel({
         </button>
         {copyMessage ? <p className="workspace-message" role="status">{copyMessage}</p> : null}
       </div>
+
+      <div className="embed-direct-link">
+        <label htmlFor="daymark-direct-booking-link">Direct booking link</label>
+        <div>
+          <input id="daymark-direct-booking-link" value={directLink} readOnly />
+          {directLink ? (
+            <a href={directLink} target="_blank" rel="noreferrer">Open booking page</a>
+          ) : null}
+        </div>
+        <p>Use this URL for buttons, emails, or pages where the widget is not needed.</p>
+      </div>
     </div>
   );
 }
@@ -130,6 +236,7 @@ export function buildEmbedSnippet(
   origin: string,
   mode: EmbedMode,
   employee: string,
+  service: string,
   label: string,
   workspaceSlug = "daymark",
 ): string {
@@ -138,8 +245,24 @@ export function buildEmbedSnippet(
   const safeEmployee = employee === "all" || EMPLOYEE_PROFILE_ID.test(employee)
     ? employee
     : "all";
+  const safeService = service === "all" || validServiceSlug(service)
+    ? service
+    : "all";
   const safeWorkspace = EMPLOYEE_PROFILE_ID.test(workspaceSlug) ? workspaceSlug : "daymark";
-  return `<script src="${escapeAttribute(`${safeOrigin}/daymark-widget.js`)}" data-workspace="${escapeAttribute(safeWorkspace)}" data-mode="${safeMode}" data-employee="${escapeAttribute(safeEmployee)}" data-label="${escapeAttribute(label)}"></script>`;
+  return `<script src="${escapeAttribute(`${safeOrigin}/daymark-widget.js`)}" data-workspace="${escapeAttribute(safeWorkspace)}" data-mode="${safeMode}" data-employee="${escapeAttribute(safeEmployee)}" data-service="${escapeAttribute(safeService)}" data-label="${escapeAttribute(label)}"></script>`;
+}
+
+export function buildDirectBookingLink(
+  origin: string,
+  workspaceSlug: string,
+  service: string,
+): string {
+  const safeOrigin = normalizedOrigin(origin);
+  const safeWorkspace = EMPLOYEE_PROFILE_ID.test(workspaceSlug) ? workspaceSlug : "daymark";
+  const base = `${safeOrigin}/book/${encodeURIComponent(safeWorkspace)}`;
+  return service === "all" || !validServiceSlug(service)
+    ? base
+    : `${base}?service=${encodeURIComponent(service)}`;
 }
 
 function normalizedOrigin(value: string): string {
