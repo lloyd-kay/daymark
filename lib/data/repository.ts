@@ -43,58 +43,16 @@ import {
   generalQualificationValues,
   generalServiceValues,
 } from "../services/defaults";
+import {
+  INITIAL_AVAILABILITY_MARKER,
+  initialAvailabilityValues,
+  initialProfileValues,
+} from "./initial-roster";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export const LEGACY_WORKSPACE_ID = "workspace-daymark";
-const INITIAL_AVAILABILITY_MARKER = "initial-availability-v1";
-
-export const PUBLIC_PROFILE_SEEDS = [
-  {
-    id: "maya-chen",
-    workspaceId: LEGACY_WORKSPACE_ID,
-    membershipId: null,
-    publicName: "Maya Chen",
-    title: "Client partner",
-    bio: "Thoughtful planning and project conversations.",
-    accent: "coral",
-    active: true,
-    sortOrder: 0,
-  },
-  {
-    id: "theo-brooks",
-    workspaceId: LEGACY_WORKSPACE_ID,
-    membershipId: null,
-    publicName: "Theo Brooks",
-    title: "Operations specialist",
-    bio: "Practical sessions for keeping work moving.",
-    accent: "sage",
-    active: true,
-    sortOrder: 1,
-  },
-  {
-    id: "priya-shah",
-    workspaceId: LEGACY_WORKSPACE_ID,
-    membershipId: null,
-    publicName: "Priya Shah",
-    title: "Project adviser",
-    bio: "Focused support for decisions and next steps.",
-    accent: "lilac",
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    id: "jon-bell",
-    workspaceId: LEGACY_WORKSPACE_ID,
-    membershipId: null,
-    publicName: "Jon Bell",
-    title: "Team coordinator",
-    bio: "Clear, friendly appointments for general enquiries.",
-    accent: "ochre",
-    active: true,
-    sortOrder: 3,
-  },
-] as const satisfies readonly EmployeeProfileRecord[];
+export const PUBLIC_PROFILE_SEEDS = initialProfileValues(LEGACY_WORKSPACE_ID);
 
 export function toPublicEmployee(
   profile: EmployeeProfileRecord,
@@ -978,25 +936,7 @@ async function database() {
 }
 
 function defaultAvailabilitySeeds() {
-  const windows: Record<string, [number, number]> = {
-    "maya-chen": [9 * 60, 17 * 60],
-    "theo-brooks": [8 * 60 + 30, 16 * 60 + 30],
-    "priya-shah": [10 * 60, 18 * 60],
-    "jon-bell": [9 * 60, 15 * 60 + 30],
-  };
-  return PUBLIC_PROFILE_SEEDS.flatMap((profile) =>
-    [1, 2, 3, 4, 5].map((weekday) => ({
-      id: `rule-${profile.id}-${weekday}`,
-      workspaceId: LEGACY_WORKSPACE_ID,
-      employeeProfileId: profile.id,
-      weekday,
-      startMinute: windows[profile.id][0],
-      endMinute: windows[profile.id][1],
-      slotMinutes: 30,
-      bufferMinutes: 10,
-      active: true,
-    })),
-  );
+  return initialAvailabilityValues(LEGACY_WORKSPACE_ID);
 }
 
 function broadUtcRange(dateKeys: string[]) {
