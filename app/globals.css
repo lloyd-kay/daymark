@@ -2639,6 +2639,48 @@ a {
   opacity: 0.5;
 }
 
+.embed-default-control {
+  display: grid;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 13px;
+  border: 1px dashed var(--ink);
+  background: var(--paper-light);
+}
+
+.embed-default-control > p:first-child {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.embed-default-control > button,
+.embed-default-control > a {
+  width: fit-content;
+  color: var(--ink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.embed-default-control > button {
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+}
+
+.embed-default-control > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.embed-default-control .workspace-message {
+  margin: 0;
+}
+
 .embed-service-select,
 .embed-employee-select {
   display: grid;

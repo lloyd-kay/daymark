@@ -23,6 +23,7 @@ import type {
   EmployeeAvailability,
   ScheduleEntry,
   TeamProfile,
+  WorkspaceEmbedPreference,
   WorkspaceService,
 } from "../../lib/data/contracts";
 import { EmbedPanel } from "./EmbedPanel";
@@ -45,6 +46,7 @@ export function WorkspaceClient({
   actor,
   profiles: initialProfiles,
   initialServices,
+  initialEmbedPreference,
   initialEntries,
   initialAvailability,
   initialRange,
@@ -53,6 +55,7 @@ export function WorkspaceClient({
   actor: WorkspaceActor;
   profiles: TeamProfile[];
   initialServices: WorkspaceService[];
+  initialEmbedPreference: WorkspaceEmbedPreference | null;
   initialEntries: ScheduleEntry[];
   initialAvailability: EmployeeAvailability | null;
   initialRange: { from: string; to: string };
@@ -524,6 +527,7 @@ export function WorkspaceClient({
               workspaceSlug={actor.workspaceSlug}
               profiles={profiles}
               services={services}
+              initialPreference={initialEmbedPreference}
             />
           ) : null}
         </section>

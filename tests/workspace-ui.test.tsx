@@ -11,6 +11,7 @@ import type { WorkspaceActor } from "../lib/auth/membership";
 import type {
   ScheduleEntry,
   TeamProfile,
+  WorkspaceEmbedPreference,
   WorkspaceService,
 } from "../lib/data/contracts";
 
@@ -231,6 +232,93 @@ describe("embed configuration", () => {
       `<script src="${window.location.origin}/daymark-widget.js" data-workspace="daymark" data-mode="floating" data-employee="all" data-service="all" data-label="Book an appointment"></script>`,
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("starts from the persisted Inline full-catalogue workspace default", async () => {
+    const initialPreference: WorkspaceEmbedPreference = {
+      workspaceId: "workspace-cedar",
+      defaultMode: "inline",
+      defaultServiceScope: "all",
+    };
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      workspaceSlug: "cedar-house",
+      initialPreference,
+    }));
+
+    expect(container.querySelector<HTMLInputElement>('input[value="inline"]')?.checked).toBe(true);
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-mode="inline"');
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="all"');
+    expect(container.textContent).toContain("Workspace default: Inline widget");
+  });
+
+  it("keeps snippet experimentation separate until the administrator saves a default", async () => {
+    const fetchMock = vi.mocked(fetch).mockResolvedValue(jsonResponse(200, {
+      ok: true,
+      preference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "inline",
+        defaultServiceScope: "all",
+      },
+    }));
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      workspaceSlug: "cedar-house",
+      initialPreference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "all",
+      },
+    }));
+
+    await act(async () => {
+      container.querySelector<HTMLInputElement>('input[value="inline"]')!.click();
+    });
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-mode="inline"');
+    expect(container.textContent).toContain("Workspace default: Floating widget");
+
+    await act(async () => buttonNamed(container, "Save as workspace default").click());
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/workspace/embed-preferences?workspace=cedar-house",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set-default", defaultMode: "inline" }),
+      },
+    );
+    expect(container.textContent).toContain("Workspace default: Inline widget");
+    expect(container.textContent).toContain("Workspace default saved.");
+    expect(container.querySelector<HTMLAnchorElement>('a[href="/setup-profile/import"]'))
+      .not.toBeNull();
+  });
+
+  it("retains the previous default and offers retry after a failed save", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(500, {
+      ok: false,
+      error: "The workspace default could not be saved. Try again.",
+    }));
+    const { container } = await render(createElement(EmbedPanel, {
+      profiles,
+      initialPreference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "floating",
+        defaultServiceScope: "all",
+      },
+    }));
+
+    await act(async () => {
+      container.querySelector<HTMLInputElement>('input[value="inline"]')!.click();
+      buttonNamed(container, "Save as workspace default").click();
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Workspace default: Floating widget");
+    expect(container.textContent).toContain("The workspace default could not be saved. Try again.");
+    expect(buttonNamed(container, "Save as workspace default").disabled).toBe(false);
   });
 
   it("switches between catalogue and preselected service links and filters unqualified calendars", async () => {
@@ -460,6 +548,11 @@ async function renderWorkspace(
     actor,
     profiles: workspaceProfiles,
     initialServices,
+    initialEmbedPreference: actor.role === "admin" ? {
+      workspaceId: actor.workspaceId,
+      defaultMode: "floating",
+      defaultServiceScope: "all",
+    } : null,
     initialEntries: entries,
     initialAvailability: {
       employeeProfileId: "maya-chen",

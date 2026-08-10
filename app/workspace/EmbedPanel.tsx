@@ -2,10 +2,14 @@
 
 import { Code2, Copy } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import type { TeamProfile, WorkspaceService } from "../../lib/data/contracts";
+import type {
+  EmbedMode,
+  TeamProfile,
+  WorkspaceEmbedPreference,
+  WorkspaceService,
+} from "../../lib/data/contracts";
 import { validServiceSlug } from "../../lib/services/eligibility";
 
-type EmbedMode = "floating" | "inline";
 type BookingJourney = "catalogue" | "preselected";
 
 const EMPLOYEE_PROFILE_ID = /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/;
@@ -15,12 +19,18 @@ export function EmbedPanel({
   profiles,
   services = [],
   workspaceSlug = "daymark",
+  initialPreference,
 }: {
   profiles: TeamProfile[];
   services?: WorkspaceService[];
   workspaceSlug?: string;
+  initialPreference?: WorkspaceEmbedPreference | null;
 }) {
-  const [mode, setMode] = useState<EmbedMode>("floating");
+  const initialMode = initialPreference?.defaultMode ?? "floating";
+  const [mode, setMode] = useState<EmbedMode>(initialMode);
+  const [savedDefaultMode, setSavedDefaultMode] = useState<EmbedMode>(initialMode);
+  const [savingDefault, setSavingDefault] = useState(false);
+  const [defaultMessage, setDefaultMessage] = useState("");
   const [journey, setJourney] = useState<BookingJourney>("catalogue");
   const [service, setService] = useState(
     () => services.find((item) => item.active && validServiceSlug(item.slug))?.slug ?? "",
@@ -86,6 +96,38 @@ export function EmbedPanel({
     }
   }
 
+  async function saveWorkspaceDefault() {
+    setSavingDefault(true);
+    setDefaultMessage("");
+    try {
+      const response = await fetch(
+        `/api/workspace/embed-preferences?workspace=${encodeURIComponent(workspaceSlug)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "set-default", defaultMode: mode }),
+        },
+      );
+      const body = await response.json() as {
+        error?: string;
+        preference?: WorkspaceEmbedPreference;
+      };
+      if (!response.ok || !body.preference) {
+        throw new Error(body.error ?? "The workspace default could not be saved. Try again.");
+      }
+      setSavedDefaultMode(body.preference.defaultMode);
+      setDefaultMessage("Workspace default saved.");
+    } catch (error) {
+      setDefaultMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "The workspace default could not be saved. Try again.",
+      );
+    } finally {
+      setSavingDefault(false);
+    }
+  }
+
   return (
     <div className="embed-panel">
       <div className="team-heading">
@@ -106,7 +148,11 @@ export function EmbedPanel({
                 name="embed-mode"
                 value="floating"
                 checked={mode === "floating"}
-                onChange={() => { setMode("floating"); setCopied(false); }}
+                onChange={() => {
+                  setMode("floating");
+                  setCopied(false);
+                  setDefaultMessage("");
+                }}
               />
               <span>Floating launcher</span>
             </label>
@@ -116,11 +162,33 @@ export function EmbedPanel({
                 name="embed-mode"
                 value="inline"
                 checked={mode === "inline"}
-                onChange={() => { setMode("inline"); setCopied(false); }}
+                onChange={() => {
+                  setMode("inline");
+                  setCopied(false);
+                  setDefaultMessage("");
+                }}
               />
               <span>Inline panel</span>
             </label>
           </fieldset>
+          <div className="embed-default-control">
+            <p>
+              Workspace default: {savedDefaultMode === "inline"
+                ? "Inline widget"
+                : "Floating widget"}
+            </p>
+            <button
+              type="button"
+              disabled={savingDefault || mode === savedDefaultMode}
+              onClick={saveWorkspaceDefault}
+            >
+              {savingDefault ? "Saving default…" : "Save as workspace default"}
+            </button>
+            <a href="/setup-profile/import">Import setup code</a>
+            {defaultMessage ? (
+              <p className="workspace-message" role="status">{defaultMessage}</p>
+            ) : null}
+          </div>
           <fieldset>
             <legend>Booking journey</legend>
             <label>

@@ -8,7 +8,11 @@ import {
   listSchedule,
   listTeamProfiles,
 } from "../../../lib/data/repository";
-import type { TeamProfile } from "../../../lib/data/contracts";
+import type {
+  TeamProfile,
+  WorkspaceEmbedPreference,
+} from "../../../lib/data/contracts";
+import { getWorkspaceEmbedPreference } from "../../../lib/data/embed-preference-repository";
 import { listWorkspaceServices } from "../../../lib/data/service-repository";
 import { normalizeWorkspaceSlug } from "../../../lib/workspaces/slug";
 import { PasswordChangeGate } from "../PasswordChangeGate";
@@ -83,7 +87,7 @@ export default async function CompanyWorkspacePage({
   const selectedProfileId = actor.employeeProfileId
     ?? profiles.find((profile) => profile.active)?.id
     ?? null;
-  const [entries, availability, initialServices] = await Promise.all([
+  const [entries, availability, initialServices, initialEmbedPreference] = await Promise.all([
     listSchedule(scope, { from, to }, actor.employeeProfileId ?? undefined),
     selectedProfileId
       ? getEmployeeAvailability(scope, selectedProfileId)
@@ -91,6 +95,9 @@ export default async function CompanyWorkspacePage({
     actor.role === "admin"
       ? listWorkspaceServices({ workspaceId: actor.workspaceId })
       : Promise.resolve([]),
+    actor.role === "admin"
+      ? getWorkspaceEmbedPreference({ workspaceId: actor.workspaceId })
+      : Promise.resolve<WorkspaceEmbedPreference | null>(null),
   ]);
 
   return (
@@ -98,6 +105,7 @@ export default async function CompanyWorkspacePage({
       actor={actor}
       profiles={profiles}
       initialServices={initialServices}
+      initialEmbedPreference={initialEmbedPreference}
       initialEntries={entries}
       initialAvailability={availability}
       initialRange={{ from, to }}
