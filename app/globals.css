@@ -1482,12 +1482,46 @@ a {
   font-weight: 800;
 }
 
-.setup-profile-workspace select {
+.setup-profile-workspace select,
+.setup-profile-service select {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--ink);
   background: var(--paper-light);
   color: var(--ink);
+}
+
+.setup-profile-service {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--ink);
+  background: rgb(255 250 238 / 72%);
+}
+
+.setup-profile-service-status,
+.setup-profile-service-empty,
+.setup-profile-service-error .enrol-error {
+  margin: 0;
+}
+
+.setup-profile-service-error button,
+.setup-profile-service-empty a {
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.setup-profile-service-error button {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.setup-profile-service[aria-busy="true"] {
+  border-style: dashed;
 }
 
 .setup-profile-actions {

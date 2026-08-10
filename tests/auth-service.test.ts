@@ -202,6 +202,7 @@ describe("authentication service", () => {
       embedPreference: {
         defaultMode: "floating",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     });
     expect(result).toEqual({
@@ -218,7 +219,9 @@ describe("authentication service", () => {
   it.each([
     ["DM1-C-F-2ZE7", "floating"],
     ["dm1-c-i-355c", "inline"],
-  ] as const)("maps setup profile %s into the first workspace %s default", async (setupProfileCode, defaultMode) => {
+    ["DM2-C-I-2SPS", "inline"],
+    ["DM2-P-I-2Y6D", "floating"],
+  ] as const)("maps setup profile %s into the safe first-workspace %s default", async (setupProfileCode, defaultMode) => {
     const deps = dependencies();
     deps.hashOpaqueValue.mockResolvedValueOnce("same").mockResolvedValueOnce("same");
 
@@ -238,7 +241,11 @@ describe("authentication service", () => {
 
     expect(deps.createInitialWorkspaceAdministrator).toHaveBeenCalledWith(
       expect.objectContaining({
-        embedPreference: { defaultMode, defaultServiceScope: "all" },
+        embedPreference: {
+          defaultMode,
+          defaultServiceScope: "all",
+          defaultServiceId: null,
+        },
       }),
     );
   });

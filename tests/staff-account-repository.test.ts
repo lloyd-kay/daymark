@@ -155,6 +155,7 @@ describe("staff repository atomic write contracts", () => {
       embedPreference: {
         defaultMode: "inline",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     })).resolves.toEqual({
       accountId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
@@ -165,6 +166,8 @@ describe("staff repository atomic write contracts", () => {
     expect(d1.batches[0]).toHaveLength(13);
     expect(d1.batches[0][0].query).toContain('insert into "workspaces"');
     expect(d1.batches[0][1].query).toContain('insert into "workspace_embed_preferences"');
+    expect(d1.batches[0][1].query).toContain('"default_service_id"');
+    expect(d1.batches[0][1].params).toContain(null);
     const queries = d1.batches[0].map((statement) => statement.query).join("\n");
     expect(queries).toContain('insert into "employee_profiles"');
     expect(queries).toContain('insert into "employee_service_qualifications"');
@@ -198,6 +201,7 @@ describe("staff repository atomic write contracts", () => {
       embedPreference: {
         defaultMode: "floating",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     })).rejects.toThrow("forced preference statement failure");
 

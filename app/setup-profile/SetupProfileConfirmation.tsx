@@ -41,7 +41,9 @@ export function SetupProfileConfirmation({
       <dl className="setup-profile-summary">
         <div>
           <dt>Booking journey</dt>
-          <dd>Full service catalogue</dd>
+          <dd>{profile.journey === "page-service"
+            ? "Page-specific service"
+            : "Full service catalogue"}</dd>
         </div>
         <div>
           <dt>Default layout</dt>

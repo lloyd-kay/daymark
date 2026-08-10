@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
-import type { WorkspaceSummary } from "../../lib/data/contracts";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { WorkspaceService, WorkspaceSummary } from "../../lib/data/contracts";
 import { navigate } from "../../lib/browser-navigation";
 import {
   decodeSetupProfile,
@@ -32,14 +32,58 @@ export function SetupProfileImportPanel({
     () => adminWorkspaces.filter((workspace) => workspace.role === "admin"),
     [adminWorkspaces],
   );
+  const initialWorkspace = eligibleWorkspaces.length === 1
+    ? eligibleWorkspaces[0].slug
+    : "";
   const [rawCode, setRawCode] = useState(initialCode);
   const [pending, setPending] = useState<PendingProfile | null>(initialReview.pending);
-  const [selectedWorkspace, setSelectedWorkspace] = useState(
-    eligibleWorkspaces.length === 1 ? eligibleWorkspaces[0].slug : "",
-  );
+  const [selectedWorkspace, setSelectedWorkspace] = useState(initialWorkspace);
   const [confirmedSetupCode, setConfirmedSetupCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialReview.error);
+  const [activeServices, setActiveServices] = useState<WorkspaceService[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [servicesLoading, setServicesLoading] = useState(
+    installationState === "ready"
+    && initialReview.pending?.profile.journey === "page-service"
+    && Boolean(initialWorkspace),
+  );
+  const [servicesError, setServicesError] = useState("");
+  const [serviceLoadAttempt, setServiceLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    if (
+      installationState !== "ready"
+      || pending?.profile.journey !== "page-service"
+      || !selectedWorkspace
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    void fetch(
+      `/api/workspace/services?workspace=${encodeURIComponent(selectedWorkspace)}`,
+      { cache: "no-store" },
+    ).then(async (response) => {
+      const body = await response.json() as { services?: WorkspaceService[] };
+      if (!response.ok || !Array.isArray(body.services)) {
+        throw new Error("service load failed");
+      }
+      if (cancelled) return;
+      const services = body.services.filter((service) => service.active === true);
+      setActiveServices(services);
+      setSelectedServiceId(services.length === 1 ? services[0].id : "");
+    }).catch(() => {
+      if (cancelled) return;
+      setServicesError("Services could not be loaded. Try again.");
+    }).finally(() => {
+      if (!cancelled) setServicesLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [installationState, pending, selectedWorkspace, serviceLoadAttempt]);
 
   if (installationState === "sign-in-required") {
     return (
@@ -51,11 +95,15 @@ export function SetupProfileImportPanel({
   }
 
   if (installationState === "unclaimed" && confirmedSetupCode) {
+    const setupRedirectPath = pending?.profile.journey === "page-service"
+      ? `/setup-profile/import?code=${encodeURIComponent(confirmedSetupCode)}`
+      : undefined;
     return (
       <SignInPanel
         initialView="setup"
         setupAllowed={false}
         setupProfileCode={confirmedSetupCode}
+        redirectPath={setupRedirectPath}
       />
     );
   }
@@ -63,6 +111,11 @@ export function SetupProfileImportPanel({
   function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const result = review(rawCode);
+    resetServices(
+      installationState === "ready"
+      && result.pending?.profile.journey === "page-service"
+      && Boolean(selectedWorkspace),
+    );
     setPending(result.pending);
     setError(result.error);
   }
@@ -71,6 +124,7 @@ export function SetupProfileImportPanel({
     setPending(null);
     setRawCode("");
     setError("");
+    resetServices();
   }
 
   async function confirmImport() {
@@ -79,7 +133,10 @@ export function SetupProfileImportPanel({
       setConfirmedSetupCode(pending.code);
       return;
     }
-    if (!selectedWorkspace) return;
+    if (
+      !selectedWorkspace
+      || (pending.profile.journey === "page-service" && !selectedServiceId)
+    ) return;
 
     setBusy(true);
     setError("");
@@ -89,7 +146,13 @@ export function SetupProfileImportPanel({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "import-profile", code: pending.code }),
+          body: JSON.stringify({
+            action: "import-profile",
+            code: pending.code,
+            serviceId: pending.profile.journey === "page-service"
+              ? selectedServiceId
+              : null,
+          }),
         },
       );
       if (!response.ok) throw new Error("import failed");
@@ -103,11 +166,19 @@ export function SetupProfileImportPanel({
   }
 
   if (pending) {
+    const pageService = pending.profile.journey === "page-service";
     return (
       <SetupProfileConfirmation
         profile={pending.profile}
         busy={busy}
-        confirmDisabled={installationState === "ready" && !selectedWorkspace}
+        confirmDisabled={installationState === "ready" && (
+          !selectedWorkspace
+          || (pageService && (
+            servicesLoading
+            || Boolean(servicesError)
+            || !selectedServiceId
+          ))
+        )}
         onConfirm={confirmImport}
         onCancel={cancelReview}
       >
@@ -121,7 +192,7 @@ export function SetupProfileImportPanel({
                 <select
                   id="setup-profile-workspace"
                   value={selectedWorkspace}
-                  onChange={(event) => setSelectedWorkspace(event.target.value)}
+                  onChange={(event) => selectWorkspace(event.target.value)}
                 >
                   <option value="">Choose a workspace</option>
                   {eligibleWorkspaces.map((workspace) => (
@@ -132,6 +203,43 @@ export function SetupProfileImportPanel({
             ) : (
               <p role="alert">You need administrator access to a workspace before importing this setup.</p>
             )}
+            {pageService && selectedWorkspace ? (
+              <div className="setup-profile-service" aria-busy={servicesLoading}>
+                {servicesLoading ? (
+                  <p className="setup-profile-service-status" role="status">
+                    Loading active servicesâ€¦
+                  </p>
+                ) : servicesError ? (
+                  <div className="setup-profile-service-error">
+                    <p className="enrol-error" role="alert">{servicesError}</p>
+                    <button type="button" onClick={retryServices}>Retry services</button>
+                  </div>
+                ) : activeServices.length > 0 ? (
+                  <label htmlFor="setup-profile-service">
+                    <span>Service for this page</span>
+                    <select
+                      id="setup-profile-service"
+                      value={selectedServiceId}
+                      onChange={(event) => setSelectedServiceId(event.target.value)}
+                    >
+                      {activeServices.length > 1 ? (
+                        <option value="">Choose a service</option>
+                      ) : null}
+                      {activeServices.map((service) => (
+                        <option key={service.id} value={service.id}>{service.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <p className="setup-profile-service-empty">
+                    No active services are available in this workspace.{" "}
+                    <a href={`/workspace/${encodeURIComponent(selectedWorkspace)}?view=services`}>
+                      Manage services
+                    </a>
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
         {error ? <p className="enrol-error" role="alert">{error}</p> : null}
@@ -162,6 +270,25 @@ export function SetupProfileImportPanel({
       {error ? <p className="enrol-error" role="alert">{error}</p> : null}
     </section>
   );
+
+  function resetServices(loading = false) {
+    setSelectedServiceId("");
+    setActiveServices([]);
+    setServicesError("");
+    setServicesLoading(loading);
+  }
+
+  function selectWorkspace(workspaceSlug: string) {
+    resetServices(
+      pending?.profile.journey === "page-service" && Boolean(workspaceSlug),
+    );
+    setSelectedWorkspace(workspaceSlug);
+  }
+
+  function retryServices() {
+    resetServices(true);
+    setServiceLoadAttempt((attempt) => attempt + 1);
+  }
 }
 
 function review(value: string): { pending: PendingProfile | null; error: string } {
@@ -169,7 +296,7 @@ function review(value: string): { pending: PendingProfile | null; error: string 
   try {
     const profile = decodeSetupProfile(value);
     return {
-      pending: { profile, code: encodeSetupProfile(profile.layout) },
+      pending: { profile, code: encodeSetupProfile(profile) },
       error: "",
     };
   } catch (error) {

@@ -91,7 +91,7 @@ describe("authentication routes", () => {
     const { POST } = await import("../app/api/auth/setup/route");
     const response = await POST(request("/api/auth/setup", {
       setupCode: "setup-secret",
-      setupProfileCode: "DM1-C-I-355C",
+      setupProfileCode: "DM2-P-I-2Y6D",
       workspaceName: "Cedar House",
       workspaceSlug: "cedar-house",
       displayName: "Maya Chen",
@@ -102,7 +102,7 @@ describe("authentication routes", () => {
     expect(response.status).toBe(200);
     expect(auth.setup).toHaveBeenCalledWith({
       setupCode: "setup-secret",
-      setupProfileCode: "DM1-C-I-355C",
+      setupProfileCode: "DM2-P-I-2Y6D",
       workspaceName: "Cedar House",
       workspaceSlug: "cedar-house",
       displayName: "Maya Chen",

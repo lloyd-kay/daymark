@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SetupProfileImportPanel } from "../app/setup-profile/SetupProfileImportPanel";
 import { PasswordChangeGate } from "../app/workspace/PasswordChangeGate";
 import { SignInPanel } from "../app/workspace/sign-in/SignInPanel";
-import type { WorkspaceSummary } from "../lib/data/contracts";
+import type { WorkspaceService, WorkspaceSummary } from "../lib/data/contracts";
 import { navigate } from "../lib/browser-navigation";
 
 vi.mock("../lib/browser-navigation", () => ({ navigate: vi.fn() }));
@@ -29,6 +29,38 @@ const employeeWorkspace: WorkspaceSummary = {
   name: "Employee Company",
   slug: "employee-company",
   role: "employee",
+};
+
+const cameraService: WorkspaceService = {
+  id: "service-camera",
+  workspaceId: "workspace-cedar",
+  slug: "camera-installation",
+  name: "Camera installation",
+  category: "Security cameras",
+  description: "Install and configure a camera system.",
+  durationMinutes: 90,
+  active: true,
+  sortOrder: 0,
+  qualifications: [],
+};
+
+const alarmService: WorkspaceService = {
+  ...cameraService,
+  id: "service-alarm",
+  slug: "alarm-installation",
+  name: "Alarm installation",
+  category: "Alarm systems",
+  durationMinutes: 120,
+  sortOrder: 1,
+};
+
+const inactiveService: WorkspaceService = {
+  ...cameraService,
+  id: "service-inactive",
+  slug: "legacy-installation",
+  name: "Legacy installation",
+  active: false,
+  sortOrder: 2,
 };
 
 const roots: Root[] = [];
@@ -80,6 +112,21 @@ describe("setup profile review", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["DM2-P-F-34D6", "Floating widget"],
+    ["DM2-P-I-2Y6D", "Inline widget"],
+  ])("reviews page-specific profile %s with its %s layout", async (code, layout) => {
+    const container = await renderPanel({
+      initialCode: code,
+      installationState: "unclaimed",
+      adminWorkspaces: [],
+    });
+
+    expect(container.textContent).toContain("Page-specific service");
+    expect(container.textContent).toContain(layout);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("cancels without a request and clears the pending confirmation", async () => {
     const container = await renderPanel({ initialCode: "DM1-C-F-2ZE7" });
 
@@ -116,6 +163,196 @@ describe("existing workspace import", () => {
       .toEqual(["Choose a workspace", "Cedar House", "Harbour Tech"]);
   });
 
+  it("loads and visibly preselects the only active service for a page profile", async () => {
+    vi.mocked(fetch).mockResolvedValue(serviceListResponse([cameraService, inactiveService]));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await settleEffects();
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/workspace/services?workspace=cedar-house",
+      { cache: "no-store" },
+    );
+    const select = container.querySelector<HTMLSelectElement>("#setup-profile-service")!;
+    expect(select.value).toBe("service-camera");
+    expect(select.selectedOptions[0]?.textContent).toContain("Camera installation");
+    expect(container.textContent).not.toContain("Legacy installation");
+    expect(buttonNamed(container, "Import setup").disabled).toBe(false);
+  });
+
+  it("requires a deliberate service choice when several active services are available", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      serviceListResponse([cameraService, inactiveService, alarmService]),
+    );
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await settleEffects();
+
+    const select = container.querySelector<HTMLSelectElement>("#setup-profile-service")!;
+    expect(select.value).toBe("");
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual([
+      "Choose a service",
+      "Camera installation",
+      "Alarm installation",
+    ]);
+    expect(buttonNamed(container, "Import setup").disabled).toBe(true);
+
+    await changeSelect(select, "service-alarm");
+
+    expect(select.value).toBe("service-alarm");
+    expect(buttonNamed(container, "Import setup").disabled).toBe(false);
+  });
+
+  it("blocks page import with no active services and links to service management", async () => {
+    vi.mocked(fetch).mockResolvedValue(serviceListResponse([inactiveService]));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await settleEffects();
+
+    expect(buttonNamed(container, "Import setup").disabled).toBe(true);
+    expect(container.textContent).toContain("No active services");
+    expect(container.querySelector<HTMLAnchorElement>(
+      'a[href="/workspace/cedar-house?view=services"]',
+    )?.textContent).toContain("Manage services");
+  });
+
+  it("clears a selected service immediately when the workspace changes", async () => {
+    let resolveHarbour!: (response: Response) => void;
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(serviceListResponse([cameraService]))
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveHarbour = resolve;
+      }));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar, harbour],
+    });
+    const workspaceSelect = container.querySelector<HTMLSelectElement>("#setup-profile-workspace")!;
+
+    await changeSelect(workspaceSelect, "cedar-house");
+    await settleEffects();
+    expect(container.querySelector<HTMLSelectElement>("#setup-profile-service")?.value)
+      .toBe("service-camera");
+
+    await changeSelect(workspaceSelect, "harbour-tech");
+
+    expect(buttonNamed(container, "Import setup").disabled).toBe(true);
+    expect(container.textContent).not.toContain("Camera installation");
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/workspace/services?workspace=harbour-tech",
+      { cache: "no-store" },
+    );
+
+    await act(async () => resolveHarbour(serviceListResponse([{
+      ...alarmService,
+      workspaceId: "workspace-harbour",
+    }])));
+    await settleEffects();
+    expect(container.querySelector<HTMLSelectElement>("#setup-profile-service")?.value)
+      .toBe("service-alarm");
+  });
+
+  it("ignores a stale service response from the previously selected workspace", async () => {
+    let resolveCedar!: (response: Response) => void;
+    let resolveHarbour!: (response: Response) => void;
+    vi.mocked(fetch)
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveCedar = resolve;
+      }))
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveHarbour = resolve;
+      }));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar, harbour],
+    });
+    const workspaceSelect = container.querySelector<HTMLSelectElement>("#setup-profile-workspace")!;
+
+    await changeSelect(workspaceSelect, "cedar-house");
+    await changeSelect(workspaceSelect, "harbour-tech");
+    await act(async () => resolveHarbour(serviceListResponse([{
+      ...alarmService,
+      workspaceId: "workspace-harbour",
+    }])));
+    await settleEffects();
+    expect(container.querySelector<HTMLSelectElement>("#setup-profile-service")?.value)
+      .toBe("service-alarm");
+
+    await act(async () => resolveCedar(serviceListResponse([cameraService])));
+    await settleEffects();
+    expect(container.querySelector<HTMLSelectElement>("#setup-profile-service")?.value)
+      .toBe("service-alarm");
+    expect(container.textContent).not.toContain("Camera installation");
+  });
+
+  it("keeps the reviewed page profile available when services fail to load and retries safely", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "private details" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }))
+      .mockResolvedValueOnce(serviceListResponse([cameraService]));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await settleEffects();
+
+    expect(container.textContent).toContain("Import this setup?");
+    expect(container.querySelector('[role="alert"]')?.textContent)
+      .toContain("Services could not be loaded");
+    expect(buttonNamed(container, "Import setup").disabled).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    await act(async () => buttonNamed(container, "Retry services").click());
+    await settleEffects();
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(container.querySelector<HTMLSelectElement>("#setup-profile-service")?.value)
+      .toBe("service-camera");
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining("embed-preferences"),
+      expect.anything(),
+    );
+  });
+
+  it("posts the selected stable service ID for a page profile and never its slug", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(serviceListResponse([cameraService, alarmService]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await settleEffects();
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>("#setup-profile-service")!,
+      "service-alarm",
+    );
+
+    await act(async () => buttonNamed(container, "Import setup").click());
+
+    const [url, init] = vi.mocked(fetch).mock.calls[1];
+    expect(url).toBe("/api/workspace/embed-preferences?workspace=cedar-house");
+    const body = JSON.parse(String(init?.body));
+    expect(body).toEqual({
+      action: "import-profile",
+      code: "DM2-P-I-2Y6D",
+      serviceId: "service-alarm",
+    });
+    expect(JSON.stringify(body)).not.toContain("alarm-installation");
+    expect(navigate).toHaveBeenCalledWith("/workspace/cedar-house?view=embed");
+  });
+
   it("posts the normalized code once, disables submission, and opens Embed on success", async () => {
     let resolveResponse!: (response: Response) => void;
     vi.mocked(fetch).mockReturnValue(new Promise((resolve) => {
@@ -135,7 +372,11 @@ describe("existing workspace import", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "import-profile", code: "DM1-C-I-355C" }),
+        body: JSON.stringify({
+          action: "import-profile",
+          code: "DM1-C-I-355C",
+          serviceId: null,
+        }),
       },
     );
 
@@ -145,6 +386,7 @@ describe("existing workspace import", () => {
         workspaceId: "workspace-cedar",
         defaultMode: "inline",
         defaultServiceScope: "all",
+        defaultServiceId: null,
       },
     }), {
       status: 200,
@@ -177,9 +419,15 @@ describe("existing workspace import", () => {
 });
 
 describe("unclaimed and signed-out installations", () => {
-  it("retains only the normalized profile after confirmation and reveals first setup", async () => {
+  it.each([
+    [" dm1-c-i-355c ", "DM1-C-I-355C"],
+    [" dm2-c-i-2sps ", "DM2-C-I-2SPS"],
+  ])("retains only normalized catalogue profile %s and reveals first setup", async (
+    initialCode,
+    canonicalCode,
+  ) => {
     const container = await renderPanel({
-      initialCode: " dm1-c-i-355c ",
+      initialCode,
       installationState: "unclaimed",
       adminWorkspaces: [],
     });
@@ -189,7 +437,7 @@ describe("unclaimed and signed-out installations", () => {
     expect(container.textContent).toContain("Set up Daymark.");
     expect(container.querySelector<HTMLInputElement>("#setup-code")).not.toBeNull();
     expect(container.querySelector<HTMLInputElement>("#setup-code")?.value).toBe("");
-    expect(container.textContent).not.toContain("DM1-C-I-355C");
+    expect(container.textContent).not.toContain(canonicalCode);
 
     const form = container.querySelector("form")!;
     setInput(form, "setupCode", "separate-installer-secret");
@@ -206,9 +454,47 @@ describe("unclaimed and signed-out installations", () => {
 
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toMatchObject({
       setupCode: "separate-installer-secret",
-      setupProfileCode: "DM1-C-I-355C",
+      setupProfileCode: canonicalCode,
     });
     expect(navigate).toHaveBeenCalledWith("/workspace/cedar-house?view=embed");
+  });
+
+  it("preserves an unclaimed page profile for mapping after first setup", async () => {
+    const container = await renderPanel({
+      initialCode: " dm2-p-i-2y6d ",
+      installationState: "unclaimed",
+      adminWorkspaces: [],
+    });
+
+    expect(container.textContent).toContain("Page-specific service");
+    await act(async () => buttonNamed(container, "Import setup").click());
+    expect(container.textContent).toContain("Set up Daymark.");
+    expect(container.textContent).not.toContain("DM2-P-I-2Y6D");
+
+    const form = container.querySelector("form")!;
+    setInput(form, "setupCode", "separate-installer-secret");
+    setInput(form, "workspaceName", "Cedar House");
+    setInput(form, "workspaceSlug", "cedar-house");
+    setInput(form, "displayName", "Maya Chen");
+    setInput(form, "email", "maya@example.com");
+    setInput(form, "password", "a secure password");
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({
+      ok: true,
+      workspaceSlug: "cedar-house",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    await act(async () => form.dispatchEvent(new Event("submit", {
+      bubbles: true,
+      cancelable: true,
+    })));
+
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toMatchObject({
+      setupCode: "separate-installer-secret",
+      setupProfileCode: "DM2-P-I-2Y6D",
+    });
+    expect(navigate).toHaveBeenCalledWith(
+      "/setup-profile/import?code=DM2-P-I-2Y6D",
+    );
   });
 
   it("requires sign-in and preserves the exact local return path", async () => {
@@ -291,6 +577,28 @@ async function enterCodeAndReview(container: HTMLElement, code: string) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
   await act(async () => buttonNamed(container, "Review setup").click());
+}
+
+function serviceListResponse(services: WorkspaceService[]) {
+  return new Response(JSON.stringify({ services }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function settleEffects() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function changeSelect(select: HTMLSelectElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+  await act(async () => {
+    setter?.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 }
 
 function buttonNamed(container: HTMLElement, name: string) {

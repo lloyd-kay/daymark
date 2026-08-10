@@ -125,6 +125,7 @@ export async function createInitialWorkspaceAdministrator(input: {
   embedPreference: {
     defaultMode: "floating" | "inline";
     defaultServiceScope: "all";
+    defaultServiceId: null;
   };
 }): Promise<{ accountId: string; workspaceSlug: string }> {
   const db = await database();
@@ -148,6 +149,7 @@ export async function createInitialWorkspaceAdministrator(input: {
       workspaceId,
       defaultMode: input.embedPreference.defaultMode,
       defaultServiceScope: input.embedPreference.defaultServiceScope,
+      defaultServiceId: input.embedPreference.defaultServiceId,
       createdAt: now,
       updatedAt: now,
     }),

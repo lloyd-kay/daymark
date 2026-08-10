@@ -55,6 +55,7 @@ export type AuthDependencies = {
     embedPreference: {
       defaultMode: "floating" | "inline";
       defaultServiceScope: "all";
+      defaultServiceId: null;
     };
   }): Promise<{ accountId: string; workspaceSlug: string }>;
   findCredentialByEmail(
@@ -140,10 +141,10 @@ export function createAuthService(dependencies: AuthDependencies) {
         return failure(409, "Administrator setup has already been completed.");
       }
 
-      let defaultMode: "floating" | "inline" = "floating";
+      let setupProfile: ReturnType<typeof decodeSetupProfile> | null = null;
       if (input.setupProfileCode !== undefined) {
         try {
-          defaultMode = decodeSetupProfile(input.setupProfileCode).layout;
+          setupProfile = decodeSetupProfile(input.setupProfileCode);
         } catch (error) {
           return error instanceof SetupProfileError
             ? setupProfileFailure(error)
@@ -171,6 +172,17 @@ export function createAuthService(dependencies: AuthDependencies) {
       }
 
       const verifier = await dependencies.hashPassword(input.password);
+      const initialPreference = setupProfile?.journey === "catalogue"
+        ? {
+            defaultMode: setupProfile.layout,
+            defaultServiceScope: "all" as const,
+            defaultServiceId: null,
+          }
+        : {
+            defaultMode: "floating" as const,
+            defaultServiceScope: "all" as const,
+            defaultServiceId: null,
+          };
       const account = await dependencies.createInitialWorkspaceAdministrator({
         workspaceName,
         workspaceSlug,
@@ -178,10 +190,7 @@ export function createAuthService(dependencies: AuthDependencies) {
         displayName,
         verifier,
         mustChangePassword: false,
-        embedPreference: {
-          defaultMode,
-          defaultServiceScope: "all",
-        },
+        embedPreference: initialPreference,
       });
       const result = await issueSession(account.accountId, false, now);
       result.body.workspaceSlug = account.workspaceSlug;

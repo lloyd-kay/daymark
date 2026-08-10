@@ -54,7 +54,7 @@ export function SignInPanel({
       if (!response.ok) throw new Error("authentication failed");
       const result = await response.json() as { workspaceSlug?: string };
       navigate(
-        redirectPath && view === "sign-in"
+        redirectPath
           ? redirectPath
           : view === "setup" && result.workspaceSlug
           ? `/workspace/${encodeURIComponent(result.workspaceSlug)}${setupProfileCode ? "?view=embed" : ""}`
