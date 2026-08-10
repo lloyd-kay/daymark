@@ -6,7 +6,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "../app/page";
-import { WidgetOptionsShowcase } from "../app/home/WidgetOptionsShowcase";
+import { HomepageSetupBuilder } from "../app/home/HomepageSetupBuilder";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -20,6 +20,7 @@ beforeEach(() => {
 afterEach(async () => {
   if (root) await act(async () => root?.unmount());
   root = undefined;
+  Reflect.deleteProperty(navigator, "clipboard");
   vi.unstubAllGlobals();
 });
 
@@ -94,33 +95,96 @@ describe("WidgetOptionsShowcase", () => {
     expect(stylesheet).toMatch(/\.widget-host-art-tagline\s*\{[^}]*font-size:\s*2\.75cqw;/s);
   });
 
-  it("changes only local accessible selection state", async () => {
+  it("turns accessible layout selection into a deterministic setup profile", async () => {
     const container = await renderShowcase();
     const controls = Array.from(container.querySelectorAll<HTMLButtonElement>(".widget-choice-select"));
     expect(controls).toHaveLength(2);
     expect(controls[0].getAttribute("aria-pressed")).toBe("true");
     expect(controls[1].getAttribute("aria-pressed")).toBe("false");
+    expect(container.querySelector(".homepage-setup-summary")?.textContent)
+      .toContain("Full service catalogue · Floating widget");
+    expect(container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')?.getAttribute("href"))
+      .toBe("daymark://import-setup?code=DM1-C-F-2ZE7");
 
     await act(async () => controls[1].click());
 
     expect(controls[0].getAttribute("aria-pressed")).toBe("false");
     expect(controls[1].getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector(".homepage-setup-summary")?.textContent)
+      .toContain("Full service catalogue · Inline widget");
+    expect(container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')?.getAttribute("href"))
+      .toBe("daymark://import-setup?code=DM1-C-I-355C");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reveals and copies a portable code without a network request", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    const container = await renderShowcase();
+    const reveal = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("Use on another machine"));
+
+    expect(reveal).toBeDefined();
+    expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")).toBeNull();
+    await act(async () => reveal!.click());
+
+    const code = container.querySelector<HTMLInputElement>("#homepage-setup-code");
+    expect(code?.value).toBe("DM1-C-F-2ZE7");
+    expect(code?.readOnly).toBe(true);
+    const copy = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("Copy setup code"));
+    await act(async () => copy!.click());
+    expect(writeText).toHaveBeenCalledWith("DM1-C-F-2ZE7");
+    expect(container.querySelector('[role="status"]')?.textContent).toContain("Setup code copied.");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps the portable fallback visible when protocol launch cannot be detected", async () => {
+    const container = await renderShowcase();
+    const link = container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')!;
+    link.addEventListener("click", (event) => event.preventDefault());
+    await act(async () => link.click());
+
+    expect(container.textContent).toContain(
+      "If Daymark does not open, install it first or use this setup code on the other machine.",
+    );
+    expect(container.textContent).not.toMatch(/detected|successfully opened/i);
+  });
+
+  it("leaves the code selectable when clipboard access is unavailable", async () => {
+    const container = await renderShowcase();
+    const reveal = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("Use on another machine"));
+    await act(async () => reveal!.click());
+    const copy = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("Copy setup code"));
+    await act(async () => copy!.click());
+
+    expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")?.value)
+      .toBe("DM1-C-F-2ZE7");
+    expect(container.querySelector('[role="status"]')?.textContent)
+      .toContain("Select the code and copy it manually.");
   });
 });
 
-describe("homepage widget setup note", () => {
-  it("presents custom work as information until a contact route exists", async () => {
+describe("homepage setup integration", () => {
+  it("explains service-first filtering and renders the transferable builder", async () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
     await act(async () => root?.render(createElement(Home)));
 
-    const setup = container.querySelector<HTMLElement>(".widget-setup");
+    const setup = container.querySelector<HTMLElement>(".homepage-setup-builder");
     const contact = container.querySelector<HTMLElement>(".widget-contact-note");
 
-    expect(setup?.textContent).toContain("Use the embed position that suits your layout");
-    expect(setup?.querySelector('a[href="/workspace/sign-in"]')).not.toBeNull();
+    expect(container.querySelector(".demo-heading")?.textContent)
+      .toContain("Clients choose a service first");
+    expect(setup?.textContent).toContain("Your Daymark setup");
+    expect(setup?.querySelector('a[href="daymark://import-setup?code=DM1-C-F-2ZE7"]'))
+      .not.toBeNull();
     expect(contact?.textContent).toContain("For custom widgets or integrations, contact us.");
     expect(contact?.querySelector("a, button, [tabindex]")).toBeNull();
   });
@@ -130,6 +194,6 @@ async function renderShowcase() {
   const container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
-  await act(async () => root?.render(createElement(WidgetOptionsShowcase)));
+  await act(async () => root?.render(createElement(HomepageSetupBuilder)));
   return container;
 }

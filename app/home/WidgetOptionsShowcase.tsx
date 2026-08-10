@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-type WidgetPlacement = "floating" | "inline";
+export type WidgetPlacement = "floating" | "inline";
 
 function HostBrowser({ children }: { children: ReactNode }) {
   return (
@@ -38,9 +38,13 @@ function HostHero({ inline = false }: { inline?: boolean }) {
   );
 }
 
-export function WidgetOptionsShowcase() {
-  const [selected, setSelected] = useState<WidgetPlacement>("floating");
-
+export function WidgetOptionsShowcase({
+  selected,
+  onSelect,
+}: {
+  selected: WidgetPlacement;
+  onSelect: (placement: WidgetPlacement) => void;
+}) {
   return (
     <div className="widget-choice-grid" aria-label="Widget presentation options">
       <article className={`widget-choice widget-choice-floating${selected === "floating" ? " is-selected" : ""}`}>
@@ -61,7 +65,7 @@ export function WidgetOptionsShowcase() {
           <span className="widget-choice-label">Option A · Floating</span>
           <h3 id="floating-widget-title">Always close, never in the way</h3>
           <p id="floating-widget-description">A compact corner button opens the booking panel over any page. Best when booking should be available site-wide.</p>
-          <button className="widget-choice-select" type="button" aria-pressed={selected === "floating"} aria-labelledby="floating-widget-title" aria-describedby="floating-widget-description" onClick={() => setSelected("floating")}>{selected === "floating" ? "Selected" : "Choose this layout"}</button>
+          <button className="widget-choice-select" type="button" aria-pressed={selected === "floating"} aria-labelledby="floating-widget-title" aria-describedby="floating-widget-description" onClick={() => onSelect("floating")}>{selected === "floating" ? "Selected" : "Choose this layout"}</button>
         </div>
       </article>
 
@@ -82,7 +86,7 @@ export function WidgetOptionsShowcase() {
           <span className="widget-choice-label">Option B · Inline</span>
           <h3 id="inline-widget-title">A booking section with presence</h3>
           <p id="inline-widget-description">The full panel sits inside a page and feels intentional. Best for a dedicated contact or “book now” section.</p>
-          <button className="widget-choice-select" type="button" aria-pressed={selected === "inline"} aria-labelledby="inline-widget-title" aria-describedby="inline-widget-description" onClick={() => setSelected("inline")}>{selected === "inline" ? "Selected" : "Choose this layout"}</button>
+          <button className="widget-choice-select" type="button" aria-pressed={selected === "inline"} aria-labelledby="inline-widget-title" aria-describedby="inline-widget-description" onClick={() => onSelect("inline")}>{selected === "inline" ? "Selected" : "Choose this layout"}</button>
         </div>
       </article>
     </div>

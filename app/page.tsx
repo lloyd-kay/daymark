@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUpRight, LockKeyhole, ShieldCheck } from "lucide-react";
 import { DemoBookingFlow } from "./demo/DemoBookingFlow";
-import { WidgetOptionsShowcase } from "./home/WidgetOptionsShowcase";
+import { HomepageSetupBuilder } from "./home/HomepageSetupBuilder";
 
 const privacyPromises = [
   { number: "01", title: "Discrete slots only", copy: "Clients choose from the times a person offers. They never see the calendar behind them." },
@@ -64,7 +64,7 @@ export default function Home() {
       <div className="demo-section" id="demo">
         <div className="demo-heading">
           <div><p className="eyebrow">A safe place to try it</p><h2 id="demo-title">Interactive demonstration</h2></div>
-          <p className="demo-notice"><ShieldCheck size={18} aria-hidden="true" /> No appointment will be created.</p>
+          <p className="demo-notice"><ShieldCheck size={18} aria-hidden="true" /> Clients choose a service first; Daymark then shows only qualified people. No appointment will be created.</p>
         </div>
         <DemoBookingFlow />
       </div>
@@ -74,11 +74,10 @@ export default function Home() {
           <p className="eyebrow">Widget options</p><h2 id="widget-title">Place booking where it belongs.</h2>
           <p>Choose the surface that feels native to your site; the private scheduling rules stay the same.</p>
         </div>
-        <WidgetOptionsShowcase />
+        <HomepageSetupBuilder />
         <div className="widget-setup">
           <p>
-            Use the embed position that suits your layout, then{" "}
-            <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.
+            The transferred choice sets a starting default. It never prevents your team from generating another layout.
           </p>
           <p className="widget-contact-note">
             <span className="widget-contact-label">Custom fit</span>
