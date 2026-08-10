@@ -31,7 +31,7 @@ const employeeWorkspace: WorkspaceSummary = {
   role: "employee",
 };
 
-let roots: Root[] = [];
+const roots: Root[] = [];
 
 beforeEach(() => {
   document.body.replaceChildren();
