@@ -1,8 +1,11 @@
+import { validServiceSlug } from "../services/eligibility";
+
 export type WidgetMode = "floating" | "inline";
 
 export type WidgetConfig = {
   mode: WidgetMode;
   employee: string;
+  service: string;
   label: string;
 };
 
@@ -20,12 +23,15 @@ export function normalizeWidgetConfig(input: Record<string, unknown>): WidgetCon
   const employee = typeof input.employee === "string" && EMPLOYEE_ID_PATTERN.test(input.employee)
     ? input.employee
     : "all";
+  const service = input.service === "all" || validServiceSlug(input.service)
+    ? input.service
+    : "all";
   const trimmedLabel = typeof input.label === "string" ? input.label.trim() : "";
   const label = trimmedLabel.length >= 1 && trimmedLabel.length <= 80
     ? trimmedLabel
     : DEFAULT_LABEL;
 
-  return { mode, employee, label };
+  return { mode, employee, service, label };
 }
 
 export function validWidgetMessage(value: unknown, channel: string): value is WidgetMessage {

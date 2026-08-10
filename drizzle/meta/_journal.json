@@ -29,6 +29,13 @@
       "when": 1786186627136,
       "tag": "0003_daymark_seed_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786352713951,
+      "tag": "0004_daymark_service_catalog",
+      "breakpoints": true
     }
   ]
 }

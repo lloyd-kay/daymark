@@ -15,12 +15,13 @@ export async function GET(
   const { workspaceSlug } = await context.params;
   const scope = await resolvePublicWorkspace(workspaceSlug);
   if (!scope) return notFound();
+  const employeeId = new URL(request.url).searchParams.get("employeeId");
   const result = await createPublicBookingService(scope, {
     listPublicServices,
     listPublicEmployees,
     listPublicSlots,
     createBooking,
-  }).employees({ serviceId: new URL(request.url).searchParams.get("serviceId") });
+  }).services({ employeeId });
   return noStoreJson(result.body, result.status);
 }
 

@@ -9,6 +9,7 @@ import {
   listTeamProfiles,
 } from "../../../lib/data/repository";
 import type { TeamProfile } from "../../../lib/data/contracts";
+import { listWorkspaceServices } from "../../../lib/data/service-repository";
 import { normalizeWorkspaceSlug } from "../../../lib/workspaces/slug";
 import { PasswordChangeGate } from "../PasswordChangeGate";
 import { WorkspaceClient } from "../WorkspaceClient";
@@ -82,17 +83,21 @@ export default async function CompanyWorkspacePage({
   const selectedProfileId = actor.employeeProfileId
     ?? profiles.find((profile) => profile.active)?.id
     ?? null;
-  const [entries, availability] = await Promise.all([
+  const [entries, availability, initialServices] = await Promise.all([
     listSchedule(scope, { from, to }, actor.employeeProfileId ?? undefined),
     selectedProfileId
       ? getEmployeeAvailability(scope, selectedProfileId)
       : Promise.resolve(null),
+    actor.role === "admin"
+      ? listWorkspaceServices({ workspaceId: actor.workspaceId })
+      : Promise.resolve([]),
   ]);
 
   return (
     <WorkspaceClient
       actor={actor}
       profiles={profiles}
+      initialServices={initialServices}
       initialEntries={entries}
       initialAvailability={availability}
       initialRange={{ from, to }}

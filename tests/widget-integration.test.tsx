@@ -7,7 +7,8 @@ import { BookingFlow } from "../app/booking/BookingFlow";
 import { DemoBookingFlow } from "../app/demo/DemoBookingFlow";
 import { EmbedBridge } from "../app/embed/EmbedBridge";
 import type { BookingTransport } from "../lib/booking/transport";
-import type { PublicEmployee } from "../lib/data/contracts";
+import type { PublicEmployee, PublicService } from "../lib/data/contracts";
+import { resolveWidgetBooking } from "../lib/widget/booking-selection";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -140,7 +141,7 @@ describe("BookingFlow embed lifecycle", () => {
     await act(async () => {
       window.dispatchEvent(new Event("daymark:reset"));
     });
-    expect(embedded.container.textContent).toContain("Who would you like to meet?");
+    expect(embedded.container.textContent).toContain("Who should deliver this service?");
     expect(embedded.container.textContent).not.toContain("Your time is marked.");
     expect(embedded.container.querySelector("input[name='name']")).toBeNull();
     await act(async () => embedded.root.unmount());
@@ -151,6 +152,71 @@ describe("BookingFlow embed lifecycle", () => {
     expect(standalone.container.textContent).toContain("Your time is marked.");
     await act(async () => standalone.root.unmount());
     window.removeEventListener("daymark:complete", complete);
+  });
+});
+
+describe("Embed service resolution", () => {
+  it("keeps catalogue mode unlocked while limiting services for a fixed employee", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn();
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "all" },
+      { listServices, listEmployees },
+    )).resolves.toEqual({
+      initialServices: [service],
+      initialEmployees: [],
+      initialEmployeeId: "maya-chen",
+    });
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).not.toHaveBeenCalled();
+  });
+
+  it("locks an explicit service and validates a fixed employee against its qualified team", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn().mockResolvedValue([employee]);
+
+    const booking = await resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "camera-installation" },
+      { listServices, listEmployees },
+    );
+
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).toHaveBeenCalledWith(scope, service.id);
+    expect(booking).toMatchObject({
+      initialServices: [service],
+      initialServiceId: service.id,
+      initialEmployees: [employee],
+      initialEmployeeId: "maya-chen",
+    });
+  });
+
+  it("keeps catalogue mode explicit and rejects an unavailable employee-service pair", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([]);
+    const listEmployees = vi.fn().mockResolvedValue([]);
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "theo-brooks", service: "camera-installation" },
+      { listServices, listEmployees },
+    )).resolves.toBeNull();
   });
 });
 
@@ -204,15 +270,27 @@ const employee: PublicEmployee = {
   accent: "coral",
 };
 
+const service: PublicService = {
+  id: "service-camera",
+  slug: "camera-installation",
+  name: "Camera installation",
+  category: "Smart security",
+  description: "Install and configure a camera.",
+  durationMinutes: 90,
+};
+
 async function completeBooking(embedded: boolean) {
   const startAt = "2026-08-06T09:00:00.000Z";
   const transport: BookingTransport = {
+    loadEmployees: vi.fn().mockResolvedValue([employee]),
     loadSlots: vi.fn().mockResolvedValue({
       dateKeys: ["2026-08-06"],
       slots: [{ dateKey: "2026-08-06", startAt, endAt: "2026-08-06T09:30:00.000Z" }],
     }),
     createBooking: vi.fn().mockResolvedValue({
       reference: "DM-TEST",
+      serviceName: "Camera installation",
+      serviceDurationMinutes: 90,
       employeeName: "Maya Chen",
       startAt,
       endAt: "2026-08-06T09:30:00.000Z",
@@ -221,6 +299,8 @@ async function completeBooking(embedded: boolean) {
     }),
   };
   const view = await render(createElement(BookingFlow, {
+    initialServices: [service],
+    initialServiceId: service.id,
     initialEmployees: [employee],
     transport,
     embedded,

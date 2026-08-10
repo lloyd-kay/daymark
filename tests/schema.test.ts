@@ -8,10 +8,12 @@ import {
   availabilityRules,
   blockedPeriods,
   credentials,
+  employeeServiceQualifications,
   employeeProfiles,
   invitations,
   loginAttempts,
   memberships,
+  services,
   workspaces,
 } from "../db/schema";
 
@@ -21,6 +23,8 @@ describe("Daymark schema", () => {
     expect(accounts).toBeDefined();
     expect(memberships).toBeDefined();
     expect(employeeProfiles).toBeDefined();
+    expect(services).toBeDefined();
+    expect(employeeServiceQualifications).toBeDefined();
     expect(invitations).toBeDefined();
     expect(availabilityRules).toBeDefined();
     expect(blockedPeriods).toBeDefined();
@@ -32,6 +36,8 @@ describe("Daymark schema", () => {
     expect(getTableColumns(memberships).workspaceId.notNull).toBe(true);
     expect(getTableColumns(memberships).accountId.notNull).toBe(true);
     expect(getTableColumns(employeeProfiles).workspaceId.notNull).toBe(true);
+    expect(getTableColumns(services).workspaceId.notNull).toBe(true);
+    expect(getTableColumns(employeeServiceQualifications).workspaceId.notNull).toBe(true);
     expect(getTableColumns(invitations).workspaceId.notNull).toBe(true);
     expect(getTableColumns(availabilityRules).workspaceId.notNull).toBe(true);
     expect(getTableColumns(blockedPeriods).workspaceId.notNull).toBe(true);
@@ -75,6 +81,13 @@ describe("Daymark widget auth migration", () => {
       migration.lastIndexOf("PRAGMA foreign_keys=ON"),
     );
   });
+
+  it("stores a resilient service relationship and immutable appointment snapshot", () => {
+    const columns = getTableColumns(appointments);
+    expect(columns.serviceId.notNull).toBe(false);
+    expect(columns.serviceName.notNull).toBe(true);
+    expect(columns.serviceDurationMinutes.notNull).toBe(true);
+  });
 });
 
 describe("company workspace migration", () => {
@@ -94,6 +107,26 @@ describe("company workspace migration", () => {
     expect(migration.lastIndexOf("PRAGMA foreign_keys=ON")).toBeGreaterThan(
       migration.indexOf("drop table `appointments`"),
     );
+    expect(migration).toMatch(/PRAGMA foreign_key_check/);
+    expect(migration).toMatch(/PRAGMA optimize/);
+  });
+});
+
+describe("service catalogue migration", () => {
+  it("backfills General appointment services before attaching legacy appointments", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0004_daymark_service_catalog.sql", import.meta.url),
+      "utf8",
+    );
+
+    const serviceInsert = migration.indexOf("insert into `services`");
+    const qualificationInsert = migration.indexOf(
+      "insert into `employee_service_qualifications`",
+    );
+    const appointmentBackfill = migration.indexOf("update `appointments`");
+    expect(serviceInsert).toBeGreaterThan(-1);
+    expect(qualificationInsert).toBeGreaterThan(serviceInsert);
+    expect(appointmentBackfill).toBeGreaterThan(qualificationInsert);
     expect(migration).toMatch(/PRAGMA foreign_key_check/);
     expect(migration).toMatch(/PRAGMA optimize/);
   });

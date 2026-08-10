@@ -15,7 +15,17 @@ const employee = {
   accent: "coral",
 };
 
+const service = {
+  id: "service-camera",
+  slug: "camera-installation",
+  name: "Camera installation",
+  category: "Smart security",
+  description: "Install and configure a camera.",
+  durationMinutes: 90,
+};
+
 const validBooking = {
+  serviceId: "service-camera",
   employeeId: "maya-chen",
   startAt: "2026-08-10T08:00:00.000Z",
   clientName: "Lloyd Example",
@@ -27,12 +37,15 @@ const validBooking = {
 
 function dependencies() {
   return {
+    listPublicServices: vi.fn().mockResolvedValue([service]),
     listPublicEmployees: vi.fn().mockResolvedValue([employee]),
-    listPublicSlots: vi.fn().mockResolvedValue({ employee, slots: [] }),
+    listPublicSlots: vi.fn().mockResolvedValue({ service, employee, slots: [] }),
     createBooking: vi.fn().mockResolvedValue({
       ok: true,
       booking: {
         reference: "DM-7K4P2Q",
+        serviceName: "Camera installation",
+        serviceDurationMinutes: 90,
         employeeName: "Maya Chen",
         startAt: validBooking.startAt,
         endAt: "2026-08-10T08:30:00.000Z",
@@ -42,6 +55,28 @@ function dependencies() {
 }
 
 describe("public employee data", () => {
+  it("whitelists public service fields and accepts optional employee filtering", async () => {
+    const deps = dependencies();
+    deps.listPublicServices.mockResolvedValue([{
+      ...service,
+      workspaceId: "private-workspace",
+      active: true,
+      certificateName: "must not leak",
+    }] as never);
+
+    const result = await createPublicBookingService(deps).services({
+      employeeId: "maya-chen",
+    });
+
+    expect(result.body).toEqual({ services: [service] });
+    expect(deps.listPublicServices).toHaveBeenCalledWith(
+      scope,
+      "maya-chen",
+      expect.any(Date),
+    );
+    expect(JSON.stringify(result.body)).not.toMatch(/workspace|active|certificate/i);
+  });
+
   it("whitelists anonymous profile fields", async () => {
     const deps = dependencies();
     deps.listPublicEmployees.mockResolvedValue([
@@ -49,9 +84,15 @@ describe("public employee data", () => {
     ] as never);
     const service = createPublicBookingService(deps);
 
-    const result = await service.employees();
+    const result = await service.employees({ serviceId: "service-camera" });
 
     expect(result.body).toEqual({ employees: [employee] });
+    expect(deps.listPublicEmployees).toHaveBeenCalledWith(
+      scope,
+      "service-camera",
+      expect.any(Date),
+    );
+    expect(JSON.stringify(result.body)).not.toMatch(/certificate|expiresOn|issuedOn/i);
   });
 });
 
@@ -61,7 +102,7 @@ describe("slot lookup", () => {
     const service = createPublicBookingService(deps);
 
     const result = await service.slots(
-      { employeeId: "<script>", from: "not-a-date" },
+      { serviceId: "<script>", employeeId: "<script>", from: "not-a-date" },
       new Date("2026-08-05T12:00:00.000Z"),
     );
 
@@ -74,21 +115,37 @@ describe("slot lookup", () => {
     const service = createPublicBookingService(deps);
 
     await service.slots(
-      { employeeId: "maya-chen", from: "2026-08-06" },
+      { serviceId: "service-camera", employeeId: "maya-chen", from: "2026-08-06" },
       new Date("2026-08-05T12:00:00.000Z"),
     );
 
     expect(deps.listPublicSlots).toHaveBeenCalledWith(
       scope,
+      "service-camera",
       "maya-chen",
       expect.arrayContaining(["2026-08-06", "2026-08-19"]),
       expect.any(Date),
     );
-    expect(deps.listPublicSlots.mock.calls[0][2]).toHaveLength(14);
+    expect(deps.listPublicSlots.mock.calls[0][3]).toHaveLength(14);
   });
 });
 
 describe("booking creation", () => {
+  it("rejects a missing service before querying storage", async () => {
+    const deps = dependencies();
+
+    const result = await createPublicBookingService(deps).book(
+      { ...validBooking, serviceId: undefined },
+      new Date("2026-08-05T12:00:00.000Z"),
+    );
+
+    expect(result).toEqual({
+      status: 400,
+      body: { ok: false, error: "Choose a valid service." },
+    });
+    expect(deps.createBooking).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid contact details before querying storage", async () => {
     const deps = dependencies();
     const service = createPublicBookingService(deps);
@@ -167,6 +224,8 @@ describe("booking creation", () => {
       ok: true,
       booking: {
         reference: "DM-7K4P2Q",
+        serviceName: "Camera installation",
+        serviceDurationMinutes: 90,
         employeeName: "Maya Chen",
         startAt: "2026-08-10T08:00:00.000Z",
         endAt: "2026-08-10T08:30:00.000Z",
@@ -241,6 +300,8 @@ describe("booking creation", () => {
       ok: true,
       booking: {
         reference: "DM-7K4P2Q",
+        serviceName: "Camera installation",
+        serviceDurationMinutes: 90,
         employeeName: "Maya Chen",
         startAt: validBooking.startAt,
         endAt: "2026-08-10T08:30:00.000Z",
@@ -258,6 +319,8 @@ describe("booking creation", () => {
       ok: true,
       booking: {
         reference: "DM-7K4P2Q",
+        serviceName: "Camera installation",
+        serviceDurationMinutes: 90,
         employeeName: "Maya Chen",
         startAt: validBooking.startAt,
         endAt: "2026-08-10T08:30:00.000Z",

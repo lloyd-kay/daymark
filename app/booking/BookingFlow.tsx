@@ -24,12 +24,13 @@ import {
   isBookingConflict,
   type BookingTransport,
 } from "../../lib/booking/transport";
-import type { PublicEmployee } from "../../lib/data/contracts";
+import type { PublicEmployee, PublicService } from "../../lib/data/contracts";
 import type { BookableSlot } from "../../lib/scheduling/types";
 
-type BookingStep = "person" | "date" | "time" | "details" | "confirmed";
+type BookingStep = "service" | "person" | "date" | "time" | "details" | "confirmed";
 
 type BookingDraft = {
+  service: PublicService | null;
   employee: PublicEmployee | null;
   dateKey: string | null;
   slot: BookableSlot | null;
@@ -42,6 +43,8 @@ type BookingDraft = {
 
 type Confirmation = {
   reference: string;
+  serviceName: string;
+  serviceDurationMinutes: number;
   employeeName: string;
   startAt: string;
   endAt: string;
@@ -49,37 +52,48 @@ type Confirmation = {
   contactSummary: string;
 };
 
-const STEP_LABELS: Array<{ step: Exclude<BookingStep, "confirmed">; label: string }> = [
+type StepLabel = {
+  step: Exclude<BookingStep, "confirmed">;
+  label: string;
+};
+
+const CATALOGUE_STEPS: StepLabel[] = [
+  { step: "service", label: "Service" },
   { step: "person", label: "Person" },
   { step: "date", label: "Date" },
   { step: "time", label: "Time" },
   { step: "details", label: "Details" },
 ];
 
+const FIXED_SERVICE_STEPS = CATALOGUE_STEPS.filter(
+  (item) => item.step !== "service",
+);
+
 export function BookingFlow({
+  initialServices,
   initialEmployees,
   transport,
+  initialServiceId,
   initialEmployeeId,
   embedded = false,
   demonstration = false,
 }: {
+  initialServices: PublicService[];
   initialEmployees: PublicEmployee[];
   transport: BookingTransport;
+  initialServiceId?: string;
   initialEmployeeId?: string;
   embedded?: boolean;
   demonstration?: boolean;
 }) {
-  const [step, setStep] = useState<BookingStep>("person");
-  const [draft, setDraft] = useState<BookingDraft>({
-    employee: null,
-    dateKey: null,
-    slot: null,
-    clientName: "",
-    clientAddress: "",
-    clientEmail: "",
-    clientPhone: "",
-    clientNote: "",
-  });
+  const configuredService = initialServiceId
+    ? initialServices.find((service) => service.id === initialServiceId) ?? null
+    : null;
+  const fixedService = Boolean(configuredService);
+  const stepLabels = fixedService ? FIXED_SERVICE_STEPS : CATALOGUE_STEPS;
+  const [step, setStep] = useState<BookingStep>(fixedService ? "person" : "service");
+  const [draft, setDraft] = useState<BookingDraft>(() => emptyDraft(configuredService));
+  const [employees, setEmployees] = useState(initialEmployees);
   const [dateKeys, setDateKeys] = useState<string[]>(() => nextDateKeys(14));
   const [slots, setSlots] = useState<BookableSlot[]>([]);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -92,22 +106,15 @@ export function BookingFlow({
   }, []);
 
   const reset = useCallback(() => {
-    setStep("person");
-    setDraft({
-      employee: null,
-      dateKey: null,
-      slot: null,
-      clientName: "",
-      clientAddress: "",
-      clientEmail: "",
-      clientPhone: "",
-      clientNote: "",
-    });
+    setStep(fixedService ? "person" : "service");
+    setDraft(emptyDraft(configuredService));
+    setEmployees(initialEmployees);
+    setDateKeys(nextDateKeys(14));
+    setSlots([]);
     setConfirmation(null);
     setError("");
-    setSlots([]);
     focusStage();
-  }, [focusStage]);
+  }, [configuredService, fixedService, focusStage, initialEmployees]);
 
   useEffect(() => {
     if (!embedded) return;
@@ -121,12 +128,42 @@ export function BookingFlow({
     [selectedDate, slots],
   );
   const dateParts = formatDateParts(selectedDate);
-  const currentStep = step === "confirmed" ? 4 : STEP_LABELS.findIndex((item) => item.step === step);
+  const currentStep = step === "confirmed"
+    ? stepLabels.length
+    : stepLabels.findIndex((item) => item.step === step);
   const displayedEmployees = initialEmployeeId
-    ? initialEmployees.filter((employee) => employee.id === initialEmployeeId)
-    : initialEmployees;
+    ? employees.filter((employee) => employee.id === initialEmployeeId)
+    : employees;
+
+  async function chooseService(service: PublicService) {
+    setDraft((current) => ({
+      ...current,
+      service,
+      employee: null,
+      dateKey: null,
+      slot: null,
+    }));
+    setEmployees([]);
+    setSlots([]);
+    setStep("person");
+    setError("");
+    setLoading(true);
+    try {
+      setEmployees(await transport.loadEmployees(service.id));
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "The qualified team could not be loaded. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+      focusStage();
+    }
+  }
 
   async function chooseEmployee(employee: PublicEmployee) {
+    if (!draft.service) return;
     setDraft((current) => ({
       ...current,
       employee,
@@ -137,7 +174,11 @@ export function BookingFlow({
     setError("");
     setLoading(true);
     try {
-      const payload = await transport.loadSlots(employee.id, todayKey());
+      const payload = await transport.loadSlots(
+        draft.service.id,
+        employee.id,
+        todayKey(),
+      );
       const keys = payload.dateKeys.length ? payload.dateKeys : nextDateKeys(14);
       setDateKeys(keys);
       setSlots(payload.slots ?? []);
@@ -170,11 +211,12 @@ export function BookingFlow({
 
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.employee || !draft.slot) return;
+    if (!draft.service || !draft.employee || !draft.slot) return;
     setLoading(true);
     setError("");
     try {
       const booking = await transport.createBooking({
+        serviceId: draft.service.id,
         employeeId: draft.employee.id,
         startAt: draft.slot.startAt,
         clientName: draft.clientName,
@@ -190,6 +232,7 @@ export function BookingFlow({
       if (isBookingConflict(caught)) {
         const refreshed = await recoverBookingConflict(
           transport,
+          draft.service.id,
           draft.employee.id,
           todayKey(),
         ).catch(() => null);
@@ -216,16 +259,27 @@ export function BookingFlow({
 
   function goBack() {
     const previous: Partial<Record<BookingStep, BookingStep>> = {
+      person: fixedService ? undefined : "service",
       date: "person",
       time: "date",
       details: "time",
     };
     const target = previous[step];
-    if (target) {
-      setStep(target);
-      setError("");
-      focusStage();
+    if (!target) return;
+    if (target === "service") {
+      setDraft((current) => ({
+        ...current,
+        service: null,
+        employee: null,
+        dateKey: null,
+        slot: null,
+      }));
+      setEmployees([]);
+      setSlots([]);
     }
+    setStep(target);
+    setError("");
+    focusStage();
   }
 
   return (
@@ -243,10 +297,10 @@ export function BookingFlow({
         <div className="booking-toolbar">
           <div>
             <p className="eyebrow">Make an appointment</p>
-            <h2 id="booking-title">A clear path to a good conversation.</h2>
+            <h2 id="booking-title">A clear path to the right service.</h2>
           </div>
           <ol className="step-track" aria-label="Booking progress">
-            {STEP_LABELS.map((item, index) => (
+            {stepLabels.map((item, index) => (
               <li key={item.step} className={index <= currentStep ? "is-reached" : ""}>
                 <span>{index < currentStep ? <Check size={12} /> : index + 1}</span>
                 {item.label}
@@ -255,51 +309,87 @@ export function BookingFlow({
           </ol>
         </div>
 
-        {step !== "person" && step !== "confirmed" && draft.employee ? (
-          <div className="selection-slip" data-accent={draft.employee.accent}>
-            <span className="avatar-stamp" aria-hidden="true">
-              {initials(draft.employee.publicName)}
-            </span>
+        {step !== "service" && step !== "confirmed" && draft.service ? (
+          <div className="selection-slip service-selection-slip" data-accent={draft.employee?.accent ?? "coral"}>
+            <span className="service-stamp" aria-hidden="true"><Clock3 size={18} /></span>
             <div>
-              <small>You’re booking with</small>
-              <strong>{draft.employee.publicName}</strong>
+              <small>Selected service</small>
+              <strong>{draft.service.name}</strong>
             </div>
+            <span>{formatDuration(draft.service.durationMinutes)}</span>
+            {draft.employee ? <span>{draft.employee.publicName}</span> : null}
             {draft.dateKey ? <span>{formatShortDate(draft.dateKey)}</span> : null}
             {draft.slot ? <span>{formatTime(draft.slot.startAt)}</span> : null}
           </div>
         ) : null}
 
         <div className="booking-stage">
-          {step === "person" ? (
+          {step === "service" ? (
             <>
               <StageTitle
                 ref={stageHeading}
-                overline="01 / Pick a person"
-                title="Who would you like to meet?"
-                note="Each person controls their own availability. No one else on the team can see it."
+                overline="01 / Pick a service"
+                title="Which service do you need?"
+                note="Choose the work first, and Daymark will show only people currently approved to deliver it."
               />
-              <div className="people-list">
-                {displayedEmployees.map((employee, index) => (
+              <div className="service-choice-list">
+                {initialServices.map((service) => (
                   <button
-                    className="person-tab"
-                    data-accent={employee.accent}
-                    key={employee.id}
-                    onClick={() => chooseEmployee(employee)}
+                    className="service-choice-card"
+                    key={service.id}
+                    onClick={() => chooseService(service)}
                     type="button"
                   >
-                    <span className="person-index">0{index + 1}</span>
-                    <span className="avatar-stamp" aria-hidden="true">
-                      {initials(employee.publicName)}
-                    </span>
-                    <span className="person-copy">
-                      <strong>{employee.publicName}</strong>
-                      <small>{employee.title}</small>
-                      <span>{employee.bio}</span>
-                    </span>
+                    <span className="service-choice-category">{service.category}</span>
+                    <strong>{service.name}</strong>
+                    <span>{service.description}</span>
+                    <small>{formatDuration(service.durationMinutes)}</small>
                     <ArrowRight size={19} aria-hidden="true" />
                   </button>
                 ))}
               </div>
+              {initialServices.length === 0 ? (
+                <EmptyNote text="No services are currently available for online booking." />
+              ) : null}
+            </>
+          ) : null}
+
+          {step === "person" ? (
+            <>
+              <StageTitle
+                ref={stageHeading}
+                overline={`${stageNumber("person", fixedService)} / Pick a person`}
+                title="Who should deliver this service?"
+                note="Only team members with a current approval for this service appear here."
+              />
+              {loading ? <LoadingNote label="Finding the qualified team…" /> : null}
+              {!loading ? (
+                <div className="people-list">
+                  {displayedEmployees.map((employee, index) => (
+                    <button
+                      className="person-tab"
+                      data-accent={employee.accent}
+                      key={employee.id}
+                      onClick={() => chooseEmployee(employee)}
+                      type="button"
+                    >
+                      <span className="person-index">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="avatar-stamp" aria-hidden="true">
+                        {initials(employee.publicName)}
+                      </span>
+                      <span className="person-copy">
+                        <strong>{employee.publicName}</strong>
+                        <small>{employee.title}</small>
+                        <span>{employee.bio}</span>
+                      </span>
+                      <ArrowRight size={19} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {!loading && displayedEmployees.length === 0 && !error ? (
+                <EmptyNote text="No qualified team members are available for this service right now." />
+              ) : null}
             </>
           ) : null}
 
@@ -307,7 +397,7 @@ export function BookingFlow({
             <>
               <StageTitle
                 ref={stageHeading}
-                overline="02 / Choose a date"
+                overline={`${stageNumber("date", fixedService)} / Choose a date`}
                 title="Which day suits you?"
                 note="We show only days inside the next two weeks."
               />
@@ -336,7 +426,7 @@ export function BookingFlow({
                 </div>
               ) : null}
               {!loading && slots.length === 0 && !error ? (
-                <EmptyNote text="No times are open in this window. Choose another person to see their availability." />
+                <EmptyNote text="No times are open in this window. Choose another qualified person to check their availability." />
               ) : null}
             </>
           ) : null}
@@ -345,7 +435,7 @@ export function BookingFlow({
             <>
               <StageTitle
                 ref={stageHeading}
-                overline="03 / Choose a time"
+                overline={`${stageNumber("time", fixedService)} / Choose a time`}
                 title={`Open moments on ${formatShortDate(selectedDate)}`}
                 note="Times are shown in Europe/London. Busy periods and calendar details stay hidden."
               />
@@ -355,7 +445,7 @@ export function BookingFlow({
                     <button type="button" key={slot.startAt} onClick={() => chooseSlot(slot)}>
                       <Clock3 size={16} aria-hidden="true" />
                       <strong>{formatTime(slot.startAt)}</strong>
-                      <span>30 min</span>
+                      <span>{formatDuration(draft.service?.durationMinutes ?? 30)}</span>
                       <ArrowRight size={16} aria-hidden="true" />
                     </button>
                   ))}
@@ -370,7 +460,7 @@ export function BookingFlow({
             <>
               <StageTitle
                 ref={stageHeading}
-                overline="04 / Your details"
+                overline={`${stageNumber("details", fixedService)} / Your details`}
                 title="Where should we send the booking details?"
                 note="Your information is visible only to the person you book and a Daymark administrator."
               />
@@ -383,9 +473,7 @@ export function BookingFlow({
                     required
                     maxLength={80}
                     value={draft.clientName}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, clientName: event.target.value }))
-                    }
+                    onChange={(event) => setDraft((current) => ({ ...current, clientName: event.target.value }))}
                     placeholder="e.g. Alex Morgan"
                   />
                 </label>
@@ -397,9 +485,7 @@ export function BookingFlow({
                     required
                     maxLength={240}
                     value={draft.clientAddress}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, clientAddress: event.target.value }))
-                    }
+                    onChange={(event) => setDraft((current) => ({ ...current, clientAddress: event.target.value }))}
                     placeholder="14 Example Street, London, N1 1AA"
                   />
                 </label>
@@ -415,9 +501,7 @@ export function BookingFlow({
                     maxLength={254}
                     aria-describedby="contact-help"
                     value={draft.clientEmail}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, clientEmail: event.target.value }))
-                    }
+                    onChange={(event) => setDraft((current) => ({ ...current, clientEmail: event.target.value }))}
                     placeholder="alex@example.com"
                   />
                 </label>
@@ -430,9 +514,7 @@ export function BookingFlow({
                     maxLength={25}
                     aria-describedby="contact-help"
                     value={draft.clientPhone}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, clientPhone: event.target.value }))
-                    }
+                    onChange={(event) => setDraft((current) => ({ ...current, clientPhone: event.target.value }))}
                     placeholder="+44 20 7946 0000"
                   />
                 </label>
@@ -443,10 +525,8 @@ export function BookingFlow({
                     rows={4}
                     maxLength={500}
                     value={draft.clientNote}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, clientNote: event.target.value }))
-                    }
-                    placeholder="A short note about what you’d like to discuss."
+                    onChange={(event) => setDraft((current) => ({ ...current, clientNote: event.target.value }))}
+                    placeholder="A short note about the service you need."
                   />
                 </label>
                 <button className="confirm-button" type="submit" disabled={loading}>
@@ -463,8 +543,8 @@ export function BookingFlow({
               <p className="eyebrow">Demonstration complete</p>
               <h3 ref={stageHeading} tabIndex={-1}>No appointment was created.</h3>
               <p>
-                You explored a booking with <strong>{confirmation.employeeName}</strong> on{" "}
-                <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
+                You explored <strong>{confirmation.serviceName}</strong> ({formatDuration(confirmation.serviceDurationMinutes)}) with{" "}
+                <strong>{confirmation.employeeName}</strong> on <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
               </p>
               <p>This is a local example only. Nothing was added to a calendar or sent to the team.</p>
               <div className="reference-slip">
@@ -483,8 +563,8 @@ export function BookingFlow({
               <p className="eyebrow">Appointment confirmed</p>
               <h3 ref={stageHeading} tabIndex={-1}>Your time is marked.</h3>
               <p>
-                You’re meeting <strong>{confirmation.employeeName}</strong> on{" "}
-                <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
+                <strong>{confirmation.serviceName}</strong> ({formatDuration(confirmation.serviceDurationMinutes)}) with{" "}
+                <strong>{confirmation.employeeName}</strong> on <strong>{formatFullDateTime(confirmation.startAt)}</strong>.
               </p>
               <p>{confirmation.address} · {confirmation.contactSummary}</p>
               <div className="reference-slip">
@@ -498,16 +578,12 @@ export function BookingFlow({
           ) : null}
 
           {error ? (
-            <p className="booking-error" role="status" aria-live="polite">
-              {error}
-            </p>
+            <p className="booking-error" role="status" aria-live="polite">{error}</p>
           ) : (
-            <span className="sr-only" aria-live="polite">
-              {loading ? "Loading" : ""}
-            </span>
+            <span className="sr-only" aria-live="polite">{loading ? "Loading" : ""}</span>
           )}
 
-          {step !== "person" && step !== "confirmed" ? (
+          {step !== "service" && step !== "confirmed" && (step !== "person" || !fixedService) ? (
             <button className="back-button" type="button" onClick={goBack}>
               <ArrowLeft size={16} aria-hidden="true" /> Back
             </button>
@@ -521,12 +597,12 @@ export function BookingFlow({
         <p className="eyebrow">The quiet part</p>
         <h3>Your details stay private.</h3>
         <p>
-          You see bookable moments—not someone’s calendar. Other employees can’t see
-          this appointment, and records disappear 30 days after it ends.
+          You see qualified people and bookable moments—not anyone’s calendar. Other
+          employees cannot see this appointment, and records disappear 30 days after it ends.
         </p>
         <ul>
           <li><LockKeyhole size={14} /> No free/busy calendar</li>
-          <li><UserRound size={14} /> Only your chosen person</li>
+          <li><UserRound size={14} /> Qualified people only</li>
           <li><Clock3 size={14} /> 30-day retention</li>
         </ul>
       </aside>
@@ -536,6 +612,7 @@ export function BookingFlow({
 
 export async function recoverBookingConflict(
   transport: BookingTransport,
+  serviceId: string,
   employeeId: string,
   from: string,
 ): Promise<{
@@ -544,12 +621,8 @@ export async function recoverBookingConflict(
   nextStep: "time";
   slot: null;
 }> {
-  const availability = await transport.loadSlots(employeeId, from);
-  return {
-    ...availability,
-    nextStep: "time",
-    slot: null,
-  };
+  const availability = await transport.loadSlots(serviceId, employeeId, from);
+  return { ...availability, nextStep: "time", slot: null };
 }
 
 const StageTitle = forwardRef<
@@ -566,15 +639,33 @@ const StageTitle = forwardRef<
 });
 
 function LoadingNote({ label }: { label: string }) {
-  return (
-    <div className="loading-note" role="status">
-      <span aria-hidden="true" /> {label}
-    </div>
-  );
+  return <div className="loading-note" role="status"><span aria-hidden="true" /> {label}</div>;
 }
 
 function EmptyNote({ text }: { text: string }) {
   return <p className="empty-note">{text}</p>;
+}
+
+function emptyDraft(service: PublicService | null): BookingDraft {
+  return {
+    service,
+    employee: null,
+    dateKey: null,
+    slot: null,
+    clientName: "",
+    clientAddress: "",
+    clientEmail: "",
+    clientPhone: "",
+    clientNote: "",
+  };
+}
+
+function stageNumber(
+  step: Exclude<BookingStep, "confirmed" | "service">,
+  fixedService: boolean,
+): string {
+  const labels = fixedService ? FIXED_SERVICE_STEPS : CATALOGUE_STEPS;
+  return String(labels.findIndex((item) => item.step === step) + 1).padStart(2, "0");
 }
 
 function nextDateKeys(count: number): string[] {
@@ -640,6 +731,15 @@ function formatFullDateTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder
+    ? `${hours} hr ${remainder} min`
+    : `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
 function initials(name: string): string {

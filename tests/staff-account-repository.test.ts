@@ -4,6 +4,7 @@ const cloudflare = vi.hoisted(() => ({ env: { DB: null as unknown } }));
 vi.mock("cloudflare:workers", () => ({ env: cloudflare.env }));
 
 import {
+  createInitialWorkspaceAdministrator,
   insertStaffCredential,
   replaceStaffPasswordVerifier,
   setStaffActiveState,
@@ -141,6 +142,40 @@ describe("staff repository validation", () => {
 });
 
 describe("staff repository atomic write contracts", () => {
+  it("creates a bookable initial roster inside the first company transaction", async () => {
+    const d1 = configureD1();
+
+    await expect(createInitialWorkspaceAdministrator({
+      workspaceName: "Happy Smart Homes QA",
+      workspaceSlug: "happy-smart-homes-qa",
+      email: "admin@daymark-qa.invalid",
+      displayName: "Local QA Admin",
+      verifier,
+      mustChangePassword: false,
+    })).resolves.toEqual({
+      accountId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+      workspaceSlug: "happy-smart-homes-qa",
+    });
+
+    expect(d1.batches).toHaveLength(1);
+    expect(d1.batches[0]).toHaveLength(12);
+    const queries = d1.batches[0].map((statement) => statement.query).join("\n");
+    expect(queries).toContain('insert into "employee_profiles"');
+    expect(queries).toContain('insert into "employee_service_qualifications"');
+    expect(queries).toContain('insert into "availability_rules"');
+    expect(queries).toContain('insert into "runtime_state"');
+    const params = JSON.stringify(d1.batches[0].map((statement) => statement.params));
+    expect(params).toContain("Maya Chen");
+    expect(params).toContain("General appointment");
+    expect(params).not.toContain("DAYMARK_SETUP_CODE");
+    const availabilityStatements = d1.batches[0].filter(
+      (statement) => statement.query.includes('insert into "availability_rules"'),
+    );
+    expect(availabilityStatements).toHaveLength(4);
+    expect(Math.max(...availabilityStatements.map((statement) => statement.params.length)))
+      .toBeLessThanOrEqual(50);
+  });
+
   it("creates the global account, company membership, credential, and profile link atomically", async () => {
     const d1 = configureD1(successfulCreate());
     seedCreateLookups(d1);

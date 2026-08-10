@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -48,8 +48,8 @@ test("starts Daymark with persistent local D1 and reports healthy", { timeout: 6
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     status: "ok",
-    appVersion: "0.1.0",
-    latestMigration: "0003_daymark_seed_recovery.sql",
+    appVersion: "0.1.1",
+    latestMigration: "0004_daymark_service_catalog.sql",
   });
 
   const backup = await runCli([
@@ -134,11 +134,93 @@ test("repairs default availability after a partial initial seed", { timeout: 60_
     once(lines, "line"),
     once(child, "exit").then(([code]) => { throw new Error(`Runtime exited ${code}: ${stderr}`); }),
   ]);
-  const response = await fetch(`http://127.0.0.1:${port}/api/public/daymark/slots?employeeId=maya-chen&from=${nextMondayDateKey()}`);
+  const response = await fetch(`http://127.0.0.1:${port}/api/public/daymark/slots?serviceId=service-general-workspace-daymark&employeeId=maya-chen&from=${nextMondayDateKey()}`);
   const responseText = await response.text();
   assert.equal(response.status, 200, `${responseText}\n${stdout}\n${stderr}`);
   const result = JSON.parse(responseText);
   assert.ok(result.slots.length > 0, "the partial seed should regain default bookable times");
+});
+
+test("backfills General service data for a controlled legacy appointment", { timeout: 60_000 }, async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "daymark-runtime-legacy-service-"));
+  const databaseRuntime = new Miniflare({
+    modules: true,
+    script: "export default {}",
+    d1Persist: path.join(root, "d1"),
+    d1Databases: { DB: "00000000-0000-4000-8000-000000000000" },
+  });
+  context.after(async () => {
+    await databaseRuntime.dispose();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  });
+  const database = await databaseRuntime.getD1Database("DB");
+  for (const migration of [
+    "0000_icy_doorman.sql",
+    "0001_daymark_widget_auth.sql",
+    "0002_daymark_company_workspaces.sql",
+    "0003_daymark_seed_recovery.sql",
+  ]) {
+    await applySqlMigration(database, migration);
+  }
+
+  await database.prepare(`
+    insert into employee_profiles
+      (id, workspace_id, membership_id, public_name, title, bio, accent, active, sort_order)
+    values
+      ('legacy-installer', 'workspace-daymark', null, 'Legacy Installer', 'Installer', '', 'coral', true, 0)
+  `).run();
+  await database.prepare(`
+    insert into appointments
+      (id, workspace_id, public_reference, employee_profile_id, start_at, end_at,
+       client_name, client_address, client_email, client_phone, client_note, status)
+    values
+      ('legacy-appointment', 'workspace-daymark', 'DM-LEGACY', 'legacy-installer',
+       '2026-08-11T09:00:00.000Z', '2026-08-11T09:30:00.000Z', 'Local Test Client',
+       '1 Test Street', 'local-test@example.invalid', null, '', 'booked')
+  `).run();
+
+  await applySqlMigration(database, "0004_daymark_service_catalog.sql");
+
+  assert.deepEqual(
+    await database.prepare(`
+      select id, slug, name, duration_minutes as durationMinutes
+      from services where id = 'service-general-workspace-daymark'
+    `).first(),
+    {
+      id: "service-general-workspace-daymark",
+      slug: "general-appointment",
+      name: "General appointment",
+      durationMinutes: 30,
+    },
+  );
+  assert.deepEqual(
+    await database.prepare(`
+      select employee_profile_id as employeeProfileId, service_id as serviceId,
+             method, active
+      from employee_service_qualifications
+      where employee_profile_id = 'legacy-installer'
+    `).first(),
+    {
+      employeeProfileId: "legacy-installer",
+      serviceId: "service-general-workspace-daymark",
+      method: "manual",
+      active: 1,
+    },
+  );
+  assert.deepEqual(
+    await database.prepare(`
+      select service_id as serviceId, service_name as serviceName,
+             service_duration_minutes as serviceDurationMinutes
+      from appointments where id = 'legacy-appointment'
+    `).first(),
+    {
+      serviceId: "service-general-workspace-daymark",
+      serviceName: "General appointment",
+      serviceDurationMinutes: 30,
+    },
+  );
+  const foreignKeys = await database.prepare("PRAGMA foreign_key_check").all();
+  assert.deepEqual(foreignKeys.results, []);
 });
 
 test("rejects a backup when no migrated Daymark database exists", async (context) => {
@@ -187,6 +269,16 @@ function nextMondayDateKey() {
   const daysUntilMonday = ((8 - date.getUTCDay()) % 7) || 7;
   date.setUTCDate(date.getUTCDate() + daysUntilMonday);
   return date.toISOString().slice(0, 10);
+}
+
+async function applySqlMigration(database, filename) {
+  const sql = await readFile(path.join(repositoryRoot, "drizzle", filename), "utf8");
+  for (const statement of sql
+    .split("--> statement-breakpoint")
+    .map((value) => value.trim())
+    .filter(Boolean)) {
+    await database.prepare(statement).run();
+  }
 }
 
 async function waitForExit(child, timeoutMs) {

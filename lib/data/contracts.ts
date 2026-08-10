@@ -1,4 +1,34 @@
 import type { AvailabilityRule, BookableSlot } from "../scheduling/types";
+import type { QualificationMethod } from "../services/eligibility";
+
+export type PublicService = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  durationMinutes: number;
+};
+
+export type EmployeeServiceQualification = {
+  id: string;
+  employeeProfileId: string;
+  serviceId: string;
+  method: QualificationMethod;
+  certificateName: string | null;
+  certificateReference: string | null;
+  issuedOn: string | null;
+  expiresOn: string | null;
+  active: boolean;
+  current: boolean;
+};
+
+export type WorkspaceService = PublicService & {
+  workspaceId: string;
+  active: boolean;
+  sortOrder: number;
+  qualifications: EmployeeServiceQualification[];
+};
 
 export type PublicEmployee = {
   id: string;
@@ -71,6 +101,8 @@ export type PublicBookingScope = {
 export type ScheduleEntry = {
   id: string;
   reference: string;
+  serviceName: string;
+  serviceDurationMinutes: number;
   employeeProfileId: string;
   employeeName: string;
   accent: string;
@@ -85,6 +117,7 @@ export type ScheduleEntry = {
 };
 
 export type CreateBookingInput = {
+  serviceId: string;
   employeeId: string;
   startAt: string;
   clientName: string;
@@ -113,6 +146,8 @@ export type CreateBookingResult =
       ok: true;
       booking: {
         reference: string;
+        serviceName: string;
+        serviceDurationMinutes: number;
         employeeName: string;
         startAt: string;
         endAt: string;
@@ -127,6 +162,7 @@ export type EmployeeAvailability = {
 };
 
 export type PublicSlotResult = {
+  service: PublicService;
   employee: PublicEmployee;
   slots: BookableSlot[];
 };
