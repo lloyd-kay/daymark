@@ -36,6 +36,13 @@
       "when": 1786352713951,
       "tag": "0004_daymark_service_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786389597616,
+      "tag": "0005_daymark_embed_preferences",
+      "breakpoints": true
     }
   ]
 }

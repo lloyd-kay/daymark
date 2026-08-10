@@ -49,7 +49,7 @@ test("starts Daymark with persistent local D1 and reports healthy", { timeout: 6
   assert.deepEqual(await response.json(), {
     status: "ok",
     appVersion: "0.1.1",
-    latestMigration: "0004_daymark_service_catalog.sql",
+    latestMigration: "0005_daymark_embed_preferences.sql",
   });
 
   const backup = await runCli([
@@ -221,6 +221,45 @@ test("backfills General service data for a controlled legacy appointment", { tim
   );
   const foreignKeys = await database.prepare("PRAGMA foreign_key_check").all();
   assert.deepEqual(foreignKeys.results, []);
+});
+
+test("backfills a floating full-catalogue Embed default for an existing workspace", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "daymark-runtime-legacy-embed-"));
+  const databaseRuntime = new Miniflare({
+    modules: true,
+    script: "export default {}",
+    d1Persist: path.join(root, "d1"),
+    d1Databases: { DB: "00000000-0000-4000-8000-000000000000" },
+  });
+  context.after(async () => {
+    await databaseRuntime.dispose();
+    await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  });
+  const database = await databaseRuntime.getD1Database("DB");
+  for (const migration of [
+    "0000_icy_doorman.sql",
+    "0001_daymark_widget_auth.sql",
+    "0002_daymark_company_workspaces.sql",
+    "0003_daymark_seed_recovery.sql",
+    "0004_daymark_service_catalog.sql",
+  ]) {
+    await applySqlMigration(database, migration);
+  }
+
+  await applySqlMigration(database, "0005_daymark_embed_preferences.sql");
+
+  assert.deepEqual(
+    await database.prepare(`
+      select workspace_id as workspaceId, default_mode as defaultMode,
+             default_service_scope as defaultServiceScope
+      from workspace_embed_preferences where workspace_id = 'workspace-daymark'
+    `).first(),
+    {
+      workspaceId: "workspace-daymark",
+      defaultMode: "floating",
+      defaultServiceScope: "all",
+    },
+  );
 });
 
 test("rejects a backup when no migrated Daymark database exists", async (context) => {

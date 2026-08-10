@@ -14,6 +14,7 @@ import {
   loginAttempts,
   memberships,
   services,
+  workspaceEmbedPreferences,
   workspaces,
 } from "../db/schema";
 
@@ -25,6 +26,7 @@ describe("Daymark schema", () => {
     expect(employeeProfiles).toBeDefined();
     expect(services).toBeDefined();
     expect(employeeServiceQualifications).toBeDefined();
+    expect(workspaceEmbedPreferences).toBeDefined();
     expect(invitations).toBeDefined();
     expect(availabilityRules).toBeDefined();
     expect(blockedPeriods).toBeDefined();
@@ -42,6 +44,31 @@ describe("Daymark schema", () => {
     expect(getTableColumns(availabilityRules).workspaceId.notNull).toBe(true);
     expect(getTableColumns(blockedPeriods).workspaceId.notNull).toBe(true);
     expect(getTableColumns(appointments).workspaceId.notNull).toBe(true);
+  });
+});
+
+describe("workspace embed preference schema", () => {
+  it("stores one constrained default per workspace", () => {
+    const columns = getTableColumns(workspaceEmbedPreferences);
+    expect(columns.workspaceId.primary).toBe(true);
+    expect(columns.workspaceId.notNull).toBe(true);
+    expect(columns.defaultMode.notNull).toBe(true);
+    expect(columns.defaultServiceScope.notNull).toBe(true);
+    expect(columns.createdAt.notNull).toBe(true);
+    expect(columns.updatedAt.notNull).toBe(true);
+  });
+
+  it("backfills existing workspaces with the current floating catalogue default", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0005_daymark_embed_preferences.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration).toMatch(/default_mode[^;]+check[^;]+floating[^;]+inline/is);
+    expect(migration).toMatch(/default_service_scope[^;]+check[^;]+all/is);
+    expect(migration).toMatch(
+      /insert into `workspace_embed_preferences`[\s\S]+select `id`, 'floating', 'all'[\s\S]+from `workspaces`/i,
+    );
   });
 });
 

@@ -34,6 +34,32 @@ export const workspaces = sqliteTable(
   (table) => [uniqueIndex("idx_workspaces_slug").on(table.slug)],
 );
 
+export const workspaceEmbedPreferences = sqliteTable(
+  "workspace_embed_preferences",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    defaultMode: text("default_mode")
+      .$type<"floating" | "inline">()
+      .notNull(),
+    defaultServiceScope: text("default_service_scope")
+      .$type<"all">()
+      .notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "workspace_embed_preferences_default_mode_check",
+      sql`${table.defaultMode} in ('floating', 'inline')`,
+    ),
+    check(
+      "workspace_embed_preferences_service_scope_check",
+      sql`${table.defaultServiceScope} in ('all')`,
+    ),
+  ],
+);
+
 export const accounts = sqliteTable(
   "accounts",
   {

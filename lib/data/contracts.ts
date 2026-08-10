@@ -92,6 +92,15 @@ export type WorkspaceSummary = {
   role: "admin" | "employee";
 };
 
+export type EmbedMode = "floating" | "inline";
+export type EmbedServiceScope = "all";
+
+export type WorkspaceEmbedPreference = {
+  workspaceId: string;
+  defaultMode: EmbedMode;
+  defaultServiceScope: EmbedServiceScope;
+};
+
 export type PublicBookingScope = {
   workspaceId: string;
   workspaceSlug: string;
