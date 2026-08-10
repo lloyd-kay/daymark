@@ -22,6 +22,10 @@ $layoutPath = Join-Path $repoRoot "packaging\windows\install-layout.json"
 $installGuidePath = Join-Path $repoRoot "docs\install\windows.md"
 $headerPath = Join-Path $repoRoot "packaging\windows\assets\header.bmp"
 $sidebarPath = Join-Path $repoRoot "packaging\windows\assets\sidebar.bmp"
+$controlPackagePath = Join-Path $repoRoot "desktop\daymark-control\package.json"
+$cargoManifestPath = Join-Path $repoRoot "desktop\daymark-control\src-tauri\Cargo.toml"
+$controlMainPath = Join-Path $repoRoot "desktop\daymark-control\src-tauri\src\main.rs"
+$profileCommandPath = Join-Path $repoRoot "desktop\daymark-control\src-tauri\src\setup_profile.rs"
 
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
 $rootPackage = Get-Content (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
@@ -32,6 +36,22 @@ Assert-True (@($config.bundle.targets) -contains "nsis") "The Windows bundle tar
 Assert-True ($config.bundle.windows.nsis.installMode -eq "perMachine") "The installer must be per-machine."
 Assert-True ($config.bundle.windows.nsis.installerHooks -eq "../../../packaging/windows/installer-hooks.nsh") "The installer hooks path is missing."
 Assert-True ($config.build.beforeBuildCommand -match "build-windows-launcher\.ps1") "The release launcher must be staged before Tauri validates resources."
+$deepLinkConfig = $config.plugins."deep-link".desktop
+Assert-True (@($deepLinkConfig.schemes).Count -eq 1 -and @($deepLinkConfig.schemes)[0] -ceq "daymark") "The installer must own only the exact daymark protocol."
+$controlPackage = Get-Content $controlPackagePath -Raw | ConvertFrom-Json
+Assert-True ($controlPackage.dependencies."@tauri-apps/plugin-deep-link" -eq "2.4.9") "The frontend deep-link plugin must stay pinned."
+$cargoManifest = Get-Content $cargoManifestPath -Raw
+Assert-True ($cargoManifest -match 'tauri-plugin-deep-link\s*=\s*"=2\.4\.9"') "The Rust deep-link plugin must stay pinned."
+Assert-True ($cargoManifest -match 'tauri-plugin-single-instance\s*=\s*\{[^}]*version\s*=\s*"=2\.4\.3"') "The Rust single-instance plugin must stay pinned."
+Assert-True ($cargoManifest -match 'tauri-plugin-single-instance\s*=\s*\{[^}]*features\s*=\s*\["deep-link"\]') "Single-instance handling must forward later deep links."
+$controlMain = Get-Content $controlMainPath -Raw
+$singleInstanceIndex = $controlMain.IndexOf("tauri_plugin_single_instance::init")
+$deepLinkIndex = $controlMain.IndexOf("tauri_plugin_deep_link::init")
+Assert-True ($singleInstanceIndex -ge 0 -and $singleInstanceIndex -lt $deepLinkIndex) "Single-instance handling must be registered before deep-link handling."
+Assert-True ($controlMain -match 'generate_handler!\[[\s\S]*setup_profile::open_setup_profile_import') "Only the validated setup-profile command may cross the app boundary."
+$profileCommand = Get-Content $profileCommandPath -Raw
+Assert-True ($profileCommand -match 'MAX_URI_LENGTH:\s*usize\s*=\s*256') "Setup-profile URI input must be length bounded before parsing."
+Assert-True ($profileCommand -match 'assert_safe_local_url') "Setup-profile imports must pass the local URL allowlist."
 $resourceMap = $config.bundle.resources
 Assert-True ($resourceMap."../../../artifacts/windows-stage/DaymarkRuntime.exe" -eq "DaymarkRuntime.exe") "The installer must consume the staged release launcher."
 Assert-True ($resourceMap."../../../artifacts/windows-stage/lib/" -eq "lib") "The installer must bundle the shared runtime library."
@@ -51,6 +71,7 @@ $processCleanup = Get-Content $processCleanupPath -Raw
 $stageScript = Get-Content $stageScriptPath -Raw
 $inspectionScript = Get-Content $inspectionScriptPath -Raw
 $installerScript = Get-Content $installerScriptPath -Raw
+Assert-True ($hooks -notmatch 'HKEY_CLASSES_ROOT\\daymark|URL Protocol') "NSIS hooks must not create a second protocol-registration owner."
 Assert-True ($stageScript -match 'foreach \(\$directory in @\("dist", "drizzle", "runtime", "lib"\)\)') "The Windows stage must copy the shared runtime library."
 Assert-True ($stageScript -match 'Join-Path \$repoRoot "package\.json"\) -Destination \(Join-Path \$workingPath "package\.json"') "The Windows stage must copy runtime version metadata."
 Assert-True ($stageScript -match 'stop-daymark-processes\.ps1') "The Windows stage must copy the path-scoped process cleanup script."

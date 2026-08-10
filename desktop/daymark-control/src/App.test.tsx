@@ -1,11 +1,15 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
 const invokeMock = vi.hoisted(() => vi.fn());
+const deepLinkListenerMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
+vi.mock("./deep-links", () => ({
+  listenForSetupProfileLinks: deepLinkListenerMock,
+}));
 
 const stoppedStatus = {
   state: "stopped" as const,
@@ -30,8 +34,13 @@ const needsAttentionStatus = {
   message: "Daymark is running but needs attention before it can accept bookings.",
 };
 
+beforeEach(() => {
+  deepLinkListenerMock.mockResolvedValue(vi.fn());
+});
+
 afterEach(() => {
   invokeMock.mockReset();
+  deepLinkListenerMock.mockReset();
   Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
 });
 
@@ -86,5 +95,48 @@ describe("Daymark Control", () => {
       expect(invokeMock).toHaveBeenCalledWith("restart_runtime");
     });
     expect(invokeMock).not.toHaveBeenCalledWith("start_runtime");
+  });
+
+  it("shows only generic guidance when a setup deep link is rejected", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    deepLinkListenerMock.mockImplementation(async (onError: () => void) => {
+      onError();
+      return vi.fn();
+    });
+    invokeMock.mockImplementation((command: string) => {
+      if (command === "get_runtime_status") return Promise.resolve(runningStatus);
+      if (command === "get_setup_state") return Promise.resolve({ configured: true });
+      return Promise.resolve();
+    });
+
+    render(<App initialStatus={runningStatus} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That Daymark setup link could not be opened. Use the setup code instead.",
+    );
+    expect(screen.queryByText(/DM1-C-|daymark:\/\//)).not.toBeInTheDocument();
+  });
+
+  it("stops the deep-link listener when Control closes", async () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: {},
+    });
+    const stopListening = vi.fn();
+    deepLinkListenerMock.mockResolvedValue(stopListening);
+    invokeMock.mockImplementation((command: string) => {
+      if (command === "get_runtime_status") return Promise.resolve(runningStatus);
+      if (command === "get_setup_state") return Promise.resolve({ configured: true });
+      return Promise.resolve();
+    });
+
+    const view = render(<App initialStatus={runningStatus} />);
+    await waitFor(() => expect(deepLinkListenerMock).toHaveBeenCalledOnce());
+    view.unmount();
+
+    expect(stopListening).toHaveBeenCalledOnce();
   });
 });

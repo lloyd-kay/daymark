@@ -3,6 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -260,6 +261,26 @@ fn runtime_is_reachable() -> bool {
         Duration::from_millis(500),
     )
     .is_ok()
+}
+
+pub(crate) fn ensure_runtime_ready(controller: &ServiceController) -> Result<(), ControlError> {
+    if runtime_is_reachable() && crate::status::runtime_is_ready() {
+        return Ok(());
+    }
+    if !runtime_is_reachable() {
+        controller.start(controller.read_mode())?;
+    }
+
+    for _ in 0..40 {
+        if runtime_is_reachable() && crate::status::runtime_is_ready() {
+            return Ok(());
+        }
+        thread::sleep(Duration::from_millis(250));
+    }
+    Err(control_error(
+        "runtime_not_ready",
+        "Daymark did not become ready in time",
+    ))
 }
 
 fn ensure_runtime_file(path: &Path) -> Result<(), ControlError> {

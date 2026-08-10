@@ -20,6 +20,7 @@ if ($ResumeAfterRestart) {
     if ($bootedAt -le [datetime]$checkpoint.bootedAt) { throw "Windows has not restarted since the Daymark checkpoint was created." }
     $installedRuntimeDependencies = Assert-DaymarkInstalledRuntime
     $vcRedistVersion = Assert-DaymarkVcRuntime
+    $protocolRegistered = Assert-DaymarkProtocolRegistration
     Assert-DaymarkAutomaticService | Out-Null
     Wait-DaymarkHealth | Out-Null
     $request = @{
@@ -40,6 +41,7 @@ if ($ResumeAfterRestart) {
         serviceAutomatic = $true
         installedRuntimeDependencies = $installedRuntimeDependencies
         vcRedistVersion = $vcRedistVersion
+        protocolRegistered = $protocolRegistered
         health = "ok"
         bookingPersistedAcrossMachineRestart = $true
         completedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -54,6 +56,7 @@ if (-not $ManualWarningConfirmed) {
 Invoke-DaymarkInstaller $Installer
 $installedRuntimeDependencies = Assert-DaymarkInstalledRuntime
 $vcRedistVersion = Assert-DaymarkVcRuntime
+$protocolRegistered = Assert-DaymarkProtocolRegistration
 Assert-DaymarkAutomaticService | Out-Null
 Wait-DaymarkHealth | Out-Null
 
@@ -123,6 +126,7 @@ Write-DaymarkSmokeResult @{
     serviceAutomatic = $true
     installedRuntimeDependencies = $installedRuntimeDependencies
     vcRedistVersion = $vcRedistVersion
+    protocolRegistered = $protocolRegistered
     health = "ok"
     firstCompanyCreated = $true
     manualWarningConfirmed = $true

@@ -119,6 +119,10 @@ fn check_health() -> HealthCheck {
     HealthCheck::NeedsAttention(health)
 }
 
+pub(crate) fn runtime_is_ready() -> bool {
+    matches!(check_health(), HealthCheck::Running(_))
+}
+
 fn read_http_response(reader: &mut impl Read) -> std::io::Result<String> {
     let mut response = Vec::new();
     let mut limited = reader.take(65_536);
