@@ -16,6 +16,7 @@ export async function getWorkspaceEmbedPreference(
       workspaceId: workspaceEmbedPreferences.workspaceId,
       defaultMode: workspaceEmbedPreferences.defaultMode,
       defaultServiceScope: workspaceEmbedPreferences.defaultServiceScope,
+      defaultServiceId: workspaceEmbedPreferences.defaultServiceId,
     })
     .from(workspaceEmbedPreferences)
     .where(eq(workspaceEmbedPreferences.workspaceId, scope.workspaceId))
@@ -28,13 +29,23 @@ export async function getWorkspaceEmbedPreference(
 
 export async function setWorkspaceEmbedPreference(
   admin: EmbedPreferenceAdminScope,
-  input: Pick<WorkspaceEmbedPreference, "defaultMode" | "defaultServiceScope">,
+  input: Pick<
+    WorkspaceEmbedPreference,
+    "defaultMode" | "defaultServiceScope" | "defaultServiceId"
+  >,
 ): Promise<boolean> {
+  const validServiceSelection = (
+    input.defaultServiceScope === "all"
+    && input.defaultServiceId === null
+  ) || (
+    input.defaultServiceScope === "service"
+    && validOpaqueId(input.defaultServiceId)
+  );
   if (
     !validOpaqueId(admin.membershipId)
     || !validOpaqueId(admin.workspaceId)
     || (input.defaultMode !== "floating" && input.defaultMode !== "inline")
-    || input.defaultServiceScope !== "all"
+    || !validServiceSelection
   ) {
     return false;
   }
@@ -42,9 +53,13 @@ export async function setWorkspaceEmbedPreference(
   const db = await database();
   const result = await db.run(sql`
     INSERT INTO workspace_embed_preferences
-      (workspace_id, default_mode, default_service_scope, created_at, updated_at)
+      (
+        workspace_id, default_mode, default_service_scope, default_service_id,
+        created_at, updated_at
+      )
     SELECT
       ${admin.workspaceId}, ${input.defaultMode}, ${input.defaultServiceScope},
+      ${input.defaultServiceId},
       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     WHERE EXISTS (
       SELECT 1
@@ -56,9 +71,26 @@ export async function setWorkspaceEmbedPreference(
         AND memberships.active = true
         AND workspaces.active = true
     )
+      AND (
+        (
+          ${input.defaultServiceScope} = 'all'
+          AND ${input.defaultServiceId} IS NULL
+        )
+        OR (
+          ${input.defaultServiceScope} = 'service'
+          AND EXISTS (
+            SELECT 1
+            FROM services
+            WHERE services.id = ${input.defaultServiceId}
+              AND services.workspace_id = ${admin.workspaceId}
+              AND services.active = true
+          )
+        )
+      )
     ON CONFLICT(workspace_id) DO UPDATE SET
       default_mode = excluded.default_mode,
       default_service_scope = excluded.default_service_scope,
+      default_service_id = excluded.default_service_id,
       updated_at = CURRENT_TIMESTAMP
   `);
   return result.meta.changes === 1;

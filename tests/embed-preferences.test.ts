@@ -29,6 +29,7 @@ function dependencies(actor: WorkspaceActor | null = admin) {
     workspaceId: "workspace-cedar",
     defaultMode: "floating",
     defaultServiceScope: "all",
+    defaultServiceId: null,
   };
   return {
     getActor: vi.fn().mockResolvedValue(actor),
@@ -65,6 +66,7 @@ describe("protected Embed preference reads", () => {
           workspaceId: "workspace-cedar",
           defaultMode: "floating",
           defaultServiceScope: "all",
+          defaultServiceId: null,
         },
       },
     });
@@ -79,8 +81,12 @@ describe("Embed preference mutations", () => {
     null,
     {},
     { action: "unknown" },
-    { action: "set-default", defaultMode: "drawer" },
-    { action: "set-default", defaultMode: "inline", extra: true },
+    { action: "set-default", defaultMode: "inline", defaultServiceScope: "all" },
+    { action: "set-default", defaultMode: "drawer", defaultServiceScope: "all", serviceId: null },
+    { action: "set-default", defaultMode: "inline", defaultServiceScope: "all", serviceId: null, extra: true },
+    { action: "set-default", defaultMode: "inline", defaultServiceScope: "all", serviceId: 42 },
+    { action: "import-profile", code: "DM1-C-F-2ZE7" },
+    { action: "import-profile", code: "DM1-C-F-2ZE7", serviceId: null, extra: true },
   ])("rejects malformed mutation %j before storage", async (input) => {
     const deps = dependencies();
 
@@ -96,6 +102,8 @@ describe("Embed preference mutations", () => {
     const result = await createEmbedPreferences(deps).mutate({
       action: "set-default",
       defaultMode: "inline",
+      defaultServiceScope: "all",
+      serviceId: null,
     });
 
     expect(result).toEqual({
@@ -106,30 +114,109 @@ describe("Embed preference mutations", () => {
           workspaceId: "workspace-cedar",
           defaultMode: "inline",
           defaultServiceScope: "all",
+          defaultServiceId: null,
         },
       },
     });
     expect(deps.setWorkspaceEmbedPreference).toHaveBeenCalledWith(
       { membershipId: "membership-admin", workspaceId: "workspace-cedar" },
-      { defaultMode: "inline", defaultServiceScope: "all" },
+      { defaultMode: "inline", defaultServiceScope: "all", defaultServiceId: null },
+    );
+  });
+
+  it("sets an explicit internal service default in the actor workspace", async () => {
+    const deps = dependencies();
+
+    const result = await createEmbedPreferences(deps).mutate({
+      action: "set-default",
+      defaultMode: "floating",
+      defaultServiceScope: "service",
+      serviceId: "service-camera",
+    });
+
+    expect(result).toMatchObject({
+      status: 200,
+      body: {
+        preference: {
+          defaultMode: "floating",
+          defaultServiceScope: "service",
+          defaultServiceId: "service-camera",
+        },
+      },
+    });
+    expect(deps.setWorkspaceEmbedPreference).toHaveBeenCalledWith(
+      { membershipId: "membership-admin", workspaceId: "workspace-cedar" },
+      {
+        defaultMode: "floating",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-camera",
+      },
     );
   });
 
   it.each([
-    ["DM1-C-F-2ZE7", "floating"],
-    ["dm1-c-i-355c", "inline"],
-  ] as const)("imports %s idempotently as %s", async (code, defaultMode) => {
+    ["catalogue scope with a service", {
+      action: "set-default",
+      defaultMode: "inline",
+      defaultServiceScope: "all",
+      serviceId: "service-camera",
+    }],
+    ["service scope without a service", {
+      action: "set-default",
+      defaultMode: "inline",
+      defaultServiceScope: "service",
+      serviceId: null,
+    }],
+    ["an unsafe service ID", {
+      action: "set-default",
+      defaultMode: "inline",
+      defaultServiceScope: "service",
+      serviceId: "camera service",
+    }],
+  ])("rejects %s before storage", async (_label, input) => {
+    const deps = dependencies();
+
+    const result = await createEmbedPreferences(deps).mutate(input);
+
+    expect(result.status).toBe(400);
+    expect(deps.setWorkspaceEmbedPreference).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["DM1-C-F-2ZE7", null, "floating", "all", null],
+    ["dm2-c-i-2sps", null, "inline", "all", null],
+    ["DM2-P-F-34D6", "service-camera", "floating", "service", "service-camera"],
+  ] as const)(
+    "imports %s idempotently with the requested service mapping",
+    async (code, serviceId, defaultMode, defaultServiceScope, defaultServiceId) => {
     const deps = dependencies();
     const service = createEmbedPreferences(deps);
 
-    const first = await service.mutate({ action: "import-profile", code });
-    const second = await service.mutate({ action: "import-profile", code });
+    const first = await service.mutate({ action: "import-profile", code, serviceId });
+    const second = await service.mutate({ action: "import-profile", code, serviceId });
 
     expect(first.status).toBe(200);
     expect(second).toMatchObject({
       status: 200,
-      body: { preference: { defaultMode, defaultServiceScope: "all" } },
+      body: { preference: { defaultMode, defaultServiceScope, defaultServiceId } },
     });
+    expect(deps.setWorkspaceEmbedPreference).toHaveBeenLastCalledWith(
+      { membershipId: "membership-admin", workspaceId: "workspace-cedar" },
+      { defaultMode, defaultServiceScope, defaultServiceId },
+    );
+  });
+
+  it.each([
+    ["catalogue import with a service", { action: "import-profile", code: "DM2-C-F-36UR", serviceId: "service-camera" }],
+    ["page import without a service", { action: "import-profile", code: "DM2-P-I-2Y6D", serviceId: null }],
+    ["page import with an unsafe service", { action: "import-profile", code: "DM2-P-I-2Y6D", serviceId: "camera service" }],
+  ])("rejects %s before storage", async (_label, input) => {
+    const deps = dependencies();
+
+    const result = await createEmbedPreferences(deps).mutate(input);
+
+    expect(result.status).toBe(400);
+    expect(deps.setWorkspaceEmbedPreference).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -142,6 +229,7 @@ describe("Embed preference mutations", () => {
     const result = await createEmbedPreferences(deps).mutate({
       action: "import-profile",
       code,
+      serviceId: null,
     });
 
     expect(result).toEqual({ status: 400, body: { ok: false, error: message } });
@@ -156,6 +244,8 @@ describe("Embed preference mutations", () => {
     const result = await createEmbedPreferences(deps).mutate({
       action: "set-default",
       defaultMode: "inline",
+      defaultServiceScope: "all",
+      serviceId: null,
     });
 
     expect(result).toEqual({
@@ -173,6 +263,8 @@ describe("Embed preference mutations", () => {
     const result = await createEmbedPreferences(deps).mutate({
       action: "set-default",
       defaultMode: "inline",
+      defaultServiceScope: "all",
+      serviceId: null,
     });
 
     expect(result).toEqual({

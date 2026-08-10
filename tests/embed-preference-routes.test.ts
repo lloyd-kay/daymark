@@ -37,12 +37,23 @@ describe("workspace Embed preference route security", () => {
     expect(preferences.mutate).not.toHaveBeenCalled();
   });
 
-  it("forwards same-origin parsed JSON with the workspace scope", async () => {
+  it.each([
+    [{
+      action: "set-default",
+      defaultMode: "inline",
+      defaultServiceScope: "all",
+      serviceId: null,
+    }],
+    [{
+      action: "import-profile",
+      code: "DM2-P-I-2Y6D",
+      serviceId: "service-camera",
+    }],
+  ])("forwards same-origin parsed JSON with the workspace scope", async (body) => {
     preferences.mutate.mockResolvedValue({
       status: 200,
       body: { ok: true, preference: { defaultMode: "inline" } },
     });
-    const body = { action: "import-profile", code: "DM1-C-I-355C" };
     const request = new Request(
       `${origin}/api/workspace/embed-preferences?workspace=cedar-house`,
       {

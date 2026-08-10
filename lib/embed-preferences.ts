@@ -1,6 +1,7 @@
 import type { WorkspaceActor } from "./auth/membership";
 import type {
   EmbedMode,
+  EmbedServiceScope,
   WorkspaceEmbedPreference,
 } from "./data/contracts";
 import type { EmbedPreferenceAdminScope } from "./data/embed-preference-repository";
@@ -16,7 +17,10 @@ type EmbedPreferenceDependencies = {
   ): Promise<WorkspaceEmbedPreference>;
   setWorkspaceEmbedPreference(
     admin: EmbedPreferenceAdminScope,
-    input: Pick<WorkspaceEmbedPreference, "defaultMode" | "defaultServiceScope">,
+    input: Pick<
+      WorkspaceEmbedPreference,
+      "defaultMode" | "defaultServiceScope" | "defaultServiceId"
+    >,
   ): Promise<boolean>;
 };
 
@@ -49,20 +53,42 @@ export function createEmbedPreferences(
 
       const body = raw as Record<string, unknown>;
       let defaultMode: EmbedMode;
+      let defaultServiceScope: EmbedServiceScope;
+      let defaultServiceId: string | null;
       if (body.action === "set-default") {
         if (
-          !hasExactKeys(body, ["action", "defaultMode"])
+          !hasExactKeys(body, [
+            "action",
+            "defaultMode",
+            "defaultServiceScope",
+            "serviceId",
+          ])
           || (body.defaultMode !== "floating" && body.defaultMode !== "inline")
+          || (body.defaultServiceScope !== "all" && body.defaultServiceScope !== "service")
+          || !validServiceId(body.serviceId)
+          || !validServiceSelection(body.defaultServiceScope, body.serviceId)
         ) {
           return badRequest();
         }
         defaultMode = body.defaultMode;
+        defaultServiceScope = body.defaultServiceScope;
+        defaultServiceId = body.serviceId;
       } else if (body.action === "import-profile") {
-        if (!hasExactKeys(body, ["action", "code"]) || typeof body.code !== "string") {
+        if (
+          !hasExactKeys(body, ["action", "code", "serviceId"])
+          || typeof body.code !== "string"
+          || !validServiceId(body.serviceId)
+        ) {
           return badRequest();
         }
         try {
-          defaultMode = decodeSetupProfile(body.code).layout;
+          const profile = decodeSetupProfile(body.code);
+          defaultMode = profile.layout;
+          defaultServiceScope = profile.journey === "catalogue" ? "all" : "service";
+          defaultServiceId = body.serviceId;
+          if (!validServiceSelection(defaultServiceScope, defaultServiceId)) {
+            return badRequest();
+          }
         } catch (error) {
           return error instanceof SetupProfileError
             ? setupProfileFailure(error)
@@ -79,7 +105,8 @@ export function createEmbedPreferences(
       try {
         const changed = await dependencies.setWorkspaceEmbedPreference(admin, {
           defaultMode,
-          defaultServiceScope: "all",
+          defaultServiceScope,
+          defaultServiceId,
         });
         if (!changed) return forbidden();
         const preference = await dependencies.getWorkspaceEmbedPreference({
@@ -91,6 +118,21 @@ export function createEmbedPreferences(
       }
     },
   };
+}
+
+function validServiceId(value: unknown): value is string | null {
+  return value === null || (
+    typeof value === "string"
+    && /^[A-Za-z0-9][A-Za-z0-9_-]{0,159}$/.test(value)
+  );
+}
+
+function validServiceSelection(
+  scope: EmbedServiceScope,
+  serviceId: string | null,
+): boolean {
+  return (scope === "all" && serviceId === null)
+    || (scope === "service" && serviceId !== null);
 }
 
 function hasExactKeys(
