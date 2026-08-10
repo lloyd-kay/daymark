@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowRight, KeyRound } from "lucide-react";
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 const GENERIC_ERROR = "We couldn't update your password. Check the details and try again.";
@@ -34,10 +33,10 @@ export function PasswordChangeGate({ displayName }: { displayName: string }) {
   return (
     <main className="workspace-gate">
       <header>
-        <Link className="brand-lockup" href="/">
+        <a className="brand-lockup" href="/">
           <span className="brand-mark" aria-hidden="true"><span /></span>
           <span>Daymark</span>
-        </Link>
+        </a>
         <span>Secure your account</span>
       </header>
       <section className="auth-card">

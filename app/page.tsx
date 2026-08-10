@@ -1,5 +1,4 @@
 import { ArrowDown, ArrowUpRight, LockKeyhole, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { DemoBookingFlow } from "./demo/DemoBookingFlow";
 import { WidgetOptionsShowcase } from "./home/WidgetOptionsShowcase";
 
@@ -19,7 +18,7 @@ export default function Home() {
         <nav className="product-nav" aria-label="Primary navigation">
           <a href="#how-it-works">How it works</a>
           <a href="#widget-options">Widget options</a>
-          <Link href="/workspace/sign-in">Staff sign in</Link>
+          <a href="/workspace/sign-in">Staff sign in</a>
         </nav>
       </header>
 
@@ -40,7 +39,7 @@ export default function Home() {
           <p className="hero-summary">Let clients choose the right person and a clear time to meet, while every employee’s working calendar remains private to them.</p>
           <div className="hero-actions">
             <a className="hero-action" href="#demo">Try the demonstration <ArrowDown size={16} aria-hidden="true" /></a>
-            <Link className="quiet-link hero-secondary" href="/get-daymark">Get Daymark <ArrowUpRight size={16} aria-hidden="true" /></Link>
+            <a className="quiet-link hero-secondary" href="/get-daymark">Get Daymark <ArrowUpRight size={16} aria-hidden="true" /></a>
           </div>
         </div>
         <aside className="hero-stamp product-stamp" aria-label="Daymark privacy promise">
@@ -79,7 +78,7 @@ export default function Home() {
         <div className="widget-setup">
           <p>
             Use the embed position that suits your layout, then{" "}
-            <Link href="/workspace/sign-in">sign in to the staff workspace</Link> to set it up.
+            <a href="/workspace/sign-in">sign in to the staff workspace</a> to set it up.
           </p>
           <p className="widget-contact-note">
             <span className="widget-contact-label">Custom fit</span>
@@ -90,7 +89,7 @@ export default function Home() {
 
       <footer className="site-footer product-footer">
         <p>Daymark keeps private calendars private and appointments clear.</p>
-        <div><Link href="/get-daymark">Get Daymark</Link><Link href="/workspace/sign-in">Staff sign in</Link></div>
+        <div><a href="/get-daymark">Get Daymark</a><a href="/workspace/sign-in">Staff sign in</a></div>
       </footer>
     </main>
   );

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getAccountSession } from "../../../lib/auth/membership";
 import { SignInPanel } from "../../workspace/sign-in/SignInPanel";
 import { JoinWorkspacePanel } from "./JoinWorkspacePanel";
@@ -21,7 +20,7 @@ export default async function JoinWorkspacePage({
   return (
     <main className="workspace-gate">
       <header>
-        <Link className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></Link>
+        <a className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></a>
         <span>Invitation-only access</span>
       </header>
       {session

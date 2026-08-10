@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { normalizeWorkspaceSlug } from "../../../../lib/workspaces/slug";
 import { SignInPanel } from "../../sign-in/SignInPanel";
 
@@ -17,7 +16,7 @@ export default async function CompanySignInPage({
   return (
     <main className="workspace-gate">
       <header>
-        <Link className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></Link>
+        <a className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></a>
         <span>Private company access</span>
       </header>
       <SignInPanel workspaceSlug={normalizeWorkspaceSlug(workspaceSlug)} setupAllowed={false} />

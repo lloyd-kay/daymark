@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAccountSession, getWorkspaceActor } from "../../../lib/auth/membership";
 import {
@@ -35,14 +34,14 @@ export default async function CompanyWorkspacePage({
     return (
       <main className="workspace-gate">
         <header>
-          <Link className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></Link>
+          <a className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></a>
           <span>Private company access</span>
         </header>
         <section className="auth-card">
           <p className="eyebrow">Access unavailable</p>
           <h1>Access not granted.</h1>
           <p>This account does not have access to this company workspace. Ask its administrator for a private invitation.</p>
-          <Link className="workspace-primary" href="/workspace">Your workspaces →</Link>
+          <a className="workspace-primary" href="/workspace">Your workspaces →</a>
         </section>
       </main>
     );

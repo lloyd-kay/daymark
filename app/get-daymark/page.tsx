@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ArrowLeft, Code2, HardDrive, ServerCog } from "lucide-react";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Get Daymark",
@@ -11,8 +10,8 @@ export default function GetDaymarkPage() {
   return (
     <main className="daymark-site get-daymark-page">
       <header className="site-header product-header">
-        <Link className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></Link>
-        <Link className="quiet-link" href="/"><ArrowLeft size={14} /> Back to the demonstration</Link>
+        <a className="brand-lockup" href="/"><span className="brand-mark" aria-hidden="true"><span /></span><span>Daymark</span></a>
+        <a className="quiet-link" href="/"><ArrowLeft size={14} /> Back to the demonstration</a>
       </header>
 
       <section className="get-daymark-intro">

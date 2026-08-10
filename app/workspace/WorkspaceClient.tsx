@@ -16,7 +16,6 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import type { WorkspaceActor } from "../../lib/auth/membership";
 import type {
@@ -247,10 +246,10 @@ export function WorkspaceClient({
   return (
     <main className="workspace-shell">
       <header className="workspace-header">
-        <Link className="brand-lockup" href="/">
+        <a className="brand-lockup" href="/">
           <span className="brand-mark" aria-hidden="true"><span /></span>
           <span>Daymark</span>
-        </Link>
+        </a>
         <nav aria-label="Workspace sections">
           <button className={view === "schedule" ? "is-active" : ""} onClick={() => setView("schedule")}>
             <CalendarDays size={16} /> Schedule
@@ -317,9 +316,9 @@ export function WorkspaceClient({
               ))}
             </div>
           ) : null}
-          <Link className="quiet-link" href="/">
+          <a className="quiet-link" href="/">
             <ArrowLeft size={14} /> Public booking page
-          </Link>
+          </a>
         </aside>
 
         <section className="workspace-content">

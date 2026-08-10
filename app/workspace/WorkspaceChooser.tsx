@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { WorkspaceSummary } from "../../lib/data/contracts";
 
 export function WorkspaceChooser({
@@ -11,10 +10,10 @@ export function WorkspaceChooser({
   return (
     <main className="workspace-gate workspace-chooser">
       <header>
-        <Link className="brand-lockup" href="/">
+        <a className="brand-lockup" href="/">
           <span className="brand-mark" aria-hidden="true"><span /></span>
           <span>Daymark</span>
-        </Link>
+        </a>
         <span>Private company access</span>
       </header>
       <section className="auth-card">
@@ -24,10 +23,10 @@ export function WorkspaceChooser({
         {workspaces.length ? (
           <div className="workspace-choice-list">
             {workspaces.map((workspace) => (
-              <Link key={workspace.slug} href={`/workspace/${workspace.slug}`}>
+              <a key={workspace.slug} href={`/workspace/${workspace.slug}`}>
                 <span><strong>{workspace.name}</strong><small>{workspace.role}</small></span>
                 <span aria-hidden="true">→</span>
-              </Link>
+              </a>
             ))}
           </div>
         ) : (
