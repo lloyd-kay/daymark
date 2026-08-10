@@ -134,7 +134,7 @@ test("repairs default availability after a partial initial seed", { timeout: 60_
     once(lines, "line"),
     once(child, "exit").then(([code]) => { throw new Error(`Runtime exited ${code}: ${stderr}`); }),
   ]);
-  const response = await fetch(`http://127.0.0.1:${port}/api/public/daymark/slots?employeeId=maya-chen&from=${nextMondayDateKey()}`);
+  const response = await fetch(`http://127.0.0.1:${port}/api/public/daymark/slots?serviceId=service-general-workspace-daymark&employeeId=maya-chen&from=${nextMondayDateKey()}`);
   const responseText = await response.text();
   assert.equal(response.status, 200, `${responseText}\n${stdout}\n${stderr}`);
   const result = JSON.parse(responseText);

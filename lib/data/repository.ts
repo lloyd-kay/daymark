@@ -2,9 +2,14 @@ import {
   and,
   asc,
   eq,
+  exists,
+  gte,
   gt,
   inArray,
   lt,
+  notExists,
+  or,
+  sql,
 } from "drizzle-orm";
 import {
   accounts,
@@ -28,6 +33,7 @@ import type {
   EmployeeProfileRecord,
   PublicEmployee,
   PublicBookingScope,
+  PublicService,
   PublicSlotResult,
   ScheduleEntry,
   ScheduleScope,
@@ -230,9 +236,48 @@ export async function purgeExpiredAppointments(
 
 export async function listPublicEmployees(
   scope: PublicBookingScope,
+  serviceId?: string,
+  now = new Date(),
 ): Promise<PublicEmployee[]> {
   await ensureSeedData();
   const db = await database();
+  if (serviceId) {
+    return db
+      .select({
+        id: employeeProfiles.id,
+        publicName: employeeProfiles.publicName,
+        title: employeeProfiles.title,
+        bio: employeeProfiles.bio,
+        accent: employeeProfiles.accent,
+      })
+      .from(employeeProfiles)
+      .innerJoin(
+        employeeServiceQualifications,
+        and(
+          eq(employeeServiceQualifications.employeeProfileId, employeeProfiles.id),
+          eq(employeeServiceQualifications.workspaceId, scope.workspaceId),
+        ),
+      )
+      .innerJoin(
+        services,
+        and(
+          eq(services.id, employeeServiceQualifications.serviceId),
+          eq(services.workspaceId, scope.workspaceId),
+        ),
+      )
+      .where(and(
+        eq(employeeProfiles.workspaceId, scope.workspaceId),
+        eq(employeeProfiles.active, true),
+        eq(services.id, serviceId),
+        eq(services.active, true),
+        publicQualificationPredicate(
+          scope.workspaceId,
+          toLondonDateKey(now),
+          serviceId,
+        ),
+      ))
+      .orderBy(asc(employeeProfiles.sortOrder));
+  }
   const rows = await db
     .select({
       id: employeeProfiles.id,
@@ -248,6 +293,78 @@ export async function listPublicEmployees(
     ))
     .orderBy(asc(employeeProfiles.sortOrder));
   return rows;
+}
+
+export async function listPublicServices(
+  scope: PublicBookingScope,
+  employeeId?: string,
+  now = new Date(),
+): Promise<PublicService[]> {
+  await ensureSeedData();
+  const db = await database();
+  const eligibleEmployee = exists(
+    db
+      .select({ id: employeeServiceQualifications.id })
+      .from(employeeServiceQualifications)
+      .innerJoin(
+        employeeProfiles,
+        and(
+          eq(employeeProfiles.id, employeeServiceQualifications.employeeProfileId),
+          eq(employeeProfiles.workspaceId, scope.workspaceId),
+        ),
+      )
+      .where(and(
+        eq(employeeServiceQualifications.serviceId, services.id),
+        eq(employeeProfiles.active, true),
+        publicQualificationPredicate(
+          scope.workspaceId,
+          toLondonDateKey(now),
+          undefined,
+          employeeId,
+        ),
+      )),
+  );
+  return db
+    .select({
+      id: services.id,
+      slug: services.slug,
+      name: services.name,
+      category: services.category,
+      description: services.description,
+      durationMinutes: services.durationMinutes,
+    })
+    .from(services)
+    .where(and(
+      eq(services.workspaceId, scope.workspaceId),
+      eq(services.active, true),
+      eligibleEmployee,
+    ))
+    .orderBy(asc(services.sortOrder), asc(services.name));
+}
+
+export function publicQualificationPredicate(
+  workspaceId: string,
+  today: string,
+  serviceId?: string,
+  employeeId?: string,
+) {
+  return and(
+    eq(employeeServiceQualifications.workspaceId, workspaceId),
+    eq(employeeServiceQualifications.active, true),
+    serviceId
+      ? eq(employeeServiceQualifications.serviceId, serviceId)
+      : undefined,
+    employeeId
+      ? eq(employeeServiceQualifications.employeeProfileId, employeeId)
+      : undefined,
+    or(
+      eq(employeeServiceQualifications.method, "manual"),
+      and(
+        eq(employeeServiceQualifications.method, "certificate"),
+        gte(employeeServiceQualifications.expiresOn, today),
+      ),
+    ),
+  );
 }
 
 export async function listTeamProfiles(
@@ -309,6 +426,7 @@ export function projectTeamProfile(row: TeamProfileProjection): TeamProfile {
 
 export async function listPublicSlots(
   scope: PublicBookingScope,
+  serviceId: string,
   employeeId: string,
   dateKeys: string[],
   now = new Date(),
@@ -317,24 +435,67 @@ export async function listPublicSlots(
   await ensureSeedData();
   await purgeExpiredAppointments(now);
   const db = await database();
-  const [employee] = await db
+  const [eligible] = await db
     .select({
-      id: employeeProfiles.id,
-      publicName: employeeProfiles.publicName,
-      title: employeeProfiles.title,
-      bio: employeeProfiles.bio,
-      accent: employeeProfiles.accent,
+      serviceId: services.id,
+      serviceSlug: services.slug,
+      serviceName: services.name,
+      serviceCategory: services.category,
+      serviceDescription: services.description,
+      serviceDurationMinutes: services.durationMinutes,
+      employeeId: employeeProfiles.id,
+      employeePublicName: employeeProfiles.publicName,
+      employeeTitle: employeeProfiles.title,
+      employeeBio: employeeProfiles.bio,
+      employeeAccent: employeeProfiles.accent,
     })
-    .from(employeeProfiles)
+    .from(employeeServiceQualifications)
+    .innerJoin(
+      services,
+      and(
+        eq(services.id, employeeServiceQualifications.serviceId),
+        eq(services.workspaceId, scope.workspaceId),
+      ),
+    )
+    .innerJoin(
+      employeeProfiles,
+      and(
+        eq(employeeProfiles.id, employeeServiceQualifications.employeeProfileId),
+        eq(employeeProfiles.workspaceId, scope.workspaceId),
+      ),
+    )
     .where(
       and(
+        eq(services.id, serviceId),
+        eq(services.active, true),
         eq(employeeProfiles.id, employeeId),
-        eq(employeeProfiles.workspaceId, scope.workspaceId),
         eq(employeeProfiles.active, true),
+        publicQualificationPredicate(
+          scope.workspaceId,
+          toLondonDateKey(now),
+          serviceId,
+          employeeId,
+        ),
       ),
     )
     .limit(1);
-  if (!employee) return null;
+  if (!eligible) return null;
+
+  const service: PublicService = {
+    id: eligible.serviceId,
+    slug: eligible.serviceSlug,
+    name: eligible.serviceName,
+    category: eligible.serviceCategory,
+    description: eligible.serviceDescription,
+    durationMinutes: eligible.serviceDurationMinutes,
+  };
+  const employee: PublicEmployee = {
+    id: eligible.employeeId,
+    publicName: eligible.employeePublicName,
+    title: eligible.employeeTitle,
+    bio: eligible.employeeBio,
+    accent: eligible.employeeAccent,
+  };
 
   const ruleRows = await db
     .select({
@@ -379,12 +540,14 @@ export async function listPublicSlots(
     );
 
   return {
+    service,
     employee,
     slots: computeBookableSlots({
       dateKeys,
       now,
       rules: ruleRows,
       busy: [...appointmentRows, ...blockRows],
+      durationMinutes: service.durationMinutes,
       zone: "Europe/London",
     }),
   };
@@ -396,25 +559,110 @@ export async function createBooking(
   now = new Date(),
 ): Promise<CreateBookingResult> {
   const dateKey = toLondonDateKey(new Date(input.startAt));
-  const result = await listPublicSlots(scope, input.employeeId, [dateKey], now);
+  const result = await listPublicSlots(
+    scope,
+    input.serviceId,
+    input.employeeId,
+    [dateKey],
+    now,
+  );
   const slot = result?.slots.find((candidate) => candidate.startAt === input.startAt);
   if (!result || !slot) return { ok: false, reason: "unavailable" };
 
   const reference = randomReference();
   const db = await database();
+  const appointmentId = crypto.randomUUID();
+  const timestamp = now.toISOString();
+  const guardedInsert = db.insert(appointments).select(
+    db
+      .select({
+        id: sql<string>`${appointmentId}`.as("id"),
+        workspaceId: sql<string>`${scope.workspaceId}`.as("workspace_id"),
+        publicReference: sql<string>`${reference}`.as("public_reference"),
+        serviceId: services.id,
+        serviceName: services.name,
+        serviceDurationMinutes: services.durationMinutes,
+        employeeProfileId: employeeProfiles.id,
+        startAt: sql<string>`${slot.startAt}`.as("start_at"),
+        endAt: sql<string>`${slot.endAt}`.as("end_at"),
+        clientName: sql<string>`${input.clientName}`.as("client_name"),
+        clientAddress: sql<string>`${input.clientAddress}`.as("client_address"),
+        clientEmail: sql<string | null>`${input.clientEmail}`.as("client_email"),
+        clientPhone: sql<string | null>`${input.clientPhone}`.as("client_phone"),
+        clientNote: sql<string>`${input.clientNote ?? ""}`.as("client_note"),
+        status: sql<"booked">`${"booked"}`.as("status"),
+        createdAt: sql<string>`${timestamp}`.as("created_at"),
+        updatedAt: sql<string>`${timestamp}`.as("updated_at"),
+      })
+      .from(employeeServiceQualifications)
+      .innerJoin(
+        services,
+        and(
+          eq(services.id, employeeServiceQualifications.serviceId),
+          eq(services.workspaceId, scope.workspaceId),
+        ),
+      )
+      .innerJoin(
+        employeeProfiles,
+        and(
+          eq(employeeProfiles.id, employeeServiceQualifications.employeeProfileId),
+          eq(employeeProfiles.workspaceId, scope.workspaceId),
+        ),
+      )
+      .where(and(
+        eq(services.id, input.serviceId),
+        eq(services.active, true),
+        eq(employeeProfiles.id, input.employeeId),
+        eq(employeeProfiles.active, true),
+        publicQualificationPredicate(
+          scope.workspaceId,
+          toLondonDateKey(now),
+          input.serviceId,
+          input.employeeId,
+        ),
+        notExists(
+          db
+            .select({ id: appointments.id })
+            .from(appointments)
+            .where(bookedAppointmentOverlapPredicate(
+              scope.workspaceId,
+              input.employeeId,
+              slot.startAt,
+              slot.endAt,
+            )),
+        ),
+      ))
+      .limit(1),
+  );
   try {
-    await db.insert(appointments).values(
-      appointmentInsertValues(scope, input, slot, reference, crypto.randomUUID()),
-    );
+    const inserted = await guardedInsert;
+    if (Number(inserted.meta?.changes ?? 0) !== 1) {
+      return { ok: false, reason: "slot-taken" };
+    }
   } catch (error) {
     if (isUniqueConstraint(error)) return { ok: false, reason: "slot-taken" };
     throw error;
   }
 
+  const [snapshot] = await db
+    .select({
+      serviceName: appointments.serviceName,
+      serviceDurationMinutes: appointments.serviceDurationMinutes,
+    })
+    .from(appointments)
+    .where(and(
+      eq(appointments.id, appointmentId),
+      eq(appointments.workspaceId, scope.workspaceId),
+    ))
+    .limit(1);
+  if (!snapshot) return { ok: false, reason: "slot-taken" };
+
   return {
     ok: true,
     booking: {
       reference,
+      serviceName: snapshot.serviceName,
+      serviceDurationMinutes: snapshot.serviceDurationMinutes,
       employeeName: result.employee.publicName,
       startAt: slot.startAt,
       endAt: slot.endAt,
@@ -425,6 +673,7 @@ export async function createBooking(
 export function appointmentInsertValues(
   scope: PublicBookingScope,
   input: CreateBookingInput,
+  service: Pick<PublicService, "id" | "name" | "durationMinutes">,
   slot: Pick<BookableSlot, "startAt" | "endAt">,
   reference: string,
   id: string,
@@ -433,6 +682,9 @@ export function appointmentInsertValues(
     id,
     workspaceId: scope.workspaceId,
     publicReference: reference,
+    serviceId: service.id,
+    serviceName: service.name,
+    serviceDurationMinutes: service.durationMinutes,
     employeeProfileId: input.employeeId,
     startAt: slot.startAt,
     endAt: slot.endAt,
@@ -443,6 +695,21 @@ export function appointmentInsertValues(
     clientNote: input.clientNote ?? "",
     status: "booked" as const,
   };
+}
+
+export function bookedAppointmentOverlapPredicate(
+  workspaceId: string,
+  employeeId: string,
+  startAt: string,
+  endAt: string,
+) {
+  return and(
+    eq(appointments.workspaceId, workspaceId),
+    eq(appointments.employeeProfileId, employeeId),
+    eq(appointments.status, "booked"),
+    lt(appointments.startAt, endAt),
+    gt(appointments.endAt, startAt),
+  );
 }
 
 export async function createInvitation(
@@ -514,6 +781,8 @@ export async function listSchedule(
     .select({
       id: appointments.id,
       reference: appointments.publicReference,
+      serviceName: appointments.serviceName,
+      serviceDurationMinutes: appointments.serviceDurationMinutes,
       employeeProfileId: appointments.employeeProfileId,
       employeeName: employeeProfiles.publicName,
       accent: employeeProfiles.accent,
@@ -548,6 +817,8 @@ export function projectScheduleEntry(entry: ScheduleEntry): ScheduleEntry {
   return {
     id: entry.id,
     reference: entry.reference,
+    serviceName: entry.serviceName,
+    serviceDurationMinutes: entry.serviceDurationMinutes,
     employeeProfileId: entry.employeeProfileId,
     employeeName: entry.employeeName,
     accent: entry.accent,

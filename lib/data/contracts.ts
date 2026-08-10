@@ -101,6 +101,8 @@ export type PublicBookingScope = {
 export type ScheduleEntry = {
   id: string;
   reference: string;
+  serviceName: string;
+  serviceDurationMinutes: number;
   employeeProfileId: string;
   employeeName: string;
   accent: string;
@@ -115,6 +117,7 @@ export type ScheduleEntry = {
 };
 
 export type CreateBookingInput = {
+  serviceId: string;
   employeeId: string;
   startAt: string;
   clientName: string;
@@ -143,6 +146,8 @@ export type CreateBookingResult =
       ok: true;
       booking: {
         reference: string;
+        serviceName: string;
+        serviceDurationMinutes: number;
         employeeName: string;
         startAt: string;
         endAt: string;
@@ -157,6 +162,7 @@ export type EmployeeAvailability = {
 };
 
 export type PublicSlotResult = {
+  service: PublicService;
   employee: PublicEmployee;
   slots: BookableSlot[];
 };

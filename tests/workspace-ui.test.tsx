@@ -265,6 +265,8 @@ describe("workspace role gates and protected details", () => {
     const entry: ScheduleEntry = {
       id: "appointment-1",
       reference: "DM-7K4P2Q",
+      serviceName: "Camera installation",
+      serviceDurationMinutes: 90,
       employeeProfileId: "maya-chen",
       employeeName: "Maya Chen",
       accent: "coral",
@@ -282,6 +284,7 @@ describe("workspace role gates and protected details", () => {
     expect(container.textContent).toContain("14 Example Street, London, N1 1AA");
     expect(container.textContent).toContain("lloyd@example.com");
     expect(container.textContent).toContain("+44 20 7946 0958");
+    expect(container.textContent).toContain("Camera installation · 1 hr 30 min");
   });
 });
 

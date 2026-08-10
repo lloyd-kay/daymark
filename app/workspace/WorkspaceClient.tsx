@@ -378,6 +378,9 @@ export function WorkspaceClient({
                               >
                                 <time>{formatTime(entry.startAt)}</time>
                                 {actor.role === "admin" ? <small>{entry.employeeName}</small> : null}
+                                <small className="appointment-service">
+                                  {entry.serviceName} · {formatDuration(entry.serviceDurationMinutes)}
+                                </small>
                                 <strong>{entry.clientName}</strong>
                                 <span>{entry.clientAddress}</span>
                                 {entry.clientEmail ? <span>{entry.clientEmail}</span> : null}
@@ -566,6 +569,13 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatDuration(minutes: number) {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
 function formatFullDate(value: string) {

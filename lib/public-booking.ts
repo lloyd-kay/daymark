@@ -3,13 +3,24 @@ import type {
   CreateBookingResult,
   PublicBookingScope,
   PublicEmployee,
+  PublicService,
   PublicSlotResult,
 } from "./data/contracts";
 
 type PublicBookingDependencies = {
-  listPublicEmployees: (scope: PublicBookingScope) => Promise<PublicEmployee[]>;
+  listPublicServices: (
+    scope: PublicBookingScope,
+    employeeId?: string,
+    now?: Date,
+  ) => Promise<PublicService[]>;
+  listPublicEmployees: (
+    scope: PublicBookingScope,
+    serviceId?: string,
+    now?: Date,
+  ) => Promise<PublicEmployee[]>;
   listPublicSlots: (
     scope: PublicBookingScope,
+    serviceId: string,
     employeeId: string,
     dateKeys: string[],
     now: Date,
@@ -28,8 +39,36 @@ export function createPublicBookingService(
   dependencies: PublicBookingDependencies,
 ) {
   return {
-    async employees(): Promise<ServiceResult> {
-      const rows = await dependencies.listPublicEmployees(scope);
+    async services(
+      query: { employeeId?: string | null } = {},
+      now = new Date(),
+    ): Promise<ServiceResult> {
+      if (query.employeeId && !validEmployeeId(query.employeeId)) {
+        return {
+          status: 400,
+          body: { ok: false, error: "Choose a valid person." },
+        };
+      }
+      const rows = await dependencies.listPublicServices(
+        scope,
+        query.employeeId ?? undefined,
+        now,
+      );
+      const services = rows.map(toPublicService);
+      return { status: 200, body: { services } };
+    },
+
+    async employees(
+      query: { serviceId?: string | null },
+      now = new Date(),
+    ): Promise<ServiceResult> {
+      if (!validServiceId(query.serviceId)) {
+        return {
+          status: 400,
+          body: { ok: false, error: "Choose a valid service." },
+        };
+      }
+      const rows = await dependencies.listPublicEmployees(scope, query.serviceId, now);
       const employees = rows.map((employee) => ({
         id: employee.id,
         publicName: employee.publicName,
@@ -41,10 +80,18 @@ export function createPublicBookingService(
     },
 
     async slots(
-      query: { employeeId?: string | null; from?: string | null },
+      query: {
+        serviceId?: string | null;
+        employeeId?: string | null;
+        from?: string | null;
+      },
       now = new Date(),
     ): Promise<ServiceResult> {
-      if (!validEmployeeId(query.employeeId) || !validDateKey(query.from)) {
+      if (
+        !validServiceId(query.serviceId)
+        || !validEmployeeId(query.employeeId)
+        || !validDateKey(query.from)
+      ) {
         return {
           status: 400,
           body: { ok: false, error: "Choose a valid person and date." },
@@ -53,6 +100,7 @@ export function createPublicBookingService(
       const dateKeys = consecutiveDateKeys(query.from, 14);
       const result = await dependencies.listPublicSlots(
         scope,
+        query.serviceId,
         query.employeeId,
         dateKeys,
         now,
@@ -66,6 +114,7 @@ export function createPublicBookingService(
       return {
         status: 200,
         body: {
+          service: toPublicService(result.service),
           employee: {
             id: result.employee.id,
             publicName: result.employee.publicName,
@@ -103,6 +152,8 @@ export function createPublicBookingService(
           ok: true,
           booking: {
             reference: result.booking.reference,
+            serviceName: result.booking.serviceName,
+            serviceDurationMinutes: result.booking.serviceDurationMinutes,
             employeeName: result.booking.employeeName,
             startAt: result.booking.startAt,
             endAt: result.booking.endAt,
@@ -126,6 +177,9 @@ function parseBookingInput(
     return { ok: false, error: "Check the booking details and try again." };
   }
   const input = value as Record<string, unknown>;
+  if (!validServiceId(input.serviceId)) {
+    return { ok: false, error: "Choose a valid service." };
+  }
   if (!validEmployeeId(input.employeeId)) {
     return { ok: false, error: "Choose a valid person." };
   }
@@ -170,6 +224,7 @@ function parseBookingInput(
   return {
     ok: true,
     data: {
+      serviceId: input.serviceId,
       employeeId: input.employeeId,
       startAt: input.startAt,
       clientName: input.clientName.trim(),
@@ -199,6 +254,22 @@ export function maskContact(email: string | null, phone: string | null): string 
 
 function validEmployeeId(value: unknown): value is string {
   return typeof value === "string" && /^[a-z0-9](?:[a-z0-9-]{1,62}[a-z0-9])?$/.test(value);
+}
+
+function validServiceId(value: unknown): value is string {
+  return typeof value === "string"
+    && /^[A-Za-z0-9][A-Za-z0-9_-]{0,159}$/.test(value);
+}
+
+function toPublicService(service: PublicService): PublicService {
+  return {
+    id: service.id,
+    slug: service.slug,
+    name: service.name,
+    category: service.category,
+    description: service.description,
+    durationMinutes: service.durationMinutes,
+  };
 }
 
 function validDateKey(value: unknown): value is string {

@@ -1,4 +1,9 @@
-import { createBooking, listPublicEmployees, listPublicSlots } from "../../../../../lib/data/repository";
+import {
+  createBooking,
+  listPublicEmployees,
+  listPublicServices,
+  listPublicSlots,
+} from "../../../../../lib/data/repository";
 import { noStoreJson, safeJson } from "../../../../../lib/http";
 import { createPublicBookingService } from "../../../../../lib/public-booking";
 import { resolvePublicWorkspace } from "../../../../../lib/workspaces/public-scope";
@@ -11,6 +16,7 @@ export async function POST(
   const scope = await resolvePublicWorkspace(workspaceSlug);
   if (!scope) return notFound();
   const result = await createPublicBookingService(scope, {
+    listPublicServices,
     listPublicEmployees,
     listPublicSlots,
     createBooking,

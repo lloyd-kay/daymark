@@ -16,6 +16,7 @@ export type SlotSearchInput = {
   now: Date;
   rules: AvailabilityRule[];
   busy: TimeRange[];
+  durationMinutes: number;
   zone: "Europe/London";
 };
 
