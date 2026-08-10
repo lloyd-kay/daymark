@@ -1,0 +1,13 @@
+{
+  "valid": [
+    { "code": "DM1-C-F-2ZE7", "layout": "floating" },
+    { "code": "DM1-C-I-355C", "layout": "inline" }
+  ],
+  "invalid": [
+    "DM1-C-F-2ZE8",
+    "DM1-C-X-2ZE7",
+    "DM2-C-F-2ZE7",
+    "DM1-C-F-2ZE7-EXTRA",
+    "DM1 C F 2ZE7"
+  ]
+}
