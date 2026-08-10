@@ -54,6 +54,7 @@ describe("workspace embed preference schema", () => {
     expect(columns.workspaceId.notNull).toBe(true);
     expect(columns.defaultMode.notNull).toBe(true);
     expect(columns.defaultServiceScope.notNull).toBe(true);
+    expect(columns.defaultServiceId.notNull).toBe(false);
     expect(columns.createdAt.notNull).toBe(true);
     expect(columns.updatedAt.notNull).toBe(true);
   });
@@ -69,6 +70,26 @@ describe("workspace embed preference schema", () => {
     expect(migration).toMatch(
       /insert into `workspace_embed_preferences`[\s\S]+select `id`, 'floating', 'all'[\s\S]+from `workspaces`/i,
     );
+  });
+
+  it("migrates catalogue preferences to the constrained service-scope schema", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0006_service_scope_widget_defaults.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration).toMatch(/pragma foreign_keys\s*=\s*off/i);
+    expect(migration).toMatch(/create unique index `idx_services_workspace_id`/i);
+    expect(migration).toMatch(/`default_service_id` text/i);
+    expect(migration).toMatch(
+      /foreign key \(`workspace_id`,`default_service_id`\) references `services`\(`workspace_id`,`id`\)/i,
+    );
+    expect(migration).toMatch(
+      /select "workspace_id", "default_mode", 'all', null, "created_at", "updated_at" from `workspace_embed_preferences`/i,
+    );
+    expect(migration).toMatch(/pragma foreign_key_check/i);
+    expect(migration).toMatch(/pragma optimize/i);
+    expect(migration).toMatch(/pragma foreign_keys\s*=\s*on/i);
   });
 });
 

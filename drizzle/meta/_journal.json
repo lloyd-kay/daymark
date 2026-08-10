@@ -43,6 +43,13 @@
       "when": 1786389597616,
       "tag": "0005_daymark_embed_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786395889394,
+      "tag": "0006_service_scope_widget_defaults",
+      "breakpoints": true
     }
   ]
 }

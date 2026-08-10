@@ -49,7 +49,7 @@ test("starts Daymark with persistent local D1 and reports healthy", { timeout: 6
   assert.deepEqual(await response.json(), {
     status: "ok",
     appVersion: "0.1.1",
-    latestMigration: "0005_daymark_embed_preferences.sql",
+    latestMigration: "0006_service_scope_widget_defaults.sql",
   });
 
   const backup = await runCli([
@@ -223,7 +223,7 @@ test("backfills General service data for a controlled legacy appointment", { tim
   assert.deepEqual(foreignKeys.results, []);
 });
 
-test("backfills a floating full-catalogue Embed default for an existing workspace", async (context) => {
+test("preserves an existing Inline full-catalogue preference through the service-scope migration", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "daymark-runtime-legacy-embed-"));
   const databaseRuntime = new Miniflare({
     modules: true,
@@ -247,19 +247,29 @@ test("backfills a floating full-catalogue Embed default for an existing workspac
   }
 
   await applySqlMigration(database, "0005_daymark_embed_preferences.sql");
+  await database.prepare(`
+    update workspace_embed_preferences
+    set default_mode = 'inline'
+    where workspace_id = 'workspace-daymark'
+  `).run();
+  await applySqlMigration(database, "0006_service_scope_widget_defaults.sql");
 
   assert.deepEqual(
     await database.prepare(`
       select workspace_id as workspaceId, default_mode as defaultMode,
-             default_service_scope as defaultServiceScope
+             default_service_scope as defaultServiceScope,
+             default_service_id as defaultServiceId
       from workspace_embed_preferences where workspace_id = 'workspace-daymark'
     `).first(),
     {
       workspaceId: "workspace-daymark",
-      defaultMode: "floating",
+      defaultMode: "inline",
       defaultServiceScope: "all",
+      defaultServiceId: null,
     },
   );
+  const foreignKeys = await database.prepare("PRAGMA foreign_key_check").all();
+  assert.deepEqual(foreignKeys.results, []);
 });
 
 test("rejects a backup when no migrated Daymark database exists", async (context) => {

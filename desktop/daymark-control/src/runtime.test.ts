@@ -12,7 +12,7 @@ describe("runtime contracts", () => {
         localUrl: "http://127.0.0.1:3210",
         publicUrl: null,
         version: "0.1.0",
-        latestMigration: "0005_daymark_embed_preferences.sql",
+        latestMigration: "0006_service_scope_widget_defaults.sql",
         message: null,
       }).state,
     ).toBe("running");
@@ -32,7 +32,7 @@ describe("runtime contracts", () => {
       localUrl: "http://127.0.0.1:3210",
       publicUrl: null,
       version: "0.1.0",
-      latestMigration: "0005_daymark_embed_preferences.sql",
+      latestMigration: "0006_service_scope_widget_defaults.sql",
       message: null,
     };
 

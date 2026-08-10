@@ -93,12 +93,13 @@ export type WorkspaceSummary = {
 };
 
 export type EmbedMode = "floating" | "inline";
-export type EmbedServiceScope = "all";
+export type EmbedServiceScope = "all" | "service";
 
 export type WorkspaceEmbedPreference = {
   workspaceId: string;
   defaultMode: EmbedMode;
   defaultServiceScope: EmbedServiceScope;
+  defaultServiceId: string | null;
 };
 
 export type PublicBookingScope = {

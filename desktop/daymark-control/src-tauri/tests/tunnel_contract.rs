@@ -36,7 +36,7 @@ fn public_access_failure_does_not_change_local_runtime_health() {
         local_url: "http://127.0.0.1:3210".to_string(),
         public_url: None,
         version: "0.1.0".to_string(),
-        latest_migration: "0005_daymark_embed_preferences.sql".to_string(),
+        latest_migration: "0006_service_scope_widget_defaults.sql".to_string(),
         message: None,
     };
 

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  foreignKey,
   index,
   integer,
   sqliteTable,
@@ -32,32 +33,6 @@ export const workspaces = sqliteTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("idx_workspaces_slug").on(table.slug)],
-);
-
-export const workspaceEmbedPreferences = sqliteTable(
-  "workspace_embed_preferences",
-  {
-    workspaceId: text("workspace_id")
-      .primaryKey()
-      .references(() => workspaces.id, { onDelete: "cascade" }),
-    defaultMode: text("default_mode")
-      .$type<"floating" | "inline">()
-      .notNull(),
-    defaultServiceScope: text("default_service_scope")
-      .$type<"all">()
-      .notNull(),
-    ...timestamps,
-  },
-  (table) => [
-    check(
-      "workspace_embed_preferences_default_mode_check",
-      sql`${table.defaultMode} in ('floating', 'inline')`,
-    ),
-    check(
-      "workspace_embed_preferences_service_scope_check",
-      sql`${table.defaultServiceScope} in ('all')`,
-    ),
-  ],
 );
 
 export const accounts = sqliteTable(
@@ -142,6 +117,7 @@ export const services = sqliteTable(
   },
   (table) => [
     uniqueIndex("idx_services_workspace_slug").on(table.workspaceId, table.slug),
+    uniqueIndex("idx_services_workspace_id").on(table.workspaceId, table.id),
     index("idx_services_workspace_active_sort").on(
       table.workspaceId,
       table.active,
@@ -151,6 +127,42 @@ export const services = sqliteTable(
       "services_duration_check",
       sql`${table.durationMinutes} between 15 and 480 and ${table.durationMinutes} % 15 = 0`,
     ),
+  ],
+);
+
+export const workspaceEmbedPreferences = sqliteTable(
+  "workspace_embed_preferences",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    defaultMode: text("default_mode")
+      .$type<"floating" | "inline">()
+      .notNull(),
+    defaultServiceScope: text("default_service_scope")
+      .$type<"all" | "service">()
+      .notNull(),
+    defaultServiceId: text("default_service_id"),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "workspace_embed_preferences_default_mode_check",
+      sql`${table.defaultMode} in ('floating', 'inline')`,
+    ),
+    check(
+      "workspace_embed_preferences_service_scope_check",
+      sql`(
+        ${table.defaultServiceScope} = 'all' and ${table.defaultServiceId} is null
+      ) or (
+        ${table.defaultServiceScope} = 'service' and ${table.defaultServiceId} is not null
+      )`,
+    ),
+    foreignKey({
+      name: "workspace_embed_preferences_service_workspace_fk",
+      columns: [table.workspaceId, table.defaultServiceId],
+      foreignColumns: [services.workspaceId, services.id],
+    }),
   ],
 );
 
