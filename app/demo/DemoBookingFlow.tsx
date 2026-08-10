@@ -1,15 +1,49 @@
 "use client";
 
-import { DEMO_SERVICES, demoBookingTransport } from "../../lib/booking/demo";
+import { useEffect, useRef, useState } from "react";
+import {
+  DEMO_SERVICES,
+  demoBookingTransport,
+  demoScenario,
+  type DemoServiceKey,
+} from "../../lib/booking/demo";
 import { BookingFlow } from "../booking/BookingFlow";
 
-export function DemoBookingFlow() {
+export function DemoBookingFlow({
+  journey = "catalogue",
+  demoService = "camera",
+}: {
+  journey?: "catalogue" | "page-service";
+  demoService?: DemoServiceKey;
+} = {}) {
+  const scenario = demoScenario(demoService);
+  const fixedService = journey === "page-service";
+  const resetKey = `${journey}:${demoService}`;
+  const container = useRef<HTMLDivElement>(null);
+  const previousResetKey = useRef(resetKey);
+  const [resetMessage, setResetMessage] = useState("");
+
+  useEffect(() => {
+    if (previousResetKey.current === resetKey) return;
+    previousResetKey.current = resetKey;
+    const timer = window.setTimeout(() => {
+      setResetMessage(`Demonstration reset for ${scenario.service.name}.`);
+      container.current?.querySelector<HTMLElement>(".stage-title h3")?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [resetKey, scenario.service.name]);
+
   return (
-    <BookingFlow
-      initialServices={DEMO_SERVICES}
-      initialEmployees={[]}
-      transport={demoBookingTransport}
-      demonstration
-    />
+    <div className="demo-booking-flow" ref={container}>
+      <span className="sr-only" role="status" aria-live="polite">{resetMessage}</span>
+      <BookingFlow
+        key={resetKey}
+        initialServices={fixedService ? [scenario.service] : DEMO_SERVICES}
+        initialServiceId={fixedService ? scenario.service.id : undefined}
+        initialEmployees={fixedService ? scenario.employees : []}
+        transport={demoBookingTransport}
+        demonstration
+      />
+    </div>
   );
 }

@@ -5,12 +5,28 @@ import {
 } from "../lib/booking/transport";
 import {
   DEMO_SERVICES,
+  demoScenario,
   demoBookingTransport,
 } from "../lib/booking/demo";
 
 const liveBookingTransport = createLiveBookingTransport("cedar-house");
 
 describe("demonstration booking transport", () => {
+  it.each([
+    ["camera", "Camera installation", 90, ["Maya Chen", "Jon Bell"]],
+    ["alarm", "Alarm installation", 120, ["Theo Brooks", "Priya Shah"]],
+  ] as const)("selects the canonical %s demonstration scenario", (
+    key,
+    serviceName,
+    durationMinutes,
+    employeeNames,
+  ) => {
+    const scenario = demoScenario(key);
+
+    expect(scenario.service).toMatchObject({ name: serviceName, durationMinutes });
+    expect(scenario.employees.map((employee) => employee.publicName)).toEqual(employeeNames);
+  });
+
   it("offers the exact smart-home catalogue and service-qualified installers", async () => {
     expect(DEMO_SERVICES.map(({ id, durationMinutes }) => ({ id, durationMinutes }))).toEqual([
       { id: "service-demo-camera-installation", durationMinutes: 90 },

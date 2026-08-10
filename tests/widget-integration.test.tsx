@@ -221,6 +221,50 @@ describe("Embed service resolution", () => {
 });
 
 describe("DemoBookingFlow", () => {
+  it("resets a controlled page-specific demonstration when its sample service changes", async () => {
+    const view = await render(createElement(DemoBookingFlow, {
+      journey: "page-service",
+      demoService: "camera",
+    }));
+
+    expect(view.container.textContent).toContain("Who should deliver this service?");
+    expect(view.container.textContent).toContain("Camera installation");
+    expect(view.container.textContent).toContain("1 hr 30 min");
+    expect(view.container.textContent).toContain("Maya Chen");
+    expect(view.container.textContent).toContain("Jon Bell");
+    expect(view.container.textContent).not.toContain("Theo Brooks");
+    expect(view.container.textContent).not.toContain("Priya Shah");
+    expect(view.container.textContent).not.toContain("Which service do you need?");
+
+    const maya = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".person-tab"))
+      .find((button) => button.textContent?.includes("Maya Chen"));
+    await click(maya!);
+    expect(view.container.textContent).toContain("Which day suits you?");
+
+    await act(async () => {
+      view.root.render(createElement(DemoBookingFlow, {
+        journey: "page-service",
+        demoService: "alarm",
+      }));
+    });
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
+
+    expect(view.container.textContent).toContain("Who should deliver this service?");
+    expect(view.container.textContent).toContain("Alarm installation");
+    expect(view.container.textContent).toContain("2 hours");
+    expect(view.container.textContent).toContain("Theo Brooks");
+    expect(view.container.textContent).toContain("Priya Shah");
+    expect(view.container.textContent).not.toContain("Maya Chen");
+    expect(view.container.textContent).not.toContain("Jon Bell");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .toContain("Demonstration reset for Alarm installation");
+    expect(document.activeElement).toBe(
+      view.container.querySelector(".stage-title h3"),
+    );
+
+    await act(async () => view.root.unmount());
+  });
+
   it("filters the smart-home catalogue and completes locally without a widget event", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const complete = vi.fn();

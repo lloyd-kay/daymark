@@ -25,6 +25,8 @@ const DEMO_SLOT_TIMES = [
   "16:00:00.000Z",
 ] as const;
 
+export type DemoServiceKey = "camera" | "alarm";
+
 export const DEMO_SERVICES: PublicService[] = [
   {
     id: "service-demo-camera-installation",
@@ -56,11 +58,23 @@ const ELIGIBLE_EMPLOYEE_IDS: Record<string, readonly string[]> = {
   "service-demo-alarm-installation": ["theo-brooks", "priya-shah"],
 };
 
+const DEMO_SERVICE_IDS: Record<DemoServiceKey, string> = {
+  camera: "service-demo-camera-installation",
+  alarm: "service-demo-alarm-installation",
+};
+
+export function demoScenario(serviceKey: DemoServiceKey): {
+  service: PublicService;
+  employees: PublicEmployee[];
+} {
+  const service = requireService(DEMO_SERVICE_IDS[serviceKey]);
+  return { service, employees: eligibleEmployees(service) };
+}
+
 export const demoBookingTransport: BookingTransport = {
   async loadEmployees(serviceId) {
     const service = requireService(serviceId);
-    const eligibleIds = new Set(ELIGIBLE_EMPLOYEE_IDS[service.id]);
-    return DEMO_EMPLOYEES.filter((employee) => eligibleIds.has(employee.id));
+    return eligibleEmployees(service);
   },
 
   async loadSlots(serviceId, employeeId) {
@@ -103,10 +117,9 @@ function requireEligibleEmployee(
   service: PublicService,
   employeeId: string,
 ): PublicEmployee {
-  const eligibleIds = ELIGIBLE_EMPLOYEE_IDS[service.id] ?? [];
-  const employee = eligibleIds.includes(employeeId)
-    ? DEMO_EMPLOYEES.find((candidate) => candidate.id === employeeId)
-    : null;
+  const employee = eligibleEmployees(service).find(
+    (candidate) => candidate.id === employeeId,
+  );
   if (!employee) {
     throw new BookingTransportError(
       "That installer is not available for this service.",
@@ -114,6 +127,11 @@ function requireEligibleEmployee(
     );
   }
   return employee;
+}
+
+function eligibleEmployees(service: PublicService): PublicEmployee[] {
+  const eligibleIds = new Set(ELIGIBLE_EMPLOYEE_IDS[service.id] ?? []);
+  return DEMO_EMPLOYEES.filter((employee) => eligibleIds.has(employee.id));
 }
 
 function maskedContact(input: CreateBookingInput): string {
