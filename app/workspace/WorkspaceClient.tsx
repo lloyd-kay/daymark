@@ -66,6 +66,7 @@ export function WorkspaceClient({
   const [view, setView] = useState<WorkspaceView>(initialView);
   const [profiles, setProfiles] = useState(initialProfiles);
   const [services, setServices] = useState(initialServices);
+  const [embedPreference, setEmbedPreference] = useState(initialEmbedPreference);
   const [entries, setEntries] = useState(initialEntries);
   const [range, setRange] = useState(initialRange);
   const [scheduleFilter, setScheduleFilter] = useState(
@@ -529,7 +530,8 @@ export function WorkspaceClient({
               workspaceSlug={actor.workspaceSlug}
               profiles={profiles}
               services={services}
-              initialPreference={initialEmbedPreference}
+              initialPreference={embedPreference}
+              onPreferenceSaved={setEmbedPreference}
             />
           ) : null}
         </section>

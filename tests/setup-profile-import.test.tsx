@@ -258,6 +258,19 @@ describe("existing workspace import", () => {
       .toBe("service-alarm");
   });
 
+  it("renders a clean active-service loading message", async () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => undefined));
+    const container = await renderPanel({
+      initialCode: "DM2-P-I-2Y6D",
+      adminWorkspaces: [cedar],
+    });
+    await act(async () => Promise.resolve());
+
+    expect(container.querySelector(".setup-profile-service-status")?.textContent)
+      .toBe("Loading active services…");
+    expect(container.textContent).not.toContain("â€¦");
+  });
+
   it("ignores a stale service response from the previously selected workspace", async () => {
     let resolveCedar!: (response: Response) => void;
     let resolveHarbour!: (response: Response) => void;

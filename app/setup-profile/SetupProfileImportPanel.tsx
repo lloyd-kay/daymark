@@ -207,7 +207,7 @@ export function SetupProfileImportPanel({
               <div className="setup-profile-service" aria-busy={servicesLoading}>
                 {servicesLoading ? (
                   <p className="setup-profile-service-status" role="status">
-                    Loading active servicesâ€¦
+                    Loading active services…
                   </p>
                 ) : servicesError ? (
                   <div className="setup-profile-service-error">

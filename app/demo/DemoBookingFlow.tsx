@@ -19,6 +19,9 @@ export function DemoBookingFlow({
   const scenario = demoScenario(demoService);
   const fixedService = journey === "page-service";
   const resetKey = `${journey}:${demoService}`;
+  const resetLabel = fixedService
+    ? scenario.service.name
+    : "the full service catalogue";
   const container = useRef<HTMLDivElement>(null);
   const previousResetKey = useRef(resetKey);
   const [resetMessage, setResetMessage] = useState("");
@@ -27,11 +30,11 @@ export function DemoBookingFlow({
     if (previousResetKey.current === resetKey) return;
     previousResetKey.current = resetKey;
     const timer = window.setTimeout(() => {
-      setResetMessage(`Demonstration reset for ${scenario.service.name}.`);
+      setResetMessage(`Demonstration reset for ${resetLabel}.`);
       container.current?.querySelector<HTMLElement>(".stage-title h3")?.focus();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [resetKey, scenario.service.name]);
+  }, [resetKey, resetLabel]);
 
   return (
     <div className="demo-booking-flow" ref={container}>

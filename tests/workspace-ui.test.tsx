@@ -650,6 +650,53 @@ describe("workspace role gates and protected details", () => {
     expect(container.querySelector(".embed-panel")).not.toBeNull();
     expect(buttonNamed(container, "Embed").classList.contains("is-active")).toBe(true);
   });
+
+  it("keeps a saved Embed default after leaving and returning to the view", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(200, {
+      ok: true,
+      preference: {
+        workspaceId: "workspace-cedar",
+        defaultMode: "inline",
+        defaultServiceScope: "service",
+        defaultServiceId: "service-alarm",
+      },
+    }));
+    const { container } = await renderWorkspace(
+      admin,
+      profiles,
+      [],
+      [qualifiedCamera, alarmService],
+      "embed",
+    );
+
+    await act(async () => {
+      container.querySelector<HTMLInputElement>('input[value="inline"]')!.click();
+      container.querySelector<HTMLInputElement>('input[value="preselected"]')!.click();
+    });
+    await changeSelect(
+      container.querySelector<HTMLSelectElement>('select[name="embed-service"]')!,
+      "service-alarm",
+    );
+    await act(async () => buttonNamed(container, "Save as workspace default").click());
+
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Inline widget · Alarm installation");
+
+    await act(async () => buttonNamed(container, "Schedule").click());
+    expect(container.querySelector(".embed-panel")).toBeNull();
+    await act(async () => buttonNamed(container, "Embed").click());
+
+    expect(container.querySelector<HTMLInputElement>('input[value="inline"]')?.checked)
+      .toBe(true);
+    expect(container.querySelector<HTMLInputElement>('input[value="preselected"]')?.checked)
+      .toBe(true);
+    expect(container.querySelector<HTMLSelectElement>('select[name="embed-service"]')?.value)
+      .toBe("service-alarm");
+    expect(container.querySelector(".embed-default-summary")?.textContent)
+      .toBe("Workspace default: Inline widget · Alarm installation");
+    expect(container.querySelector<HTMLTextAreaElement>("#daymark-embed-snippet")?.value)
+      .toContain('data-service="alarm-installation-v2"');
+  });
 });
 
 describe("service qualification controls", () => {

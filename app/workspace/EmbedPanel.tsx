@@ -20,11 +20,13 @@ export function EmbedPanel({
   services = [],
   workspaceSlug = "daymark",
   initialPreference,
+  onPreferenceSaved,
 }: {
   profiles: TeamProfile[];
   services?: WorkspaceService[];
   workspaceSlug?: string;
   initialPreference?: WorkspaceEmbedPreference | null;
+  onPreferenceSaved?: (preference: WorkspaceEmbedPreference) => void;
 }) {
   const initialMode = initialPreference?.defaultMode ?? "floating";
   const initialJourney: BookingJourney = initialPreference?.defaultServiceScope === "service"
@@ -157,6 +159,7 @@ export function EmbedPanel({
         throw new Error(body.error ?? "The workspace default could not be saved. Try again.");
       }
       setSavedPreference(body.preference);
+      onPreferenceSaved?.(body.preference);
       setDefaultMessage("Workspace default saved.");
     } catch (error) {
       setDefaultMessage(

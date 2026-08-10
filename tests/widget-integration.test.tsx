@@ -265,6 +265,30 @@ describe("DemoBookingFlow", () => {
     await act(async () => view.root.unmount());
   });
 
+  it("announces the catalogue rather than a sample service when scope resets", async () => {
+    const view = await render(createElement(DemoBookingFlow, {
+      journey: "page-service",
+      demoService: "alarm",
+    }));
+
+    await act(async () => {
+      view.root.render(createElement(DemoBookingFlow, {
+        journey: "catalogue",
+        demoService: "alarm",
+      }));
+    });
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
+
+    expect(view.container.textContent).toContain("Which service do you need?");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .toContain("Demonstration reset for the full service catalogue.");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .not.toContain("Alarm installation");
+    expect(document.activeElement).toBe(view.container.querySelector(".stage-title h3"));
+
+    await act(async () => view.root.unmount());
+  });
+
   it("filters the smart-home catalogue and completes locally without a widget event", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const complete = vi.fn();
