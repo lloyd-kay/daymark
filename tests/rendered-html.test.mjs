@@ -35,14 +35,16 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /product-title-line title-line-coral/);
   assert.match(html, /product-title-line title-line-lilac/);
   assert.match(html, /product-title-line title-line-sky/);
-  assert.match(html, /Interactive demonstration/i);
+  assert.match(html, /Build and test one clear setup/i);
   assert.match(html, /No appointment will be created/i);
-  assert.match(html, /Always close, never in the way/i);
-  assert.match(html, /A booking section with presence/i);
+  assert.match(html, /What should customers see\?/i);
+  assert.match(html, /How should the widget appear\?/i);
+  assert.match(html, /Live Cedar House preview/i);
+  assert.match(html, /daymark:\/\/import-setup\?code=DM2-C-F-36UR/i);
   assert.match(html, /For custom widgets or integrations,/i);
   assert.match(html, /contact us\./i);
   assert.match(html, /Cedar House/i);
-  assert.match(html, /aria-pressed="true"/i);
+  assert.match(html, /name="homepage-journey" checked="" value="catalogue"/i);
   assert.match(html, /Get Daymark/i);
   assert.doesNotMatch(html, /Confirm appointment/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
@@ -109,14 +111,17 @@ test("server-renders staff sign-in without the retired ChatGPT enrolment", async
 });
 
 test("removes starter infrastructure and keeps the editorial visual system", async () => {
-  const [page, layout, css, packageJson] = await Promise.all([
+  const [page, setupBuilder, layout, css, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/home/HomepageSetupBuilder.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /import\s+\{\s*DemoBookingFlow\s*\}\s+from/);
+  assert.match(page, /import\s+\{\s*HomepageSetupBuilder\s*\}\s+from/);
+  assert.doesNotMatch(page, /import\s+\{\s*DemoBookingFlow\s*\}\s+from/);
+  assert.match(setupBuilder, /import\s+\{\s*DemoBookingFlow\s*\}\s+from/);
   assert.doesNotMatch(page, /LiveBookingFlow/);
   assert.match(layout, /Private booking for teams/);
   assert.match(css, /--paper:/);

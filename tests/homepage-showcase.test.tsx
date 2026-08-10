@@ -24,38 +24,131 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-describe("WidgetOptionsShowcase", () => {
-  it("renders both restored Cedar House presentations", async () => {
-    const container = await renderShowcase();
-    expect(container.textContent).toContain("Always close, never in the way");
-    expect(container.textContent).toContain("A booking section with presence");
-    expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(2);
-    expect(container.textContent).toContain("Maya");
-    expect(container.textContent).toContain("Theo");
-    expect(container.textContent).toContain("Priya");
-    expect(container.textContent).toContain("Jon");
+describe("unified homepage setup experience", () => {
+  it("renders one semantic setup region with one live host presentation", async () => {
+    const container = await renderBuilder();
+    const legends = Array.from(container.querySelectorAll("legend"))
+      .map((legend) => legend.textContent?.trim());
+
+    expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
+    expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(1);
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
+    expect(legends).toContain("What should customers see?");
+    expect(legends).toContain("How should the widget appear?");
+    expect(container.querySelectorAll('input[name="homepage-journey"]')).toHaveLength(2);
+    expect(container.querySelectorAll('input[name="homepage-layout"]')).toHaveLength(2);
+    expect(container.textContent).toContain("Which service do you need?");
   });
 
-  it("uses a text-free background with live typography in both previews", async () => {
-    const container = await renderShowcase();
-    const artwork = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art"));
-    const images = artwork.map((element) => element.querySelector<HTMLImageElement>("img"));
-    const canvases = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-canvas"));
-    const wordmarks = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-wordmark"));
-    const taglines = Array.from(container.querySelectorAll<HTMLElement>(".widget-host-art-tagline"));
+  it.each([
+    ["catalogue", "floating", "DM2-C-F-36UR", "Full service catalogue · Floating widget"],
+    ["catalogue", "inline", "DM2-C-I-2SPS", "Full service catalogue · Inline widget"],
+    ["page-service", "floating", "DM2-P-F-34D6", "Page-specific service · Floating widget"],
+    ["page-service", "inline", "DM2-P-I-2Y6D", "Page-specific service · Inline widget"],
+  ] as const)(
+    "transfers the %s / %s profile with its matching native link and portable code",
+    async (journey, layout, code, summary) => {
+      const container = await renderBuilder();
+      await chooseRadio(container, "homepage-journey", journey);
+      await chooseRadio(container, "homepage-layout", layout);
+      await clickButton(container, "Use on another machine");
 
-    expect(artwork).toHaveLength(2);
-    expect(artwork.every((element) => element.classList.contains("widget-host-art-full-wordmark"))).toBe(true);
-    expect(canvases).toHaveLength(2);
-    expect(images.every((image) => image?.getAttribute("src") === "/daymark-widget-art-4x3-background-2x.png")).toBe(true);
-    expect(images.every((image) => image?.getAttribute("alt") === "")).toBe(true);
-    expect(images.every((image) => image?.getAttribute("loading") === "lazy")).toBe(true);
-    expect(images.every((image) => image?.getAttribute("decoding") === "async")).toBe(true);
-    expect(wordmarks).toHaveLength(2);
-    expect(wordmarks.every((wordmark) => wordmark.textContent === "DAYMARK")).toBe(true);
-    expect(taglines).toHaveLength(2);
-    expect(taglines.every((tagline) => tagline.textContent === "Book the right person. Keep every calendar private.")).toBe(true);
-    expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
+      expect(container.querySelector(".homepage-setup-summary")?.textContent)
+        .toContain(summary);
+      expect(container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')?.getAttribute("href"))
+        .toBe(`daymark://import-setup?code=${code}`);
+      expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")?.value)
+        .toBe(code);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps the page-specific transfer profile independent from the sample service", async () => {
+    const container = await renderBuilder();
+    await chooseRadio(container, "homepage-journey", "page-service");
+    await clickButton(container, "Use on another machine");
+
+    const link = container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]');
+    const input = container.querySelector<HTMLInputElement>("#homepage-setup-code");
+    expect(link?.getAttribute("href")).toBe("daymark://import-setup?code=DM2-P-F-34D6");
+    expect(input?.value).toBe("DM2-P-F-34D6");
+
+    await chooseRadio(container, "homepage-demo-service", "alarm");
+    await flushReset();
+
+    expect(link?.getAttribute("href")).toBe("daymark://import-setup?code=DM2-P-F-34D6");
+    expect(input?.value).toBe("DM2-P-F-34D6");
+    expect(container.textContent).toContain("Alarm installation");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("filters the catalogue and preserves booking progress when only layout changes", async () => {
+    const container = await renderBuilder();
+    expect(container.textContent).toContain("Which service do you need?");
+
+    await clickButton(container, "Camera installation", ".service-choice-card");
+    expect(container.textContent).toContain("Who should deliver this service?");
+    expect(container.textContent).toContain("Maya Chen");
+    expect(container.textContent).toContain("Jon Bell");
+    expect(container.textContent).not.toContain("Theo Brooks");
+    expect(container.textContent).not.toContain("Priya Shah");
+
+    await chooseRadio(container, "homepage-layout", "inline");
+
+    expect(container.textContent).toContain("Who should deliver this service?");
+    expect(container.textContent).toContain("Camera installation");
+    expect(container.textContent).toContain("Maya Chen");
+    expect(container.textContent).toContain("Jon Bell");
+    expect(container.querySelector(".widget-presentation")?.getAttribute("data-layout"))
+      .toBe("inline");
+    expect(container.querySelector(".homepage-layout-status")?.textContent)
+      .toContain("Booking progress kept");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("resets an advanced page-specific preview when its sample service changes", async () => {
+    const container = await renderBuilder();
+    await chooseRadio(container, "homepage-journey", "page-service");
+    await flushReset();
+
+    expect(container.textContent).toContain("Who should deliver this service?");
+    expect(container.textContent).not.toContain("Which service do you need?");
+    expect(container.textContent).toContain("Camera installation");
+    expect(container.textContent).toContain("1 hr 30 min");
+    expect(container.textContent).toContain("Maya Chen");
+    expect(container.textContent).toContain("Jon Bell");
+
+    await clickButton(container, "Maya Chen", ".person-tab");
+    expect(container.textContent).toContain("Which day suits you?");
+
+    await chooseRadio(container, "homepage-demo-service", "alarm");
+    await flushReset();
+
+    expect(container.textContent).toContain("Who should deliver this service?");
+    expect(container.textContent).toContain("Alarm installation");
+    expect(container.textContent).toContain("2 hours");
+    expect(container.textContent).toContain("Theo Brooks");
+    expect(container.textContent).toContain("Priya Shah");
+    expect(container.textContent).not.toContain("Maya Chen");
+    expect(container.textContent).not.toContain("Jon Bell");
+    expect(document.activeElement).toBe(container.querySelector(".stage-title h3"));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses one text-free, self-hosted Cedar House artwork presentation", async () => {
+    const container = await renderBuilder();
+    const artwork = container.querySelector<HTMLElement>(".widget-host-art");
+    const image = artwork?.querySelector<HTMLImageElement>("img");
+
+    expect(artwork?.classList.contains("widget-host-art-full-wordmark")).toBe(true);
+    expect(container.querySelectorAll(".widget-host-art-canvas")).toHaveLength(1);
+    expect(image?.getAttribute("src")).toBe("/daymark-widget-art-4x3-background-2x.png");
+    expect(image?.getAttribute("alt")).toBe("");
+    expect(image?.getAttribute("loading")).toBe("lazy");
+    expect(image?.getAttribute("decoding")).toBe("async");
+    expect(container.querySelector(".widget-host-art-wordmark")?.textContent).toBe("DAYMARK");
+    expect(container.querySelector(".widget-host-art-tagline")?.textContent)
+      .toBe("Book the right person. Keep every calendar private.");
   });
 
   it("ships the text-free background at a true two-times pixel density", () => {
@@ -85,7 +178,7 @@ describe("WidgetOptionsShowcase", () => {
 
     expect(existsSync(wordmarkFontPath)).toBe(true);
     expect(existsSync(taglineFontPath)).toBe(true);
-    expect(stylesheet).toContain('@font-face');
+    expect(stylesheet).toContain("@font-face");
     expect(stylesheet).toContain('font-family: "Daymark Bodoni"');
     expect(stylesheet).toContain('url("/fonts/libre-bodoni-latin-400.woff2")');
     expect(stylesheet).toContain('font-family: "Daymark Sans"');
@@ -95,105 +188,93 @@ describe("WidgetOptionsShowcase", () => {
     expect(stylesheet).toMatch(/\.widget-host-art-tagline\s*\{[^}]*font-size:\s*2\.75cqw;/s);
   });
 
-  it("turns accessible layout selection into a deterministic setup profile", async () => {
-    const container = await renderShowcase();
-    const controls = Array.from(container.querySelectorAll<HTMLButtonElement>(".widget-choice-select"));
-    expect(controls).toHaveLength(2);
-    expect(controls[0].getAttribute("aria-pressed")).toBe("true");
-    expect(controls[1].getAttribute("aria-pressed")).toBe("false");
-    expect(container.querySelector(".homepage-setup-summary")?.textContent)
-      .toContain("Full service catalogue · Floating widget");
-    expect(container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')?.getAttribute("href"))
-      .toBe("daymark://import-setup?code=DM1-C-F-2ZE7");
-
-    await act(async () => controls[1].click());
-
-    expect(controls[0].getAttribute("aria-pressed")).toBe("false");
-    expect(controls[1].getAttribute("aria-pressed")).toBe("true");
-    expect(container.querySelector(".homepage-setup-summary")?.textContent)
-      .toContain("Full service catalogue · Inline widget");
-    expect(container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')?.getAttribute("href"))
-      .toBe("daymark://import-setup?code=DM1-C-I-355C");
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("reveals and copies a portable code without a network request", async () => {
+  it("reveals and copies the current portable profile without a network request", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
-    const container = await renderShowcase();
-    const reveal = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
-      .find((button) => button.textContent?.includes("Use on another machine"));
+    const container = await renderBuilder();
 
-    expect(reveal).toBeDefined();
     expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")).toBeNull();
-    await act(async () => reveal!.click());
+    await clickButton(container, "Use on another machine");
+    await clickButton(container, "Copy setup code");
 
-    const code = container.querySelector<HTMLInputElement>("#homepage-setup-code");
-    expect(code?.value).toBe("DM1-C-F-2ZE7");
-    expect(code?.readOnly).toBe(true);
-    const copy = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
-      .find((button) => button.textContent?.includes("Copy setup code"));
-    await act(async () => copy!.click());
-    expect(writeText).toHaveBeenCalledWith("DM1-C-F-2ZE7");
-    expect(container.querySelector('[role="status"]')?.textContent).toContain("Setup code copied.");
+    expect(writeText).toHaveBeenCalledWith("DM2-C-F-36UR");
+    expect(container.querySelector(".homepage-copy-status")?.textContent)
+      .toContain("Setup code copied.");
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("keeps the portable fallback visible when protocol launch cannot be detected", async () => {
-    const container = await renderShowcase();
-    const link = container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]')!;
-    link.addEventListener("click", (event) => event.preventDefault());
-    await act(async () => link.click());
-
-    expect(container.textContent).toContain(
-      "If Daymark does not open, install it first or use this setup code on the other machine.",
-    );
-    expect(container.textContent).not.toMatch(/detected|successfully opened/i);
-  });
-
-  it("leaves the code selectable when clipboard access is unavailable", async () => {
-    const container = await renderShowcase();
-    const reveal = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
-      .find((button) => button.textContent?.includes("Use on another machine"));
-    await act(async () => reveal!.click());
-    const copy = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
-      .find((button) => button.textContent?.includes("Copy setup code"));
-    await act(async () => copy!.click());
+  it("keeps the portable fallback selectable when clipboard access is unavailable", async () => {
+    const container = await renderBuilder();
+    await clickButton(container, "Use on another machine");
+    await clickButton(container, "Copy setup code");
 
     expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")?.value)
-      .toBe("DM1-C-F-2ZE7");
-    expect(container.querySelector('[role="status"]')?.textContent)
+      .toBe("DM2-C-F-36UR");
+    expect(container.querySelector(".homepage-copy-status")?.textContent)
       .toContain("Select the code and copy it manually.");
   });
 });
 
 describe("homepage setup integration", () => {
-  it("explains service-first filtering and renders the transferable builder", async () => {
+  it("joins the introduction, controls, preview, and transfer card without breaking anchors", async () => {
     const container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
     await act(async () => root?.render(createElement(Home)));
 
-    const setup = container.querySelector<HTMLElement>(".homepage-setup-builder");
+    const experience = container.querySelector<HTMLElement>("#demo.homepage-setup-experience");
+    const controls = container.querySelector<HTMLElement>("#widget-options");
     const contact = container.querySelector<HTMLElement>(".widget-contact-note");
 
-    expect(container.querySelector(".demo-heading")?.textContent)
-      .toContain("Clients choose a service first");
-    expect(setup?.textContent).toContain("Your Daymark setup");
-    expect(setup?.querySelector('a[href="daymark://import-setup?code=DM1-C-F-2ZE7"]'))
+    expect(experience).not.toBeNull();
+    expect(controls && experience?.contains(controls)).toBe(true);
+    expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
+    expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(1);
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
+    expect(container.querySelector(".demo-notice")?.textContent)
+      .toContain("only qualified people");
+    expect(experience?.querySelector('a[href="daymark://import-setup?code=DM2-C-F-36UR"]'))
       .not.toBeNull();
     expect(contact?.textContent).toContain("For custom widgets or integrations, contact us.");
     expect(contact?.querySelector("a, button, [tabindex]")).toBeNull();
+    expect(container.querySelector('a[href="/get-daymark"]')).not.toBeNull();
+    expect(container.querySelector('a[href="/workspace/sign-in"]')).not.toBeNull();
   });
 });
 
-async function renderShowcase() {
+async function renderBuilder() {
   const container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
   await act(async () => root?.render(createElement(HomepageSetupBuilder)));
   return container;
+}
+
+async function chooseRadio(container: HTMLElement, name: string, value: string) {
+  const input = container.querySelector<HTMLInputElement>(
+    `input[name="${name}"][value="${value}"]`,
+  );
+  expect(input).not.toBeNull();
+  await act(async () => input?.click());
+}
+
+async function clickButton(
+  container: HTMLElement,
+  text: string,
+  selector = "button",
+) {
+  const button = Array.from(container.querySelectorAll<HTMLButtonElement>(selector))
+    .find((candidate) => candidate.textContent?.includes(text));
+  expect(button).toBeDefined();
+  await act(async () => {
+    button?.click();
+    await Promise.resolve();
+  });
+}
+
+async function flushReset() {
+  await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
 }

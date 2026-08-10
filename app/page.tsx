@@ -1,5 +1,4 @@
 import { ArrowDown, ArrowUpRight, LockKeyhole, ShieldCheck } from "lucide-react";
-import { DemoBookingFlow } from "./demo/DemoBookingFlow";
 import { HomepageSetupBuilder } from "./home/HomepageSetupBuilder";
 
 const privacyPromises = [
@@ -61,18 +60,10 @@ export default function Home() {
         </ol>
       </section>
 
-      <div className="demo-section" id="demo">
+      <section className="homepage-setup-experience" id="demo" aria-labelledby="demo-title">
         <div className="demo-heading">
-          <div><p className="eyebrow">A safe place to try it</p><h2 id="demo-title">Interactive demonstration</h2></div>
+          <div><p className="eyebrow">A safe place to try it</p><h2 id="demo-title">Build and test one clear setup.</h2></div>
           <p className="demo-notice"><ShieldCheck size={18} aria-hidden="true" /> Clients choose a service first; Daymark then shows only qualified people. No appointment will be created.</p>
-        </div>
-        <DemoBookingFlow />
-      </div>
-
-      <section className="widget-options" id="widget-options" aria-labelledby="widget-title">
-        <div className="widget-heading">
-          <p className="eyebrow">Widget options</p><h2 id="widget-title">Place booking where it belongs.</h2>
-          <p>Choose the surface that feels native to your site; the private scheduling rules stay the same.</p>
         </div>
         <HomepageSetupBuilder />
         <div className="widget-setup">
