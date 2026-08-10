@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LiveBookingFlow } from "../booking/LiveBookingFlow";
-import { listPublicEmployees } from "../../lib/data/repository";
+import { listPublicServices } from "../../lib/data/repository";
 import { resolvePublicWorkspace } from "../../lib/workspaces/public-scope";
 import { normalizeWidgetConfig } from "../../lib/widget/protocol";
 import { EmbedBridge } from "./EmbedBridge";
@@ -32,17 +32,19 @@ export default async function EmbedPage({
   if (config.employee !== employee || !channel || !CHANNEL_PATTERN.test(channel)) {
     notFound();
   }
-  const employees = await listPublicEmployees(scope);
-  if (employee !== "all" && !employees.some((candidate) => candidate.id === employee)) {
-    notFound();
-  }
+  const services = await listPublicServices(
+    scope,
+    employee === "all" ? undefined : employee,
+  );
+  if (employee !== "all" && services.length === 0) notFound();
 
   return (
     <main className="embed-shell">
       <LiveBookingFlow
         workspaceSlug={scope.workspaceSlug}
         embedded
-        initialEmployees={employees}
+        initialServices={services}
+        initialEmployees={[]}
         initialEmployeeId={employee === "all" ? undefined : employee}
       />
       <EmbedBridge channel={channel} />
