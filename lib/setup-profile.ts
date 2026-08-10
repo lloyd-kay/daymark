@@ -1,10 +1,20 @@
 export type SetupLayout = "floating" | "inline";
+export type SetupJourney = "catalogue" | "page-service";
 
-export type SetupProfile = {
+export type SetupProfileV1 = {
   version: 1;
   journey: "catalogue";
   layout: SetupLayout;
 };
+
+export type SetupProfileV2 = {
+  version: 2;
+  journey: SetupJourney;
+  layout: SetupLayout;
+};
+
+export type SetupProfile = SetupProfileV1 | SetupProfileV2;
+export type SetupProfileDraft = Pick<SetupProfileV2, "journey" | "layout">;
 
 export type SetupProfileErrorCode =
   | "invalid_format"
@@ -22,7 +32,30 @@ export class SetupProfileError extends Error {
 const CHECKSUM_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 const CODE_PATTERN = /^DM([0-9])-([A-Z])-([A-Z])-([23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4})$/;
 
-export function encodeSetupProfile(layout: SetupLayout): string {
+export function encodeSetupProfile(profile: SetupProfileDraft | SetupProfile): string;
+/** @deprecated Pass a journey/layout draft. Retained while existing callers migrate. */
+export function encodeSetupProfile(layout: SetupLayout): string;
+export function encodeSetupProfile(
+  input: SetupProfileDraft | SetupProfile | SetupLayout,
+): string {
+  const version = typeof input === "string"
+    ? 1
+    : "version" in input
+      ? input.version
+      : 2;
+  const journey = typeof input === "string" ? "catalogue" : input.journey;
+  const layout = typeof input === "string" ? input : input.layout;
+  if (version !== 1 && version !== 2) {
+    throw new SetupProfileError("unsupported_version");
+  }
+  if (journey !== "catalogue" && journey !== "page-service") {
+    throw new SetupProfileError("unsupported_value");
+  }
+  if (version === 1 && journey !== "catalogue") {
+    throw new SetupProfileError("unsupported_value");
+  }
+
+  const journeyMarker = journey === "catalogue" ? "C" : "P";
   const layoutMarker = layout === "floating"
     ? "F"
     : layout === "inline"
@@ -30,7 +63,7 @@ export function encodeSetupProfile(layout: SetupLayout): string {
       : null;
   if (!layoutMarker) throw new SetupProfileError("unsupported_value");
 
-  const body = `DM1-C-${layoutMarker}`;
+  const body = `DM${version}-${journeyMarker}-${layoutMarker}`;
   return `${body}-${checksum(body)}`;
 }
 
@@ -44,10 +77,13 @@ export function decodeSetupProfile(value: string): SetupProfile {
   if (!match) throw new SetupProfileError("invalid_format");
 
   const [, versionMarker, journeyMarker, layoutMarker, suppliedChecksum] = match;
-  if (versionMarker !== "1") {
+  if (versionMarker !== "1" && versionMarker !== "2") {
     throw new SetupProfileError("unsupported_version");
   }
-  if (journeyMarker !== "C") {
+  if (
+    (versionMarker === "1" && journeyMarker !== "C")
+    || (versionMarker === "2" && journeyMarker !== "C" && journeyMarker !== "P")
+  ) {
     throw new SetupProfileError("unsupported_value");
   }
 
@@ -63,11 +99,18 @@ export function decodeSetupProfile(value: string): SetupProfile {
     throw new SetupProfileError("invalid_checksum");
   }
 
-  return { version: 1, journey: "catalogue", layout };
+  if (versionMarker === "1") {
+    return { version: 1, journey: "catalogue", layout };
+  }
+  return {
+    version: 2,
+    journey: journeyMarker === "P" ? "page-service" : "catalogue",
+    layout,
+  };
 }
 
 export function buildSetupProfileUri(code: string): string {
-  const canonicalCode = encodeSetupProfile(decodeSetupProfile(code).layout);
+  const canonicalCode = encodeSetupProfile(decodeSetupProfile(code));
   return `daymark://import-setup?code=${canonicalCode}`;
 }
 

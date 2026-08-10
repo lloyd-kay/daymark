@@ -13,6 +13,8 @@ vi.mock("@tauri-apps/plugin-deep-link", () => ({
 
 const floatingUri = "daymark://import-setup?code=DM1-C-F-2ZE7";
 const inlineUri = "daymark://import-setup?code=DM1-C-I-355C";
+const catalogueV2Uri = "daymark://import-setup?code=DM2-C-I-2SPS";
+const pageServiceUri = "daymark://import-setup?code=DM2-P-F-34D6";
 
 beforeEach(() => {
   Object.defineProperty(window, "__TAURI_INTERNALS__", {
@@ -35,7 +37,7 @@ describe("Daymark setup deep links", () => {
       openHandler = handler;
       return unsubscribe;
     });
-    vi.mocked(getCurrent).mockResolvedValue([floatingUri, inlineUri]);
+    vi.mocked(getCurrent).mockResolvedValue([floatingUri, pageServiceUri]);
 
     const stop = await listenForSetupProfileLinks(vi.fn());
 
@@ -43,16 +45,16 @@ describe("Daymark setup deep links", () => {
       uri: floatingUri,
     });
     expect(invoke).toHaveBeenNthCalledWith(2, "open_setup_profile_import", {
-      uri: inlineUri,
+      uri: pageServiceUri,
     });
 
-    openHandler?.([inlineUri, floatingUri]);
+    openHandler?.([catalogueV2Uri, inlineUri]);
     await waitFor(() => expect(invoke).toHaveBeenCalledTimes(4));
     expect(invoke).toHaveBeenNthCalledWith(3, "open_setup_profile_import", {
-      uri: inlineUri,
+      uri: catalogueV2Uri,
     });
     expect(invoke).toHaveBeenNthCalledWith(4, "open_setup_profile_import", {
-      uri: floatingUri,
+      uri: inlineUri,
     });
 
     stop();

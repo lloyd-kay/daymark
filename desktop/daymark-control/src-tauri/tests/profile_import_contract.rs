@@ -14,6 +14,8 @@ struct SetupProfileVectors {
 #[derive(Debug, Deserialize)]
 struct ValidVector {
     code: String,
+    version: u8,
+    journey: String,
     layout: String,
 }
 
@@ -27,6 +29,14 @@ fn setup_profile_vectors_match_the_shared_typescript_contract() {
     .expect("shared setup-profile vectors must decode");
 
     for vector in vectors.valid {
+        assert!(matches!(vector.version, 1 | 2));
+        assert!(matches!(
+            vector.journey.as_str(),
+            "catalogue" | "page-service"
+        ));
+        if vector.version == 1 {
+            assert_eq!(vector.journey, "catalogue");
+        }
         assert!(matches!(vector.layout.as_str(), "floating" | "inline"));
         assert_eq!(
             validate_setup_profile_code(&vector.code).expect("valid shared vector"),
@@ -57,10 +67,14 @@ fn setup_profile_vectors_match_the_shared_typescript_contract() {
 }
 
 #[test]
-fn accepts_only_the_two_canonical_daymark_setup_uris() {
+fn accepts_all_canonical_v1_and_v2_daymark_setup_uris() {
     for (uri, code) in [
         ("daymark://import-setup?code=DM1-C-F-2ZE7", "DM1-C-F-2ZE7"),
         ("daymark://import-setup?code=DM1-C-I-355C", "DM1-C-I-355C"),
+        ("daymark://import-setup?code=DM2-C-F-36UR", "DM2-C-F-36UR"),
+        ("daymark://import-setup?code=DM2-C-I-2SPS", "DM2-C-I-2SPS"),
+        ("daymark://import-setup?code=DM2-P-F-34D6", "DM2-P-F-34D6"),
+        ("daymark://import-setup?code=DM2-P-I-2Y6D", "DM2-P-I-2Y6D"),
     ] {
         let parsed = parse_setup_profile_uri(uri).expect("canonical URI must be accepted");
         assert_eq!(parsed.code, code);

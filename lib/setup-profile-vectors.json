@@ -1,13 +1,19 @@
 {
   "valid": [
-    { "code": "DM1-C-F-2ZE7", "layout": "floating" },
-    { "code": "DM1-C-I-355C", "layout": "inline" }
+    { "code": "DM1-C-F-2ZE7", "version": 1, "journey": "catalogue", "layout": "floating" },
+    { "code": "DM1-C-I-355C", "version": 1, "journey": "catalogue", "layout": "inline" },
+    { "code": "DM2-C-F-36UR", "version": 2, "journey": "catalogue", "layout": "floating" },
+    { "code": "DM2-C-I-2SPS", "version": 2, "journey": "catalogue", "layout": "inline" },
+    { "code": "DM2-P-F-34D6", "version": 2, "journey": "page-service", "layout": "floating" },
+    { "code": "DM2-P-I-2Y6D", "version": 2, "journey": "page-service", "layout": "inline" }
   ],
   "invalid": [
     "DM1-C-F-2ZE8",
-    "DM1-C-X-2ZE7",
-    "DM2-C-F-2ZE7",
-    "DM1-C-F-2ZE7-EXTRA",
-    "DM1 C F 2ZE7"
+    "DM1-P-F-2ZE7",
+    "DM2-C-F-36US",
+    "DM2-X-F-36UR",
+    "DM3-C-F-2GA8",
+    "DM2-C-F-36UR-EXTRA",
+    "DM2 C F 36UR"
   ]
 }

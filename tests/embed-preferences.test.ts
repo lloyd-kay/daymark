@@ -134,7 +134,7 @@ describe("Embed preference mutations", () => {
 
   it.each([
     ["DM1-C-F-2ZE8", "That setup code looks incomplete or mistyped."],
-    ["DM2-C-F-2ZE7", "Update Daymark before importing this setup code."],
+    ["DM3-C-F-2GA8", "Update Daymark before importing this setup code."],
     ["DM1-C-X-2ZE7", "That setup code is not valid."],
   ])("maps invalid code %s to safe guidance", async (code, message) => {
     const deps = dependencies();

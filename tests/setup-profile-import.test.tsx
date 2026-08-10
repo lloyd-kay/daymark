@@ -61,7 +61,7 @@ describe("setup profile review", () => {
   it.each([
     ["not-a-code", "That setup code is not valid."],
     ["DM1-C-F-2ZE8", "That setup code looks incomplete or mistyped."],
-    ["DM2-C-F-2ZE7", "Update Daymark before importing this setup code."],
+    ["DM3-C-F-2GA8", "Update Daymark before importing this setup code."],
   ])("gives safe distinct guidance for %s", async (code, guidance) => {
     const container = await renderPanel();
 

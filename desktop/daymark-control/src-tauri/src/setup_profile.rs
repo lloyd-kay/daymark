@@ -49,10 +49,17 @@ pub fn parse_setup_profile_uri(uri: &str) -> Result<SetupProfileImport, ControlE
 
 pub fn validate_setup_profile_code(code: &str) -> Result<String, ControlError> {
     let bytes = code.as_bytes();
-    if bytes.len() != 12
-        || &bytes[0..3] != b"DM1"
+    if bytes.len() != 12 {
+        return Err(invalid_setup_link());
+    }
+
+    let supported_profile = matches!(
+        (bytes[2], bytes[4]),
+        (b'1', b'C') | (b'2', b'C' | b'P')
+    );
+    if &bytes[0..2] != b"DM"
+        || !supported_profile
         || bytes[3] != b'-'
-        || bytes[4] != b'C'
         || bytes[5] != b'-'
         || !matches!(bytes[6], b'F' | b'I')
         || bytes[7] != b'-'
