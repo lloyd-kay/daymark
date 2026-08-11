@@ -719,6 +719,8 @@ git commit -m "Complete widget presentation restoration"
 
 Do not create an empty commit.
 
+Review clarification: explicitly defend the launcher `[hidden]` state in CSS; listen for Escape at document scope while Floating is open; and pass the existing journey/service reset identity into the presentation wrapper so a reset requested while Floating is closed opens the overlay before `DemoBookingFlow` announces and focuses the reset step. Initial Floating and layout-only switches remain closed, and the child stays at one stable React position.
+
 - [ ] **Step 2: Run the complete repository matrix**
 
 ~~~powershell
@@ -777,10 +779,10 @@ At `http://localhost:3000/`, verify:
 
 1. Floating closed shows a neutral Cedar House page and one launcher, with no booking surface or Daymark artwork.
 2. Clicking the launcher hides it, opens one overlay, and focuses Close booking.
-3. Escape closes the overlay and returns focus to the launcher.
+3. Escape closes the overlay and returns focus to the launcher, including after focus moves outside the overlay.
 4. Inline shows one embedded booking section with no launcher or overlay close control.
 5. Select Camera, reach Person, switch Inline, then Floating and reopen; Camera, Person, Maya, and Jon remain.
-6. Changing service scope or sample service still resets with the approved announcement and focus.
+6. Changing service scope or sample service while Floating is closed opens the overlay, then resets with the approved visible heading, announcement, and focus.
 7. Desktop and narrow views contain the overlay, preserve focus rings, and avoid horizontal overflow.
 8. Console/network inspection shows no link error, uncaught error, appointment creation, or unexpected mutation.
 

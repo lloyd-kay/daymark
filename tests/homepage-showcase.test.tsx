@@ -137,9 +137,13 @@ describe("unified homepage setup experience", () => {
 
   it("resets an advanced page-specific preview when its sample service changes", async () => {
     const container = await renderBuilder();
+    const surface = container.querySelector<HTMLElement>("#widget-live-booking");
+    const launcher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
     await chooseRadio(container, "homepage-journey", "page-service");
     await flushReset();
 
+    expect(surface?.hidden).toBe(false);
+    expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).not.toContain("Which service do you need?");
     expect(container.textContent).toContain("Camera installation");
@@ -150,9 +154,15 @@ describe("unified homepage setup experience", () => {
     await clickButton(container, "Maya Chen", ".person-tab");
     expect(container.textContent).toContain("Which day suits you?");
 
+    await clickButton(container, "Close booking", ".widget-live-close");
+    expect(surface?.hidden).toBe(true);
+    expect(launcher?.hidden).toBe(false);
+
     await chooseRadio(container, "homepage-demo-service", "alarm");
     await flushReset();
 
+    expect(surface?.hidden).toBe(false);
+    expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).toContain("Alarm installation");
     expect(container.textContent).toContain("2 hours");
@@ -161,6 +171,8 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).not.toContain("Maya Chen");
     expect(container.textContent).not.toContain("Jon Bell");
     expect(document.activeElement).toBe(container.querySelector(".stage-title h3"));
+    expect(container.querySelector(".demo-booking-flow [role='status']")?.textContent)
+      .toContain("Demonstration reset for Alarm installation.");
     expect(fetch).not.toHaveBeenCalled();
   });
 

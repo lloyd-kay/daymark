@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -17,6 +19,14 @@ afterEach(async () => {
 });
 
 describe("widget live presentation", () => {
+  it("keeps the generic launcher styles from overriding its hidden state", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.widget-live-launcher\[hidden\]\s*\{[^}]*display:\s*none;/s,
+    );
+  });
+
   it("opens Floating with only the dialog visible and closes back to its launcher", async () => {
     const container = await renderHarness();
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
@@ -42,15 +52,20 @@ describe("widget live presentation", () => {
     expect(document.activeElement).toBe(launcher);
   });
 
-  it("closes an open Floating presentation with Escape", async () => {
+  it("closes an open Floating presentation with Escape after focus leaves it", async () => {
     const container = await renderHarness();
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
     const launcher = container.querySelector<HTMLButtonElement>("button.widget-live-launcher");
+    const outside = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent === "Use Floating");
     expect(surface).not.toBeNull();
     expect(launcher).not.toBeNull();
+    expect(outside).not.toBeUndefined();
 
     await click(launcher);
-    await keyDown(surface, "Escape");
+    outside?.focus();
+    expect(document.activeElement).toBe(outside);
+    await keyDown(document, "Escape");
 
     expect(surface?.hidden).toBe(true);
     expect(launcher?.hidden).toBe(false);
@@ -81,6 +96,20 @@ describe("widget live presentation", () => {
     await click(launcher);
     expect(container.querySelector(".stateful-probe")?.textContent).toBe("Step 2");
   });
+
+  it("opens a closed Floating presentation when its booking reset key changes", async () => {
+    const container = await renderHarness();
+    const surface = container.querySelector<HTMLElement>("#widget-live-booking");
+    const launcher = container.querySelector<HTMLButtonElement>("button.widget-live-launcher");
+
+    expect(surface?.hidden).toBe(true);
+    expect(launcher?.hidden).toBe(false);
+    await clickButtonByText(container, "Reset service");
+
+    expect(surface?.hidden).toBe(false);
+    expect(launcher?.hidden).toBe(true);
+    expect(document.activeElement).toBe(container.querySelector(".widget-live-close"));
+  });
 });
 
 function StatefulProbe() {
@@ -94,11 +123,17 @@ function StatefulProbe() {
 
 function PreviewHarness() {
   const [layout, setLayout] = useState<WidgetPlacement>("floating");
+  const [resetKey, setResetKey] = useState("catalogue:camera");
   return (
     <>
       <button type="button" onClick={() => setLayout("floating")}>Use Floating</button>
       <button type="button" onClick={() => setLayout("inline")}>Use Inline</button>
-      <WidgetLivePreview layout={layout}><StatefulProbe /></WidgetLivePreview>
+      <button type="button" onClick={() => setResetKey("page-service:camera")}>
+        Reset service
+      </button>
+      <WidgetLivePreview layout={layout} resetKey={resetKey}>
+        <StatefulProbe />
+      </WidgetLivePreview>
     </>
   );
 }
@@ -119,7 +154,7 @@ async function click(element: Element | null | undefined) {
   });
 }
 
-async function keyDown(element: Element | null | undefined, key: string) {
+async function keyDown(element: EventTarget | null | undefined, key: string) {
   expect(element).not.toBeNull();
   await act(async () => {
     element?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key }));

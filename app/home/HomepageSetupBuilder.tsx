@@ -42,6 +42,7 @@ export function HomepageSetupBuilder() {
     ? "Full service catalogue"
     : "Page-specific service";
   const layoutLabel = draft.layout === "floating" ? "Floating widget" : "Inline widget";
+  const demoResetKey = `${draft.journey}:${draft.demoService}`;
 
   function chooseJourney(journey: SetupJourney) {
     if (journey === draft.journey) return;
@@ -144,7 +145,7 @@ export function HomepageSetupBuilder() {
           <h3 id="homepage-preview-title">Live demonstration</h3>
           <p>No appointment will be created. Change the setup whenever you like.</p>
         </div>
-        <WidgetLivePreview layout={draft.layout}>
+        <WidgetLivePreview layout={draft.layout} resetKey={demoResetKey}>
           <DemoBookingFlow journey={draft.journey} demoService={draft.demoService} />
         </WidgetLivePreview>
         <p className="homepage-layout-status sr-only" role="status" aria-live="polite">

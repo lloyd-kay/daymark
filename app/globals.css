@@ -3667,6 +3667,7 @@ a {
 }
 
 .widget-live-launcher { border: 0; cursor: pointer; font: inherit; }
+.widget-live-launcher[hidden] { display: none; }
 
 .widget-live-surface .booking-studio {
   width: 100%;

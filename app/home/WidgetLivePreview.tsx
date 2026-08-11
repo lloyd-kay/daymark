@@ -6,23 +6,29 @@ import { WidgetHostBrowser, WidgetNeutralHostPage } from "./WidgetPreviewChrome"
 
 export function WidgetLivePreview({
   layout,
+  resetKey,
   children,
 }: {
   layout: WidgetPlacement;
+  resetKey: string;
   children: ReactNode;
 }) {
   const layoutLabel = layout === "floating" ? "Floating widget" : "Inline widget";
-  const [floatingState, setFloatingState] = useState({ layout, open: false });
+  const [floatingState, setFloatingState] = useState({ layout, resetKey, open: false });
   const launcherRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const restoreLauncherFocus = useRef(false);
   const floating = layout === "floating";
 
   if (floatingState.layout !== layout) {
-    setFloatingState({ layout, open: false });
+    setFloatingState({ layout, resetKey, open: false });
+  } else if (floatingState.resetKey !== resetKey) {
+    setFloatingState({ layout, resetKey, open: floating });
   }
 
-  const floatingOpen = floatingState.layout === layout && floatingState.open;
+  const floatingOpen = floatingState.layout === layout
+    && floatingState.resetKey === resetKey
+    && floatingState.open;
 
   useEffect(() => {
     if (!floating) return;
@@ -34,14 +40,28 @@ export function WidgetLivePreview({
     }
   }, [floating, floatingOpen]);
 
+  useEffect(() => {
+    if (!floating || !floatingOpen) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      restoreLauncherFocus.current = true;
+      setFloatingState({ layout, resetKey, open: false });
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [floating, floatingOpen, layout, resetKey]);
+
   function openFloating() {
     restoreLauncherFocus.current = false;
-    setFloatingState({ layout, open: true });
+    setFloatingState({ layout, resetKey, open: true });
   }
 
   function closeFloating() {
     restoreLauncherFocus.current = true;
-    setFloatingState({ layout, open: false });
+    setFloatingState({ layout, resetKey, open: false });
   }
 
   const bookingVisible = !floating || floatingOpen;
@@ -60,12 +80,6 @@ export function WidgetLivePreview({
           hidden={!bookingVisible}
           role={floating ? "dialog" : undefined}
           aria-labelledby={floating ? "widget-live-dialog-title" : undefined}
-          onKeyDown={(event) => {
-            if (floating && floatingOpen && event.key === "Escape") {
-              event.preventDefault();
-              closeFloating();
-            }
-          }}
         >
           {floating ? (
             <div className="widget-live-dialog-head">

@@ -87,7 +87,7 @@ There is exactly one mounted `DemoBookingFlow` instance. Changing only `layout` 
 
 Switching to Floating closes its presentation by default and exposes the launcher. Opening it reveals the preserved booking step. Switching to Inline immediately exposes that same preserved step in the embedded section.
 
-Changing service scope or the sample page-specific service continues to reset the demonstration according to the existing approved behavior.
+Changing service scope or the sample page-specific service continues to reset the demonstration according to the existing approved behavior. If Floating is closed when that reset is requested, the overlay opens so the reset heading is visible before focus and the polite announcement are applied. Initial Floating presentation and layout-only switches still start closed.
 
 ## Component boundaries
 
@@ -103,7 +103,7 @@ type HomepageSetupDraft = {
 };
 ```
 
-It passes `layout` and `chooseLayout` to the illustrated chooser, and passes `layout` plus the existing `DemoBookingFlow` to the live presentation. No second layout state is introduced.
+It passes `layout` and `chooseLayout` to the illustrated chooser, and passes `layout`, the existing reset identity, and the existing `DemoBookingFlow` to the live presentation. The reset identity only tells a closed Floating presentation to expose the already-approved reset; no second journey, service, or layout state is introduced.
 
 ### Illustrated chooser
 
@@ -113,7 +113,7 @@ The static miniature panels are decorative explanations. They never contain the 
 
 ### Live presentation
 
-A separate live-presentation component owns only Floating open/closed UI state, focus return, Escape handling, and presentation classes. It does not own journey, service, booking progress, setup code, or transfer state.
+A separate live-presentation component owns only Floating open/closed UI state, focus return, Escape handling, and presentation classes. It responds to reset-identity changes by exposing a closed Floating overlay, but it does not own journey, service, booking progress, setup code, or transfer state.
 
 The `DemoBookingFlow` remains at one stable React position inside this component. CSS and accessibility attributes expose it as a floating overlay or inline section without changing its component identity.
 
@@ -126,9 +126,9 @@ Small browser-frame primitives may be shared between the chooser and live presen
 - The layout chooser retains a semantic legend and two keyboard-operable choices.
 - The selected layout is written visibly and announced through the existing polite layout status.
 - The floating launcher has an accessible name and exposes whether its panel is open.
-- The floating overlay has a programmatic label, a keyboard-operable close control, and Escape support.
+- The floating overlay has a programmatic label, a keyboard-operable close control, and document-level Escape support while open, even if focus has moved outside it.
 - Opening the overlay moves focus into it; closing returns focus to the launcher when the launcher still exists.
-- A hidden floating booking surface is not reachable by keyboard or exposed as active content to assistive technology.
+- A hidden floating booking surface is not reachable by keyboard or exposed as active content to assistive technology; an explicit launcher `[hidden]` rule prevents its generic flex styling from overriding the browser's hidden behavior.
 - Inline mode does not use dialog semantics because it is part of the page.
 - Focus outlines, reduced-motion behavior, and responsive stacking follow Daymark's existing global patterns.
 
