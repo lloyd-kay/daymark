@@ -90,6 +90,14 @@ describe("unified homepage setup experience", () => {
 
   it("filters the catalogue and preserves booking progress when only layout changes", async () => {
     const container = await renderBuilder();
+    const surface = container.querySelector<HTMLElement>("#widget-live-booking");
+    const launcher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
+
+    expect(surface?.hidden).toBe(true);
+    expect(launcher?.hidden).toBe(false);
+    await clickButton(container, "Book an appointment", ".widget-live-launcher");
+    expect(surface?.hidden).toBe(false);
+    expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Which service do you need?");
 
     await clickButton(container, "Camera installation", ".service-choice-card");
@@ -101,6 +109,8 @@ describe("unified homepage setup experience", () => {
 
     await chooseLayoutCard(container, "inline");
 
+    expect(surface?.hidden).toBe(false);
+    expect(container.querySelector(".widget-live-launcher")).toBeNull();
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).toContain("Camera installation");
     expect(container.textContent).toContain("Maya Chen");
@@ -109,6 +119,19 @@ describe("unified homepage setup experience", () => {
       .toBe("inline");
     expect(container.querySelector(".homepage-layout-status")?.textContent)
       .toContain("Booking progress kept");
+
+    await chooseLayoutCard(container, "floating");
+
+    const restoredLauncher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
+    expect(surface?.hidden).toBe(true);
+    expect(restoredLauncher?.hidden).toBe(false);
+    await clickButton(container, "Book an appointment", ".widget-live-launcher");
+    expect(surface?.hidden).toBe(false);
+    expect(restoredLauncher?.hidden).toBe(true);
+    expect(container.textContent).toContain("Who should deliver this service?");
+    expect(container.textContent).toContain("Maya Chen");
+    expect(container.textContent).toContain("Jon Bell");
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 
