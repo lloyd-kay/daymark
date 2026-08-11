@@ -1,7 +1,7 @@
 # Widget presentation restoration and live-preview separation
 
 **Date:** 2026-08-11  
-**Status:** Approved design; awaiting written-spec review  
+**Status:** Approved
 **Read-only visual reference:** `restore-2026-08-10-before-service-scope-builder` at `d41a95c511054c2d365f96b29f3049256a9d4862`  
 **Pre-correction restore point:** `restore-2026-08-11-before-widget-visual-correction` at `d482c09cc2f2b3ba4e7147d06f657eb2cf58b301`  
 **Read-only cold data backup:** `C:\Users\Lloyd\Files\Daymark-restore-points\2026-08-10-before-service-scope-builder\.daymark`
