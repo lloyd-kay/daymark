@@ -31,12 +31,18 @@ describe("unified homepage setup experience", () => {
       .map((legend) => legend.textContent?.trim());
 
     expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
-    expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(1);
+    expect(container.querySelectorAll(
+      "#widget-options .widget-choice .widget-host-browser",
+    )).toHaveLength(2);
+    expect(container.querySelectorAll(
+      ".widget-presentation .widget-host-browser",
+    )).toHaveLength(1);
     expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
+    expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
     expect(legends).toContain("What should customers see?");
     expect(legends).toContain("How should the widget appear?");
     expect(container.querySelectorAll('input[name="homepage-journey"]')).toHaveLength(2);
-    expect(container.querySelectorAll('input[name="homepage-layout"]')).toHaveLength(2);
+    expect(container.querySelectorAll(".widget-choice-select")).toHaveLength(2);
     expect(container.textContent).toContain("Which service do you need?");
   });
 
@@ -50,7 +56,7 @@ describe("unified homepage setup experience", () => {
     async (journey, layout, code, summary) => {
       const container = await renderBuilder();
       await chooseRadio(container, "homepage-journey", journey);
-      await chooseRadio(container, "homepage-layout", layout);
+      await chooseLayoutCard(container, layout);
       await clickButton(container, "Use on another machine");
 
       expect(container.querySelector(".homepage-setup-summary")?.textContent)
@@ -93,7 +99,7 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).not.toContain("Theo Brooks");
     expect(container.textContent).not.toContain("Priya Shah");
 
-    await chooseRadio(container, "homepage-layout", "inline");
+    await chooseLayoutCard(container, "inline");
 
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).toContain("Camera installation");
@@ -135,20 +141,32 @@ describe("unified homepage setup experience", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("uses one text-free, self-hosted Cedar House artwork presentation", async () => {
+  it("restores two illustrated layout choices and keeps artwork out of the live preview", async () => {
     const container = await renderBuilder();
-    const artwork = container.querySelector<HTMLElement>(".widget-host-art");
-    const image = artwork?.querySelector<HTMLImageElement>("img");
+    const choiceImages = container.querySelectorAll<HTMLImageElement>(
+      '#widget-options .widget-choice img[src="/daymark-widget-art-4x3-background-2x.png"]',
+    );
+    const livePreview = container.querySelector<HTMLElement>(".widget-presentation");
 
-    expect(artwork?.classList.contains("widget-host-art-full-wordmark")).toBe(true);
-    expect(container.querySelectorAll(".widget-host-art-canvas")).toHaveLength(1);
-    expect(image?.getAttribute("src")).toBe("/daymark-widget-art-4x3-background-2x.png");
-    expect(image?.getAttribute("alt")).toBe("");
-    expect(image?.getAttribute("loading")).toBe("lazy");
-    expect(image?.getAttribute("decoding")).toBe("async");
-    expect(container.querySelector(".widget-host-art-wordmark")?.textContent).toBe("DAYMARK");
-    expect(container.querySelector(".widget-host-art-tagline")?.textContent)
-      .toBe("Book the right person. Keep every calendar private.");
+    expect(container.querySelectorAll("#widget-options .widget-choice")).toHaveLength(2);
+    expect(choiceImages).toHaveLength(2);
+    expect(Array.from(choiceImages).every((image) => image.alt === "")).toBe(true);
+    expect(Array.from(choiceImages).every(
+      (image) => image.getAttribute("loading") === "lazy",
+    )).toBe(true);
+    expect(Array.from(choiceImages).every(
+      (image) => image.getAttribute("decoding") === "async",
+    )).toBe(true);
+    expect(container.querySelector(".widget-choice-floating .floating-panel")).not.toBeNull();
+    expect(container.querySelector(".widget-choice-floating .widget-daymark-fab")).not.toBeNull();
+    expect(container.querySelector(".widget-choice-inline .inline-panel")).not.toBeNull();
+    expect(container.querySelector(".widget-choice-inline .widget-daymark-fab")).toBeNull();
+    expect(livePreview?.querySelector(".widget-host-art")).toBeNull();
+    expect(livePreview?.querySelector("img")).toBeNull();
+    expect(container.querySelectorAll(".widget-choice .widget-host-art-wordmark")).toHaveLength(2);
+    expect(container.querySelectorAll(".widget-choice .widget-host-art-tagline")).toHaveLength(2);
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
+    expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
   });
 
   it("ships the text-free background at a true two-times pixel density", () => {
@@ -232,7 +250,12 @@ describe("homepage setup integration", () => {
     expect(experience).not.toBeNull();
     expect(controls && experience?.contains(controls)).toBe(true);
     expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
-    expect(container.querySelectorAll(".widget-host-browser")).toHaveLength(1);
+    expect(container.querySelectorAll(
+      "#widget-options .widget-choice .widget-host-browser",
+    )).toHaveLength(2);
+    expect(container.querySelectorAll(
+      ".widget-presentation .widget-host-browser",
+    )).toHaveLength(1);
     expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
     expect(container.querySelector(".demo-notice")?.textContent)
       .toContain("only qualified people");
@@ -259,6 +282,17 @@ async function chooseRadio(container: HTMLElement, name: string, value: string) 
   );
   expect(input).not.toBeNull();
   await act(async () => input?.click());
+}
+
+async function chooseLayoutCard(
+  container: HTMLElement,
+  layout: "floating" | "inline",
+) {
+  const button = container.querySelector<HTMLButtonElement>(
+    `.widget-choice-${layout} .widget-choice-select`,
+  );
+  expect(button).not.toBeNull();
+  await act(async () => button?.click());
 }
 
 async function clickButton(

@@ -12,6 +12,7 @@ import {
   WidgetOptionsShowcase,
   type WidgetPlacement,
 } from "./WidgetOptionsShowcase";
+import { WidgetLivePreview } from "./WidgetLivePreview";
 
 type DemoService = "camera" | "alarm";
 
@@ -133,22 +134,7 @@ export function HomepageSetupBuilder() {
 
         <fieldset className="homepage-option-group homepage-layout-options">
           <legend>How should the widget appear?</legend>
-          <SetupOption
-            checked={draft.layout === "floating"}
-            description="A corner launcher opens booking over any page."
-            name="homepage-layout"
-            onChange={() => chooseLayout("floating")}
-            title="Floating"
-            value="floating"
-          />
-          <SetupOption
-            checked={draft.layout === "inline"}
-            description="Booking sits as a dedicated section within the page."
-            name="homepage-layout"
-            onChange={() => chooseLayout("inline")}
-            title="Inline"
-            value="inline"
-          />
+          <WidgetOptionsShowcase selected={draft.layout} onSelect={chooseLayout} />
         </fieldset>
       </div>
 
@@ -158,9 +144,9 @@ export function HomepageSetupBuilder() {
           <h3 id="homepage-preview-title">Live demonstration</h3>
           <p>No appointment will be created. Change the setup whenever you like.</p>
         </div>
-        <WidgetOptionsShowcase layout={draft.layout}>
+        <WidgetLivePreview layout={draft.layout}>
           <DemoBookingFlow journey={draft.journey} demoService={draft.demoService} />
-        </WidgetOptionsShowcase>
+        </WidgetLivePreview>
         <p className="homepage-layout-status sr-only" role="status" aria-live="polite">
           {layoutMessage}
         </p>
