@@ -224,11 +224,11 @@ describe("DemoBookingFlow", () => {
   it("resets a controlled page-specific demonstration when its sample service changes", async () => {
     const view = await render(createElement(DemoBookingFlow, {
       journey: "page-service",
-      demoService: "camera",
+      demoService: "interior",
     }));
 
     expect(view.container.textContent).toContain("Who should deliver this service?");
-    expect(view.container.textContent).toContain("Camera installation");
+    expect(view.container.textContent).toContain("Interior consultation");
     expect(view.container.textContent).toContain("1 hr 30 min");
     expect(view.container.textContent).toContain("Maya Chen");
     expect(view.container.textContent).toContain("Jon Bell");
@@ -244,20 +244,20 @@ describe("DemoBookingFlow", () => {
     await act(async () => {
       view.root.render(createElement(DemoBookingFlow, {
         journey: "page-service",
-        demoService: "alarm",
+        demoService: "garden",
       }));
     });
     await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
 
     expect(view.container.textContent).toContain("Who should deliver this service?");
-    expect(view.container.textContent).toContain("Alarm installation");
+    expect(view.container.textContent).toContain("Garden planning");
     expect(view.container.textContent).toContain("2 hours");
     expect(view.container.textContent).toContain("Theo Brooks");
     expect(view.container.textContent).toContain("Priya Shah");
     expect(view.container.textContent).not.toContain("Maya Chen");
     expect(view.container.textContent).not.toContain("Jon Bell");
     expect(view.container.querySelector('[role="status"]')?.textContent)
-      .toContain("Demonstration reset for Alarm installation");
+      .toContain("Demonstration reset for Garden planning");
     expect(document.activeElement).toBe(
       view.container.querySelector(".stage-title h3"),
     );
@@ -268,13 +268,13 @@ describe("DemoBookingFlow", () => {
   it("announces the catalogue rather than a sample service when scope resets", async () => {
     const view = await render(createElement(DemoBookingFlow, {
       journey: "page-service",
-      demoService: "alarm",
+      demoService: "garden",
     }));
 
     await act(async () => {
       view.root.render(createElement(DemoBookingFlow, {
         journey: "catalogue",
-        demoService: "alarm",
+        demoService: "garden",
       }));
     });
     await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
@@ -283,13 +283,13 @@ describe("DemoBookingFlow", () => {
     expect(view.container.querySelector('[role="status"]')?.textContent)
       .toContain("Demonstration reset for the full service catalogue.");
     expect(view.container.querySelector('[role="status"]')?.textContent)
-      .not.toContain("Alarm installation");
+      .not.toContain("Garden planning");
     expect(document.activeElement).toBe(view.container.querySelector(".stage-title h3"));
 
     await act(async () => view.root.unmount());
   });
 
-  it("filters the smart-home catalogue and completes locally without a widget event", async () => {
+  it("filters the neutral service catalogue and completes locally without a widget event", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const complete = vi.fn();
     window.addEventListener("daymark:complete", complete);
@@ -298,20 +298,20 @@ describe("DemoBookingFlow", () => {
     try {
       view = await render(createElement(DemoBookingFlow));
       expect(view.container.textContent).toContain("Which service do you need?");
-      const camera = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
-        .find((button) => button.textContent?.includes("Camera installation"));
-      expect(camera).toBeDefined();
-      await click(camera!);
+      const interior = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Interior consultation"));
+      expect(interior).toBeDefined();
+      await click(interior!);
       expect(view.container.textContent).toContain("Maya Chen");
       expect(view.container.textContent).toContain("Jon Bell");
       expect(view.container.textContent).not.toContain("Theo Brooks");
       expect(view.container.textContent).not.toContain("Priya Shah");
 
       await click(view.container.querySelector<HTMLButtonElement>(".back-button")!);
-      const alarm = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
-        .find((button) => button.textContent?.includes("Alarm installation"));
-      expect(alarm).toBeDefined();
-      await click(alarm!);
+      const garden = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Garden planning"));
+      expect(garden).toBeDefined();
+      await click(garden!);
       expect(view.container.textContent).toContain("Theo Brooks");
       expect(view.container.textContent).toContain("Priya Shah");
       expect(view.container.textContent).not.toContain("Maya Chen");
@@ -336,7 +336,7 @@ describe("DemoBookingFlow", () => {
       expect(text).toContain("Demonstration complete");
       expect(text).toContain("No appointment was created.");
       expect(text).toContain("Theo Brooks");
-      expect(text).toContain("Alarm installation (2 hours)");
+      expect(text).toContain("Garden planning (2 hours)");
       expect(text).toContain("Demo reference");
       expect(text).toContain("DEMO-ONLY");
       expect(text).not.toContain("Appointment confirmed");
