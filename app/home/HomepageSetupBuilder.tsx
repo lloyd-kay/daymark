@@ -14,6 +14,7 @@ import {
   type WidgetPlacement,
 } from "./WidgetOptionsShowcase";
 import { WidgetLivePreview } from "./WidgetLivePreview";
+import { ServiceScopeShowcase } from "./ServiceScopeShowcase";
 
 type HomepageSetupDraft = {
   journey: SetupJourney;
@@ -87,53 +88,21 @@ export function HomepageSetupBuilder() {
           </p>
         </div>
 
-        <fieldset className="homepage-option-group homepage-scope-options">
-          <legend>What should customers see?</legend>
-          <SetupOption
-            checked={draft.journey === "catalogue"}
-            description="Customers choose from every service before Daymark shows qualified people."
-            name="homepage-journey"
-            onChange={() => chooseJourney("catalogue")}
-            title="Show all services"
-            value="catalogue"
-          />
-          <SetupOption
-            checked={draft.journey === "page-service"}
-            description="The page passes one service into booking, so customers begin with qualified people."
-            name="homepage-journey"
-            onChange={() => chooseJourney("page-service")}
-            title="Use this page's service"
-            value="page-service"
-          />
-        </fieldset>
+        <ServiceScopeShowcase
+          journey={draft.journey}
+          demoService={draft.demoService}
+          onJourneyChange={chooseJourney}
+          onDemoServiceChange={chooseDemoService}
+        />
 
-        {draft.journey === "page-service" ? (
-          <fieldset className="homepage-option-group homepage-sample-options">
-            <legend>Which sample service should the preview use?</legend>
-            <p className="homepage-option-note">
-              Sample only. Your administrator chooses the real workspace service in Daymark.
-            </p>
-            <SetupOption
-              checked={draft.demoService === "interior"}
-              description="90 minutes · Maya and Jon"
-              name="homepage-demo-service"
-              onChange={() => chooseDemoService("interior")}
-              title="Interior consultation"
-              value="interior"
-            />
-            <SetupOption
-              checked={draft.demoService === "garden"}
-              description="120 minutes · Theo and Priya"
-              name="homepage-demo-service"
-              onChange={() => chooseDemoService("garden")}
-              title="Garden planning"
-              value="garden"
-            />
-          </fieldset>
-        ) : null}
-
-        <fieldset className="homepage-option-group homepage-layout-options">
-          <legend>How should the widget appear?</legend>
+        <fieldset className="homepage-decision-section homepage-placement-section">
+          <legend>
+            <span>02 · Placement</span>
+            <strong>How should the widget appear?</strong>
+          </legend>
+          <p className="homepage-decision-intro">
+            Choose a compact corner launcher or a full booking section built into the page.
+          </p>
           <WidgetOptionsShowcase selected={draft.layout} onSelect={chooseLayout} />
         </fieldset>
       </div>
@@ -212,47 +181,5 @@ export function HomepageSetupBuilder() {
         </div>
       </div>
     </section>
-  );
-}
-
-function SetupOption({
-  checked,
-  description,
-  name,
-  onChange,
-  title,
-  value,
-}: {
-  checked: boolean;
-  description: string;
-  name: string;
-  onChange: () => void;
-  title: string;
-  value: string;
-}) {
-  const id = `${name}-${value}`;
-
-  return (
-    <label
-      aria-label={`${title}. ${description}`}
-      className={`homepage-option${checked ? " is-selected" : ""}`}
-      htmlFor={id}
-    >
-      <input
-        id={id}
-        type="radio"
-        name={name}
-        value={value}
-        checked={checked}
-        onChange={onChange}
-      />
-      <span>
-        <span className="homepage-option-title">
-          <strong>{title}</strong>
-          <em>{checked ? "Selected" : "Choose"}</em>
-        </span>
-        <small>{description}</small>
-      </span>
-    </label>
   );
 }

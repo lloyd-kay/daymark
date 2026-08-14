@@ -3436,38 +3436,161 @@ a {
   line-height: 1.55;
 }
 
-.homepage-option-group {
+.homepage-decision-section {
   min-width: 0;
-  display: grid;
-  align-content: start;
-  gap: 0.7rem;
+  grid-column: 1 / -1;
   margin: 0;
-  padding: 1rem;
+  padding: clamp(1rem, 2.5vw, 2rem);
   border: 1px solid var(--ink);
   background: var(--paper-deep);
 }
 
-.homepage-scope-options { background: var(--paper-deep); }
-.homepage-sample-options { background: #f8ded5; }
-.homepage-layout-options {
-  grid-column: 1 / -1;
-  background: #dce7d5;
+.homepage-decision-section + .homepage-decision-section {
+  margin-top: clamp(1.5rem, 4vw, 3.5rem);
 }
-.homepage-layout-options .widget-choice-grid { margin-top: 0.35rem; }
 
-.homepage-option-group legend {
+.homepage-journey-section { background: #f7d9cf; }
+.homepage-placement-section { background: #dce7d5; }
+.homepage-placement-section .widget-choice-grid { margin-top: 0.35rem; }
+
+.homepage-decision-section > legend {
   max-width: calc(100% - 1rem);
-  padding: 0 0.45rem;
+  padding: 0 0.6rem;
+}
+
+.homepage-decision-section > legend span,
+.homepage-decision-section > legend strong {
+  display: block;
+}
+
+.homepage-decision-section > legend span {
+  color: var(--coral);
+  font-size: 0.6rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.homepage-decision-section > legend strong {
+  margin-top: 0.3rem;
   font-family: var(--font-display), Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 580;
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  font-weight: 520;
+  line-height: 0.95;
+}
+
+.homepage-decision-intro {
+  max-width: 620px;
+  margin: 0 0 1.4rem;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.journey-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2.5vw, 2rem);
+}
+
+.journey-choice {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: transform 160ms ease, outline-color 160ms ease;
+}
+
+.journey-choice.is-selected {
+  outline: 5px solid var(--coral);
+  outline-offset: 3px;
+  transform: translateY(-3px);
+}
+
+.journey-choice:has(.journey-choice-select:focus-visible) {
+  outline: 4px solid var(--coral);
+  outline-offset: 6px;
+}
+
+.journey-choice-preview {
+  min-height: 230px;
+  padding: 1.2rem;
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper-deep);
+}
+
+.journey-preview-page-service { background: var(--sky); }
+
+.journey-preview-label {
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.journey-preview-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1.1rem;
+}
+
+.journey-preview-services i,
+.journey-preview-page {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  font-style: normal;
+}
+
+.journey-preview-services i {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1rem, 1.8vw, 1.45rem);
   line-height: 1;
 }
 
-.homepage-option-note {
-  margin: 0 0 0.2rem;
+.journey-preview-services i:nth-child(2) { background: var(--sage); }
+.journey-preview-page { margin-top: 1.1rem; }
+.journey-preview-page i { font-family: var(--font-display), Georgia, serif; font-size: clamp(1.1rem, 2vw, 1.6rem); }
+.journey-preview-page b { color: var(--coral); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.journey-preview-arrow { display: block; margin: 0.65rem 0; font-weight: 850; text-align: center; }
+.journey-preview-people { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.journey-preview-people i { min-width: 54px; padding: 0.55rem; border: 1px solid var(--ink); border-radius: 999px; background: var(--sage); font-size: 0.6rem; font-style: normal; text-align: center; }
+.journey-preview-people i:nth-child(2n) { background: var(--lilac); }
+
+.journey-choice-copy { padding: clamp(1rem, 2.5vw, 1.7rem); }
+.journey-choice-label { display: block; margin-bottom: 0.7rem; color: var(--coral); font-size: 0.6rem; font-weight: 850; letter-spacing: 0.12em; text-transform: uppercase; }
+.journey-choice-copy h4 { margin: 0; font-family: var(--font-display), Georgia, serif; font-size: clamp(1.45rem, 2.4vw, 2.2rem); font-weight: 520; line-height: 1; }
+.journey-choice-copy p { margin: 0.65rem 0 1.1rem; color: var(--ink-soft); line-height: 1.5; }
+.journey-choice-select { min-height: 44px; border: 1px solid var(--ink); padding: 0.65rem 0.9rem; background: transparent; color: var(--ink); cursor: pointer; font: inherit; font-size: 0.72rem; font-weight: 800; }
+.journey-choice-select[aria-pressed="true"] { background: var(--ink); color: var(--paper-light); }
+
+.homepage-sample-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem;
+  border: 1px dashed var(--ink);
+  background: var(--paper-light);
+}
+
+.homepage-sample-options > legend {
+  padding: 0 0.45rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 580;
+}
+
+.homepage-sample-options > p {
+  grid-column: 1 / -1;
+  margin: 0;
   color: var(--ink-soft);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   line-height: 1.45;
 }
 
@@ -3741,7 +3864,8 @@ a {
 .homepage-setup-code p { margin: 0.65rem 0 0; color: var(--ink); font-size: 0.75rem; }
 
 @media (max-width: 850px) {
-  .widget-choice-grid { grid-template-columns: 1fr; }
+  .widget-choice-grid,
+  .journey-choice-grid { grid-template-columns: 1fr; }
   .homepage-setup-card { grid-template-columns: 1fr; }
   .homepage-setup-controls-heading,
   .homepage-live-preview-heading { display: block; }
@@ -3768,7 +3892,10 @@ a {
   }
   .homepage-setup-controls,
   .homepage-setup-card { padding: 1rem; box-shadow: 4px 4px 0 var(--ink); }
-  .homepage-option-group { padding: 0.75rem; }
+  .homepage-decision-section { padding: 0.75rem; }
+  .journey-choice-preview { min-height: 205px; }
+  .journey-preview-services,
+  .homepage-sample-options { grid-template-columns: 1fr; }
   .widget-presentation { padding: 0.45rem; box-shadow: 4px 4px 0 var(--ink); }
   .widget-presentation-label { display: grid; gap: 0.3rem; padding: 0.3rem 0.35rem 0.7rem; }
   .widget-host-hero { grid-template-columns: 1fr; padding: 24px 14px 18px; }
