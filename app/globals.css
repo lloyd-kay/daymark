@@ -4125,6 +4125,13 @@ a {
   }
 }
 
+@media (max-width: 760px) {
+  .widget-live-surface-compact .booking-studio,
+  .widget-live-surface-inline .booking-studio {
+    display: block;
+  }
+}
+
 @media (max-width: 620px) {
   .widget-live-surface-compact {
     right: 0.5rem;
@@ -4132,11 +4139,6 @@ a {
     width: calc(100% - 1rem);
     max-height: calc(100% - 5rem);
     border-radius: 14px;
-  }
-
-  .widget-live-surface-compact .booking-studio,
-  .widget-live-surface-inline .booking-studio {
-    display: block;
   }
 
   .widget-live-surface-compact .privacy-note,

@@ -45,6 +45,17 @@ describe("widget live presentation", () => {
     expect(css).toMatch(/@media \(max-width:\s*980px\)[\s\S]*?\.widget-live-surface-compact \.privacy-note,[\s\S]*?\.widget-live-surface-inline \.privacy-note\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*2;[^}]*transform:\s*none;/s);
   });
 
+  it("switches scoped booking surfaces to one column at the 760px horizontal-rail breakpoint", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+
+    expect(css).toContain(`@media (max-width: 760px) {
+  .widget-live-surface-compact .booking-studio,
+  .widget-live-surface-inline .booking-studio {
+    display: block;
+  }
+}`);
+  });
+
   it("opens Floating with only the dialog visible and closes back to its launcher", async () => {
     const container = await renderHarness();
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
