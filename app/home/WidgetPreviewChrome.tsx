@@ -47,18 +47,39 @@ export function WidgetArtworkHero({ inline = false }: { inline?: boolean }) {
   );
 }
 
-export function WidgetNeutralHostPage() {
+export function CedarHouseHostPage() {
   return (
     <div className="widget-live-host-page" aria-hidden="true">
-      <div className="widget-live-host-copy">
-        <span className="widget-host-kicker">Considered spaces</span>
-        <strong>Room to feel<br />at home.</strong>
-        <p>A sample host page keeps its own identity while Daymark handles booking.</p>
+      <section className="widget-live-host-hero">
+        <div className="widget-live-host-copy">
+          <span className="widget-host-kicker">Interiors · Gardens · London</span>
+          <strong>Spaces with room<br />to grow.</strong>
+          <p>Thoughtful plans for the rooms you live in and the outdoor spaces around them.</p>
+          <span className="widget-live-host-link">Explore the studio →</span>
+        </div>
+        <div className="widget-live-host-collage">
+          <i className="widget-live-swatch widget-live-swatch-coral" />
+          <i className="widget-live-swatch widget-live-swatch-sage" />
+          <i className="widget-live-swatch widget-live-swatch-paper" />
+          <span><small>Project 07</small><b>Inside<br />and out</b></span>
+        </div>
+      </section>
+      <div className="widget-live-host-services">
+        <article className="widget-live-host-service">
+          <span>01</span>
+          <strong>Interior consultation</strong>
+          <small>Room flow, materials, and a practical next step.</small>
+        </article>
+        <article className="widget-live-host-service">
+          <span>02</span>
+          <strong>Garden planning</strong>
+          <small>Layout and planting shaped around how you live.</small>
+        </article>
       </div>
-      <div className="widget-live-host-details">
-        <span>INTERIORS</span>
-        <span>PLANNING</span>
-        <span>CARE</span>
+      <div className="widget-live-host-proof">
+        <span>Independent studio</span>
+        <span>London &amp; remote</span>
+        <span>New projects · Autumn 2026</span>
       </div>
     </div>
   );

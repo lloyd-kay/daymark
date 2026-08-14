@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { WidgetPlacement } from "./WidgetOptionsShowcase";
-import { WidgetHostBrowser, WidgetNeutralHostPage } from "./WidgetPreviewChrome";
+import { CedarHouseHostPage, WidgetHostBrowser } from "./WidgetPreviewChrome";
 
 export function WidgetLivePreview({
   layout,
@@ -73,7 +73,7 @@ export function WidgetLivePreview({
         <strong>{layoutLabel} selected</strong>
       </p>
       <WidgetHostBrowser>
-        <WidgetNeutralHostPage />
+        <CedarHouseHostPage />
         <div
           id="widget-live-booking"
           className="widget-live-surface"

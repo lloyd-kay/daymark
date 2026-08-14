@@ -230,6 +230,21 @@ describe("unified homepage setup experience", () => {
     expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
   });
 
+  it("renders a fuller artwork-free Cedar House studio behind the live booking surface", async () => {
+    const container = await renderBuilder();
+    const live = container.querySelector<HTMLElement>(".widget-presentation");
+    const host = live?.querySelector<HTMLElement>(".widget-live-host-page");
+
+    expect(host?.querySelector(".widget-live-host-hero")).not.toBeNull();
+    expect(host?.querySelector(".widget-live-host-collage")).not.toBeNull();
+    expect(host?.querySelectorAll(".widget-live-host-service")).toHaveLength(2);
+    expect(host?.querySelector(".widget-live-host-proof")).not.toBeNull();
+    expect(host?.textContent).toContain("Interior consultation");
+    expect(host?.textContent).toContain("Garden planning");
+    expect(live?.querySelector(".widget-host-art")).toBeNull();
+    expect(live?.querySelector("img")).toBeNull();
+  });
+
   it("ships the text-free background at a true two-times pixel density", () => {
     const artworkPath = resolve(process.cwd(), "public/daymark-widget-art-4x3-background-2x.png");
     const artworkExists = existsSync(artworkPath);
