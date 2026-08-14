@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14
 
-**Status:** Direction approved; detailed review requested
+**Status:** Approved
 
 **Pre-change restore point:** `restore-2026-08-14-before-compact-widget-rebuild` at `4155fe66c29dfb892bfb83b2f692f6f3aa5e11c9`
 
