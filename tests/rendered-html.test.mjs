@@ -44,7 +44,12 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /For custom widgets or integrations,/i);
   assert.match(html, /contact us\./i);
   assert.match(html, /Cedar House/i);
-  assert.match(html, /name="homepage-journey" checked="" value="catalogue"/i);
+  assert.match(html, /journey-choice journey-choice-catalogue is-selected/i);
+  assert.match(html, /aria-pressed="true" aria-labelledby="journey-catalogue-title"/i);
+  assert.match(html, /widget-choice widget-choice-floating is-selected/i);
+  assert.match(html, /Interior consultation/i);
+  assert.match(html, /Garden planning/i);
+  assert.doesNotMatch(html, /Camera installation|Alarm installation|smart home/i);
   assert.match(html, /Get Daymark/i);
   assert.doesNotMatch(html, /Confirm appointment/i);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
