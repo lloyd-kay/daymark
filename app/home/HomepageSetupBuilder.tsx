@@ -3,6 +3,7 @@
 import { Copy, ExternalLink, Laptop } from "lucide-react";
 import { useState } from "react";
 import { DemoBookingFlow } from "../demo/DemoBookingFlow";
+import type { DemoServiceKey } from "../../lib/booking/demo";
 import {
   buildSetupProfileUri,
   encodeSetupProfile,
@@ -14,17 +15,15 @@ import {
 } from "./WidgetOptionsShowcase";
 import { WidgetLivePreview } from "./WidgetLivePreview";
 
-type DemoService = "camera" | "alarm";
-
 type HomepageSetupDraft = {
   journey: SetupJourney;
-  demoService: DemoService;
+  demoService: DemoServiceKey;
   layout: WidgetPlacement;
 };
 
 const INITIAL_DRAFT: HomepageSetupDraft = {
   journey: "catalogue",
-  demoService: "camera",
+  demoService: "interior",
   layout: "floating",
 };
 
@@ -51,7 +50,7 @@ export function HomepageSetupBuilder() {
     setLayoutMessage("");
   }
 
-  function chooseDemoService(demoService: DemoService) {
+  function chooseDemoService(demoService: DemoServiceKey) {
     if (demoService === draft.demoService) return;
     setDraft((current) => ({ ...current, demoService }));
     setCopyMessage("");
@@ -115,20 +114,20 @@ export function HomepageSetupBuilder() {
               Sample only. Your administrator chooses the real workspace service in Daymark.
             </p>
             <SetupOption
-              checked={draft.demoService === "camera"}
+              checked={draft.demoService === "interior"}
               description="90 minutes · Maya and Jon"
               name="homepage-demo-service"
-              onChange={() => chooseDemoService("camera")}
-              title="Camera installation"
-              value="camera"
+              onChange={() => chooseDemoService("interior")}
+              title="Interior consultation"
+              value="interior"
             />
             <SetupOption
-              checked={draft.demoService === "alarm"}
+              checked={draft.demoService === "garden"}
               description="120 minutes · Theo and Priya"
               name="homepage-demo-service"
-              onChange={() => chooseDemoService("alarm")}
-              title="Alarm installation"
-              value="alarm"
+              onChange={() => chooseDemoService("garden")}
+              title="Garden planning"
+              value="garden"
             />
           </fieldset>
         ) : null}

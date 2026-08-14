@@ -13,8 +13,8 @@ const liveBookingTransport = createLiveBookingTransport("cedar-house");
 
 describe("demonstration booking transport", () => {
   it.each([
-    ["camera", "Camera installation", 90, ["Maya Chen", "Jon Bell"]],
-    ["alarm", "Alarm installation", 120, ["Theo Brooks", "Priya Shah"]],
+    ["interior", "Interior consultation", 90, ["Maya Chen", "Jon Bell"]],
+    ["garden", "Garden planning", 120, ["Theo Brooks", "Priya Shah"]],
   ] as const)("selects the canonical %s demonstration scenario", (
     key,
     serviceName,
@@ -27,20 +27,20 @@ describe("demonstration booking transport", () => {
     expect(scenario.employees.map((employee) => employee.publicName)).toEqual(employeeNames);
   });
 
-  it("offers the exact smart-home catalogue and service-qualified installers", async () => {
+  it("offers the exact neutral catalogue and service-qualified specialists", async () => {
     expect(DEMO_SERVICES.map(({ id, durationMinutes }) => ({ id, durationMinutes }))).toEqual([
-      { id: "service-demo-camera-installation", durationMinutes: 90 },
-      { id: "service-demo-alarm-installation", durationMinutes: 120 },
+      { id: "service-demo-interior-consultation", durationMinutes: 90 },
+      { id: "service-demo-garden-planning", durationMinutes: 120 },
     ]);
-    expect((await demoBookingTransport.loadEmployees("service-demo-camera-installation"))
+    expect((await demoBookingTransport.loadEmployees("service-demo-interior-consultation"))
       .map((employee) => employee.publicName)).toEqual(["Maya Chen", "Jon Bell"]);
-    expect((await demoBookingTransport.loadEmployees("service-demo-alarm-installation"))
+    expect((await demoBookingTransport.loadEmployees("service-demo-garden-planning"))
       .map((employee) => employee.publicName)).toEqual(["Theo Brooks", "Priya Shah"]);
   });
 
   it.each([
-    ["service-demo-camera-installation", "maya-chen", "Camera installation", 90],
-    ["service-demo-alarm-installation", "theo-brooks", "Alarm installation", 120],
+    ["service-demo-interior-consultation", "maya-chen", "Interior consultation", 90],
+    ["service-demo-garden-planning", "theo-brooks", "Garden planning", 120],
   ] as const)("keeps %s in memory and uses its duration", async (
     serviceId,
     employeeId,
@@ -83,10 +83,10 @@ describe("demonstration booking transport", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2030-03-10T12:00:00.000Z"));
     try {
-      const cameraId = "service-demo-camera-installation";
-      const maya = await demoBookingTransport.loadSlots(cameraId, "maya-chen", "2030-03-10");
-      const mayaAgain = await demoBookingTransport.loadSlots(cameraId, "maya-chen", "2030-03-10");
-      const jon = await demoBookingTransport.loadSlots(cameraId, "jon-bell", "2030-03-10");
+      const interiorId = "service-demo-interior-consultation";
+      const maya = await demoBookingTransport.loadSlots(interiorId, "maya-chen", "2030-03-10");
+      const mayaAgain = await demoBookingTransport.loadSlots(interiorId, "maya-chen", "2030-03-10");
+      const jon = await demoBookingTransport.loadSlots(interiorId, "jon-bell", "2030-03-10");
 
       expect(maya.dateKeys).toEqual([
         "2030-03-10",
@@ -109,8 +109,8 @@ describe("demonstration booking transport", () => {
     }
   });
 
-  it("rejects unknown services and installers who are not qualified for the service", async () => {
-    const serviceId = "service-demo-alarm-installation";
+  it("rejects unknown services and specialists who are not qualified for the service", async () => {
+    const serviceId = "service-demo-garden-planning";
     const slots = await demoBookingTransport.loadSlots(serviceId, "theo-brooks", "2026-08-06");
     const input = {
       serviceId,

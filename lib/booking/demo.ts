@@ -25,42 +25,42 @@ const DEMO_SLOT_TIMES = [
   "16:00:00.000Z",
 ] as const;
 
-export type DemoServiceKey = "camera" | "alarm";
+export type DemoServiceKey = "interior" | "garden";
 
 export const DEMO_SERVICES: PublicService[] = [
   {
-    id: "service-demo-camera-installation",
-    slug: "camera-installation",
-    name: "Camera installation",
-    category: "Smart home installation",
-    description: "Install and configure connected security cameras.",
+    id: "service-demo-interior-consultation",
+    slug: "interior-consultation",
+    name: "Interior consultation",
+    category: "Design consultation",
+    description: "Plan a thoughtful room with a Cedar House specialist.",
     durationMinutes: 90,
   },
   {
-    id: "service-demo-alarm-installation",
-    slug: "alarm-installation",
-    name: "Alarm installation",
-    category: "Smart home installation",
-    description: "Install and configure a connected alarm system.",
+    id: "service-demo-garden-planning",
+    slug: "garden-planning",
+    name: "Garden planning",
+    category: "Outdoor spaces",
+    description: "Shape a practical planting and layout plan for your garden.",
     durationMinutes: 120,
   },
 ];
 
 export const DEMO_EMPLOYEES: PublicEmployee[] = [
-  { id: "maya-chen", publicName: "Maya Chen", title: "Camera installer", bio: "Careful connected-camera placement and setup.", accent: "coral" },
-  { id: "theo-brooks", publicName: "Theo Brooks", title: "Alarm installer", bio: "Practical connected-alarm installation and testing.", accent: "sage" },
-  { id: "priya-shah", publicName: "Priya Shah", title: "Alarm specialist", bio: "Secure alarm configuration and household handover.", accent: "lilac" },
-  { id: "jon-bell", publicName: "Jon Bell", title: "Camera specialist", bio: "Clear camera setup with a friendly walkthrough.", accent: "ochre" },
+  { id: "maya-chen", publicName: "Maya Chen", title: "Interior designer", bio: "Calm, practical room planning with a material-led approach.", accent: "coral" },
+  { id: "theo-brooks", publicName: "Theo Brooks", title: "Garden designer", bio: "Outdoor layouts designed around daily life and the seasons.", accent: "sage" },
+  { id: "priya-shah", publicName: "Priya Shah", title: "Planting specialist", bio: "Resilient planting plans with texture, colour, and year-round interest.", accent: "lilac" },
+  { id: "jon-bell", publicName: "Jon Bell", title: "Space planning consultant", bio: "Clear room layouts and a friendly, practical design walkthrough.", accent: "ochre" },
 ];
 
 const ELIGIBLE_EMPLOYEE_IDS: Record<string, readonly string[]> = {
-  "service-demo-camera-installation": ["maya-chen", "jon-bell"],
-  "service-demo-alarm-installation": ["theo-brooks", "priya-shah"],
+  "service-demo-interior-consultation": ["maya-chen", "jon-bell"],
+  "service-demo-garden-planning": ["theo-brooks", "priya-shah"],
 };
 
 const DEMO_SERVICE_IDS: Record<DemoServiceKey, string> = {
-  camera: "service-demo-camera-installation",
-  alarm: "service-demo-alarm-installation",
+  interior: "service-demo-interior-consultation",
+  garden: "service-demo-garden-planning",
 };
 
 export function demoScenario(serviceKey: DemoServiceKey): {
@@ -122,7 +122,7 @@ function requireEligibleEmployee(
   );
   if (!employee) {
     throw new BookingTransportError(
-      "That installer is not available for this service.",
+      "That specialist is not available for this service.",
       400,
     );
   }

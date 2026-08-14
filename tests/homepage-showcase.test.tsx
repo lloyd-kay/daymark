@@ -46,6 +46,15 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).toContain("Which service do you need?");
   });
 
+  it("uses a neutral public demonstration without smart-home installation copy", async () => {
+    const container = await renderBuilder();
+    const text = container.textContent ?? "";
+
+    expect(text).toContain("Interior consultation");
+    expect(text).toContain("Garden planning");
+    expect(text).not.toMatch(/smart home|camera installation|alarm installation/i);
+  });
+
   it.each([
     ["catalogue", "floating", "DM2-C-F-36UR", "Full service catalogue · Floating widget"],
     ["catalogue", "inline", "DM2-C-I-2SPS", "Full service catalogue · Inline widget"],
@@ -79,12 +88,12 @@ describe("unified homepage setup experience", () => {
     expect(link?.getAttribute("href")).toBe("daymark://import-setup?code=DM2-P-F-34D6");
     expect(input?.value).toBe("DM2-P-F-34D6");
 
-    await chooseRadio(container, "homepage-demo-service", "alarm");
+    await chooseRadio(container, "homepage-demo-service", "garden");
     await flushReset();
 
     expect(link?.getAttribute("href")).toBe("daymark://import-setup?code=DM2-P-F-34D6");
     expect(input?.value).toBe("DM2-P-F-34D6");
-    expect(container.textContent).toContain("Alarm installation");
+    expect(container.textContent).toContain("Garden planning");
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -100,7 +109,7 @@ describe("unified homepage setup experience", () => {
     expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Which service do you need?");
 
-    await clickButton(container, "Camera installation", ".service-choice-card");
+    await clickButton(container, "Interior consultation", ".service-choice-card");
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).toContain("Maya Chen");
     expect(container.textContent).toContain("Jon Bell");
@@ -112,7 +121,7 @@ describe("unified homepage setup experience", () => {
     expect(surface?.hidden).toBe(false);
     expect(container.querySelector(".widget-live-launcher")).toBeNull();
     expect(container.textContent).toContain("Who should deliver this service?");
-    expect(container.textContent).toContain("Camera installation");
+    expect(container.textContent).toContain("Interior consultation");
     expect(container.textContent).toContain("Maya Chen");
     expect(container.textContent).toContain("Jon Bell");
     expect(container.querySelector(".widget-presentation")?.getAttribute("data-layout"))
@@ -146,7 +155,7 @@ describe("unified homepage setup experience", () => {
     expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Who should deliver this service?");
     expect(container.textContent).not.toContain("Which service do you need?");
-    expect(container.textContent).toContain("Camera installation");
+    expect(container.textContent).toContain("Interior consultation");
     expect(container.textContent).toContain("1 hr 30 min");
     expect(container.textContent).toContain("Maya Chen");
     expect(container.textContent).toContain("Jon Bell");
@@ -158,13 +167,13 @@ describe("unified homepage setup experience", () => {
     expect(surface?.hidden).toBe(true);
     expect(launcher?.hidden).toBe(false);
 
-    await chooseRadio(container, "homepage-demo-service", "alarm");
+    await chooseRadio(container, "homepage-demo-service", "garden");
     await flushReset();
 
     expect(surface?.hidden).toBe(false);
     expect(launcher?.hidden).toBe(true);
     expect(container.textContent).toContain("Who should deliver this service?");
-    expect(container.textContent).toContain("Alarm installation");
+    expect(container.textContent).toContain("Garden planning");
     expect(container.textContent).toContain("2 hours");
     expect(container.textContent).toContain("Theo Brooks");
     expect(container.textContent).toContain("Priya Shah");
@@ -172,7 +181,7 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).not.toContain("Jon Bell");
     expect(document.activeElement).toBe(container.querySelector(".stage-title h3"));
     expect(container.querySelector(".demo-booking-flow [role='status']")?.textContent)
-      .toContain("Demonstration reset for Alarm installation.");
+      .toContain("Demonstration reset for Garden planning.");
     expect(fetch).not.toHaveBeenCalled();
   });
 

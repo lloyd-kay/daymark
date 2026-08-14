@@ -11,7 +11,7 @@ import { BookingFlow } from "../booking/BookingFlow";
 
 export function DemoBookingFlow({
   journey = "catalogue",
-  demoService = "camera",
+  demoService = "interior",
 }: {
   journey?: "catalogue" | "page-service";
   demoService?: DemoServiceKey;

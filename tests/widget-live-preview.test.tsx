@@ -123,12 +123,12 @@ function StatefulProbe() {
 
 function PreviewHarness() {
   const [layout, setLayout] = useState<WidgetPlacement>("floating");
-  const [resetKey, setResetKey] = useState("catalogue:camera");
+  const [resetKey, setResetKey] = useState("catalogue:interior");
   return (
     <>
       <button type="button" onClick={() => setLayout("floating")}>Use Floating</button>
       <button type="button" onClick={() => setLayout("inline")}>Use Inline</button>
-      <button type="button" onClick={() => setResetKey("page-service:camera")}>
+      <button type="button" onClick={() => setResetKey("page-service:interior")}>
         Reset service
       </button>
       <WidgetLivePreview layout={layout} resetKey={resetKey}>
