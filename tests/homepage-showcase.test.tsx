@@ -158,6 +158,8 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).toContain("Maya Chen");
     expect(container.textContent).toContain("Jon Bell");
     expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
+    expect(container.querySelector(".widget-live-surface-compact")).not.toBeNull();
+    expect(container.querySelector(".widget-live-surface-inline")).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 

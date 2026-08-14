@@ -27,12 +27,32 @@ describe("widget live presentation", () => {
     );
   });
 
+  it("keeps Floating compact and restores desktop privacy side columns", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+
+    expect(css).toMatch(/\.widget-live-surface-compact\s*\{[^}]*right:[^;]+;[^}]*bottom:[^;]+;[^}]*width:\s*min\(600px,[^;]+;[^}]*max-height:/s);
+    expect(css).toMatch(/\.widget-live-surface-compact \.booking-studio\s*\{[^}]*grid-template-columns:\s*52px minmax\(0, 1fr\) minmax\(150px, 178px\);/s);
+    expect(css).toMatch(/\.widget-live-surface-compact \.privacy-note\s*\{[^}]*grid-column:\s*3;[^}]*width:\s*auto;[^}]*transform:\s*rotate\(1\.2deg\);/s);
+    expect(css).toMatch(/\.widget-live-surface-inline \.booking-studio\s*\{[^}]*grid-template-columns:\s*88px minmax\(0, 1fr\) minmax\(200px, 230px\);/s);
+    expect(css).toMatch(/\.widget-live-surface-inline \.privacy-note\s*\{[^}]*grid-column:\s*3;[^}]*transform:\s*rotate\(1\.2deg\);/s);
+    expect(css).not.toMatch(/\.widget-live-surface \.privacy-note\s*\{[^}]*grid-column:\s*2;[^}]*width:\s*auto;[^}]*transform:\s*none;/s);
+  });
+
+  it("stacks both privacy notes safely below booking controls on narrower previews", () => {
+    const css = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
+
+    expect(css).toMatch(/@media \(max-width:\s*980px\)[\s\S]*?\.widget-live-surface-compact \.booking-studio,[\s\S]*?\.widget-live-surface-inline \.booking-studio\s*\{[^}]*grid-template-columns:\s*64px minmax\(0, 1fr\);/s);
+    expect(css).toMatch(/@media \(max-width:\s*980px\)[\s\S]*?\.widget-live-surface-compact \.privacy-note,[\s\S]*?\.widget-live-surface-inline \.privacy-note\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*2;[^}]*transform:\s*none;/s);
+  });
+
   it("opens Floating with only the dialog visible and closes back to its launcher", async () => {
     const container = await renderHarness();
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
     const launcher = container.querySelector<HTMLButtonElement>("button.widget-live-launcher");
 
     expect(surface?.hidden).toBe(true);
+    expect(surface?.classList.contains("widget-live-surface-compact")).toBe(true);
+    expect(surface?.classList.contains("widget-live-surface-inline")).toBe(false);
     expect(launcher).not.toBeNull();
     expect(launcher?.hidden).toBe(false);
     await click(launcher);
@@ -82,6 +102,8 @@ describe("widget live presentation", () => {
 
     const inlineSurface = container.querySelector<HTMLElement>("#widget-live-booking");
     expect(inlineSurface?.hidden).toBe(false);
+    expect(inlineSurface?.classList.contains("widget-live-surface-inline")).toBe(true);
+    expect(inlineSurface?.classList.contains("widget-live-surface-compact")).toBe(false);
     expect(inlineSurface?.getAttribute("role")).toBeNull();
     expect(container.querySelector(".widget-live-launcher")).toBeNull();
     expect(container.querySelector(".widget-live-close")).toBeNull();
@@ -92,6 +114,8 @@ describe("widget live presentation", () => {
     const floatingSurface = container.querySelector<HTMLElement>("#widget-live-booking");
     const launcher = container.querySelector<HTMLButtonElement>("button.widget-live-launcher");
     expect(floatingSurface?.hidden).toBe(true);
+    expect(floatingSurface?.classList.contains("widget-live-surface-compact")).toBe(true);
+    expect(floatingSurface?.classList.contains("widget-live-surface-inline")).toBe(false);
     expect(launcher?.hidden).toBe(false);
     await click(launcher);
     expect(container.querySelector(".stateful-probe")?.textContent).toBe("Step 2");

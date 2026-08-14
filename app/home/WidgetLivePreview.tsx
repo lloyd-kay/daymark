@@ -76,7 +76,7 @@ export function WidgetLivePreview({
         <CedarHouseHostPage />
         <div
           id="widget-live-booking"
-          className="widget-live-surface"
+          className={`widget-live-surface ${floating ? "widget-live-surface-compact" : "widget-live-surface-inline"}`}
           hidden={!bookingVisible}
           role={floating ? "dialog" : undefined}
           aria-labelledby={floating ? "widget-live-dialog-title" : undefined}
