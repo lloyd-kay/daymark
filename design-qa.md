@@ -1,46 +1,71 @@
-# Daymark homepage design QA
+# Daymark customer-journey selector design QA
 
-## Scope and result
+- Source visual truth: `qa-evidence/daymark-homepage/booking-setup-selector-user-reference.png`
+- Rendered implementation: `qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg`
+- Responsive and interaction record: `qa-evidence/daymark-homepage/chrome-booking-setup-selector-qa.json`
+- Route: `http://localhost:3000/`
+- State: full catalogue journey selected; floating widget selected; selector and placement cards visible
+- Browser: the user-selected Chrome session
 
-- selected background: `public/daymark-widget-art-4x3-background-2x.png` (2896 x 2172, 4,675,881 bytes)
-- live wordmark font: `public/fonts/libre-bodoni-latin-400.woff2`
-- live tagline font: `public/fonts/dm-sans-latin-variable.woff2`
-- rollback artwork: `public/daymark-widget-art-4x3-readable.png`, `public/daymark-widget-art-4x3-readable-2x.png`, and `public/daymark-widget-art-4x3-textured.png` remain untouched
-- desktop evidence: `qa-evidence/daymark-homepage/live-wordmark-desktop-chrome.png`
-- mobile evidence: `qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png` and `qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png`
-- reference comparison: `qa-evidence/daymark-homepage/live-wordmark-reference-comparison.png`
-- browser record: `qa-evidence/daymark-homepage/chrome-live-wordmark-qa.json`
-- P0-P2 findings: none after the live-type and responsive-scale pass
+## Capture normalization
 
-## Same-state visual comparison
+- Source pixels: 1196 × 1304. The supplied screenshot is a desktop crop of the setup selector.
+- Implementation pixels: 5351 × 2039.
+- Implementation CSS viewport: 4300 × 1631 CSS px at `devicePixelRatio: 0.8`.
+- Capture density: 1.25 image pixels per CSS pixel in both axes.
+- The source is a tighter crop than the connected Chrome window. Comparison therefore uses the centred selector region and the shared desktop/two-column state rather than treating the surrounding canvas as a design difference.
 
-The supplied pixelated widget screenshot and the corrected Chrome rendering were placed together in one comparison image. The paper grain, orange binding, folder colours, artwork crop, Cedar House framing, option order, blue section, controls, and selected state remain aligned with the approved source.
+## Full-view comparison evidence
 
-The raster background no longer contains the tiny `DAYMARK` or tagline pixels. Chrome now draws one live Libre Bodoni wordmark and one live DM Sans tagline over the same intrinsic 4:3 coordinate plane in each widget preview. At the 1303 x 1231 desktop viewport, that plane renders at 224 x 168 px; the wordmark is 140.0625 x 25.53125 px and the tagline is 139.9375 x 6.15625 px. The inline copy is unobstructed, while the floating copy remains naturally covered by the unchanged booking panel.
+The supplied source and the rendered implementation were opened together in one comparison input. The source establishes two things: the original customer-journey cards were visually lighter and more abstract, while the placement cards directly below them establish the desired large illustrated-card system. The implementation now gives both decisions the same browser-preview, editorial-card anatomy while retaining the pink journey section and green placement section.
 
-At 390 x 844, the cards stack in the approved order and the 4:3 planes fit by width. The complete wordmark remains visible in both cards, the tagline scales proportionally instead of being enlarged or clipped, the 205 px floating panel remains present, and `scrollWidth === clientWidth`.
+No separate focused-region comparison was required. At the captured resolution, the card titles, option labels, preview stages, selected states, explanatory copy, and placement artwork all remain legible in the full-view comparison.
 
 ## Required fidelity surfaces
 
-- typography and copy: passed; both previews contain the exact live `DAYMARK` and `Book the right person. Keep every calendar private.` strings
-- typography delivery: passed; Chrome observed both self-hosted WOFF2 files as loaded font resources
-- spacing and layout: passed; the 170 px art cutout, desktop columns, mobile stacking, option order, and controls retain their existing geometry
-- colours and visual tokens: passed; the cream paper, coral binding, sage, lilac, ochre, and sky folder palette remains intact
-- image fidelity: passed; both previews load the text-free 2896 x 2172 sibling while all earlier artwork stays recoverable
-- image delivery: passed; both decorative images remain lazy-loaded with asynchronous decoding
-- crop quality: passed; desktop fills the cutout and mobile preserves the complete wordmark without horizontal overflow
-- floating panel preservation: passed; the panel remains visible at 205 px wide and was not moved or hidden
-- interaction: passed; initial pressed state is `[true, false]`, inline activation is `[false, true]`, the URL remains unchanged, and the unit regression records no fetch call
-- console: passed; Chrome recorded zero warnings and zero errors
-- publishing: not performed
+- Fonts and typography: the existing Fraunces display hierarchy and DM Sans UI copy are preserved. Journey titles now use the same scale, weight, line height, and editorial rhythm as placement titles.
+- Spacing and layout rhythm: both decisions use matching two-column card grids, preview-to-copy proportions, borders, shadows, and selected-state outlines. The compact current-setup strip provides orientation without adding another large section.
+- Colors and visual tokens: the established paper, ink, coral, sky, sage, and lilac palette remains intact. Journey and placement remain clearly separated by their existing semantic backgrounds.
+- Image quality and asset fidelity: the existing Daymark/Cedar House artwork in the placement cards is unchanged and remains sharp. Journey previews use the existing browser chrome and real interface components rather than introducing a mismatched illustration style.
+- Copy and content: the ambiguous customer-journey wording is replaced with direct outcomes: customers either choose a service or begin with the page service already selected. Each card includes a concrete “Best for” explanation.
 
-## Verification
+## Comparison history
 
-- focused red-green regression: passed; missing local font assets failed before implementation and all 5 focused widget tests passed afterward
-- full unit suite: 21 files and 149 tests passed
-- lint: passed with zero errors
-- Vinext production build: passed across all five build stages
-- rendered-route checks: 6 passed, 0 failed
-- whitespace validation: `git diff --check` exited 0
+### Iteration 1
+
+- Earlier finding: **P1 — customer-journey choices were materially less visual and less self-explanatory than the placement choices immediately beneath them.** The abstract boxes did not make the customer’s first screen obvious, and the two independent decisions were easy to conflate.
+- Fixes made: rebuilt both journey previews inside the same Cedar House browser frame used by the widget cards; added explicit first-screen/result stages; rewrote the two decision headings; added “Best for” guidance; made each journey card one large selection target; added a live “Your current setup” summary.
+- Post-fix evidence: `qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg` shows two equal illustrated journey cards followed by the matching two illustrated placement cards, with distinct step backgrounds and clear selection states.
+
+### Iteration 2
+
+- Review finding: **P1 — changing the page-service demonstration to Garden planning left its journey illustration on Interior consultation.** The selector and the live demonstration therefore disagreed.
+- Fixes made: bound the page-service illustration to the same demonstration scenario as the live booking flow; added Garden planning/Theo/Priya regression coverage; included the “Best for” guidance in each card control's accessible description.
+- Responsive evidence: Chrome was set to a 390 × 843 CSS-pixel viewport. Both card pairs and both summary rows stacked, horizontal overflow was 0 px, the complete card activated by pointer and Enter, and sequential Tab focus reached the native journey button with a visible card outline.
+
+## Interaction and runtime checks
+
+- Selecting “Start with this service selected” updated the journey state and revealed the demonstration-service selector.
+- Changing that selector to “Garden planning” updated both the journey illustration and live demonstration to Theo and Priya.
+- Selecting the inline layout updated the live summary to “This page's service · Inline section”.
+- Selected controls reported `aria-pressed="true"`.
+- At the 390 × 843 CSS-pixel viewport, the journey cards, placement cards, and current-setup rows stacked with 0 px horizontal overflow.
+- Sequential keyboard traversal reached the journey control and displayed its card-level focus outline; Enter activated it.
+- The packaged runtime health check passed on port 3000.
+- Chrome console log check returned no errors or warnings.
+
+## Findings
+
+- No actionable P0, P1, or P2 findings remain.
+- The wide desktop source comparison is supplemented by measured responsive Chrome evidence at a 390 px CSS viewport.
+
+## Implementation checklist
+
+- [x] Match journey-card anatomy to placement cards.
+- [x] Explain each customer outcome in plain language.
+- [x] Keep journey and placement visually distinct.
+- [x] Show the combined current selection.
+- [x] Preserve keyboard, focus, and pressed-state semantics.
+- [x] Verify the packaged runtime and browser console.
 
 final result: passed

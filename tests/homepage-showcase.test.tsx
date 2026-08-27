@@ -39,8 +39,8 @@ describe("unified homepage setup experience", () => {
     )).toHaveLength(1);
     expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
     expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
-    expect(legends.some((legend) => legend?.includes("What should customers see?"))).toBe(true);
-    expect(legends.some((legend) => legend?.includes("How should the widget appear?"))).toBe(true);
+    expect(legends.some((legend) => legend?.includes("Choose how booking starts"))).toBe(true);
+    expect(legends.some((legend) => legend?.includes("Choose where booking appears"))).toBe(true);
     expect(container.querySelectorAll(".journey-choice-select")).toHaveLength(2);
     expect(container.querySelectorAll(".widget-choice-select")).toHaveLength(2);
     expect(container.textContent).toContain("Which service do you need?");
@@ -61,6 +61,73 @@ describe("unified homepage setup experience", () => {
     expect(journey?.contains(placement as Node)).toBe(false);
     expect(journey?.compareDocumentPosition(placement as Node) & Node.DOCUMENT_POSITION_FOLLOWING)
       .toBeTruthy();
+  });
+
+  it("shows each customer journey inside the same website-preview anatomy as the widget choices", async () => {
+    const container = await renderBuilder();
+    const catalogue = container.querySelector<HTMLElement>(".journey-choice-catalogue");
+    const pageService = container.querySelector<HTMLElement>(".journey-choice-page-service");
+
+    expect(catalogue?.querySelector(".widget-host-browser")).not.toBeNull();
+    expect(pageService?.querySelector(".widget-host-browser")).not.toBeNull();
+    expect(catalogue?.querySelector(".journey-preview-booking")?.textContent)
+      .toContain("Choose a service");
+    expect(catalogue?.querySelector(".journey-preview-result")?.textContent)
+      .toContain("Qualified people appear next");
+    expect(pageService?.querySelector(".journey-preview-booking")?.textContent)
+      .toContain("Interior consultation selected");
+    expect(pageService?.querySelector(".journey-preview-result")?.textContent)
+      .toContain("Start with qualified people");
+    expect(catalogue?.querySelector(".journey-choice-copy")?.textContent)
+      .toContain("Let customers choose a service");
+    expect(pageService?.querySelector(".journey-choice-copy")?.textContent)
+      .toContain("Start with this service selected");
+    const pageServiceControl = pageService?.querySelector<HTMLButtonElement>(".journey-choice-select");
+    const describedBy = pageServiceControl?.getAttribute("aria-describedby") ?? "";
+    expect(describedBy.split(" ")).toContain("journey-page-service-best-for");
+  });
+
+  it("keeps the page-service journey illustration synchronized with the selected demonstration service", async () => {
+    const container = await renderBuilder();
+    await chooseJourneyCard(container, "page-service");
+    await chooseRadio(container, "homepage-demo-service", "garden");
+    await flushReset();
+
+    const preview = container.querySelector<HTMLElement>(
+      ".journey-choice-page-service .journey-choice-preview",
+    );
+    const previewText = preview?.textContent ?? "";
+
+    expect(previewText).toContain("Garden planning");
+    expect(previewText).toContain("Theo");
+    expect(previewText).toContain("Priya");
+    expect(previewText).not.toContain("Interior consultation");
+    expect(previewText).not.toContain("Maya");
+    expect(previewText).not.toContain("Jon");
+  });
+
+  it("keeps a plain-language summary of both decisions beside the selector", async () => {
+    const container = await renderBuilder();
+    const summary = container.querySelector<HTMLElement>(".homepage-current-selection");
+    const legends = Array.from(container.querySelectorAll("legend"))
+      .map((legend) => legend.textContent?.trim());
+
+    expect(container.querySelector("#homepage-setup-title")?.textContent)
+      .toContain("Two choices. One clear setup.");
+    expect(legends.some((legend) => legend?.includes("Choose where booking appears"))).toBe(true);
+    expect(summary).not.toBeNull();
+    expect(summary?.getAttribute("aria-live")).toBe("polite");
+    expect(summary?.textContent).toContain("Your current setup");
+    expect(summary?.textContent).toContain("Booking starts");
+    expect(summary?.textContent).toContain("Full catalogue");
+    expect(summary?.textContent).toContain("Widget appears");
+    expect(summary?.textContent).toContain("Floating button");
+
+    await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "inline");
+
+    expect(summary?.textContent).toContain("This page's service");
+    expect(summary?.textContent).toContain("Inline section");
   });
 
   it("uses a neutral public demonstration without smart-home installation copy", async () => {

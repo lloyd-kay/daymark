@@ -42,6 +42,12 @@ export function HomepageSetupBuilder() {
     ? "Full service catalogue"
     : "Page-specific service";
   const layoutLabel = draft.layout === "floating" ? "Floating widget" : "Inline widget";
+  const journeyChoiceLabel = draft.journey === "catalogue"
+    ? "Full catalogue"
+    : "This page's service";
+  const placementChoiceLabel = draft.layout === "floating"
+    ? "Floating button"
+    : "Inline section";
   const demoResetKey = `${draft.journey}:${draft.demoService}`;
 
   function chooseJourney(journey: SetupJourney) {
@@ -81,12 +87,26 @@ export function HomepageSetupBuilder() {
     <section className="homepage-setup-builder" aria-labelledby="homepage-setup-title">
       <div className="homepage-setup-controls" id="widget-options">
         <div className="homepage-setup-controls-heading">
-          <p className="eyebrow">Widget options</p>
-          <h3 id="homepage-setup-title">Shape the booking experience.</h3>
+          <p className="eyebrow">Booking setup</p>
+          <h3 id="homepage-setup-title">Two choices. One clear setup.</h3>
           <p>
-            Set the customer journey and placement together, then try that exact setup in the live preview.
+            Choose where customers begin, then choose where booking appears. The live demonstration will combine both decisions.
           </p>
         </div>
+
+        <aside className="homepage-current-selection" aria-live="polite" aria-atomic="true">
+          <span>Your current setup</span>
+          <dl>
+            <div>
+              <dt>Booking starts</dt>
+              <dd>{journeyChoiceLabel}</dd>
+            </div>
+            <div>
+              <dt>Widget appears</dt>
+              <dd>{placementChoiceLabel}</dd>
+            </div>
+          </dl>
+        </aside>
 
         <ServiceScopeShowcase
           journey={draft.journey}
@@ -97,11 +117,11 @@ export function HomepageSetupBuilder() {
 
         <fieldset className="homepage-decision-section homepage-placement-section">
           <legend>
-            <span>02 · Placement</span>
-            <strong>How should the widget appear?</strong>
+            <span>02 · Widget appears</span>
+            <strong>Choose where booking appears</strong>
           </legend>
           <p className="homepage-decision-intro">
-            Choose a compact corner launcher or a full booking section built into the page.
+            Then choose where the same booking flow lives: behind a compact corner button or inside the page itself.
           </p>
           <WidgetOptionsShowcase selected={draft.layout} onSelect={chooseLayout} />
         </fieldset>

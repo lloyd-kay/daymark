@@ -37,8 +37,9 @@ test("server-renders the Daymark product demonstration", async () => {
   assert.match(html, /product-title-line title-line-sky/);
   assert.match(html, /Build and test one clear setup/i);
   assert.match(html, /No appointment will be created/i);
-  assert.match(html, /What should customers see\?/i);
-  assert.match(html, /How should the widget appear\?/i);
+  assert.match(html, /Choose how booking starts/i);
+  assert.match(html, /Choose where booking appears/i);
+  assert.match(html, /Your current setup/i);
   assert.match(html, /Live Cedar House preview/i);
   assert.match(html, /daymark:\/\/import-setup\?code=DM2-C-F-36UR/i);
   assert.match(html, /For custom widgets or integrations,/i);
