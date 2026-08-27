@@ -1,0 +1,46 @@
+{
+  "date": "2026-08-27",
+  "route": "http://localhost:3000/",
+  "browser": "Chrome",
+  "runtime": {
+    "status": "ok",
+    "appVersion": "0.1.1",
+    "latestMigration": "0006_service_scope_widget_defaults.sql",
+    "storage": "isolated ignored QA directory"
+  },
+  "desktop": {
+    "initialJourneyCards": 2,
+    "initialPlacementCards": 0,
+    "initialLivePreview": false,
+    "pageServiceThenInlineProfile": "Page-specific service · Inline widget",
+    "gardenPreview": {
+      "checked": true,
+      "visibleQualifiedPeople": ["Theo Brooks", "Priya Shah"],
+      "excludedPeople": ["Maya Chen", "Jon Bell"]
+    },
+    "keyboardFocus": {
+      "afterStartingPoint": "homepage-placement-question",
+      "afterOpeningStyle": "homepage-setup-complete-title",
+      "afterChangeStartingPoint": "homepage-journey-question",
+      "afterChangeOpeningStyle": "homepage-placement-question",
+      "afterChangingConfirmedStartingPointAndDemoReset": "homepage-setup-complete-title"
+    },
+    "capturedErrors": []
+  },
+  "mobile": {
+    "cssViewport": {
+      "width": 390,
+      "height": 842
+    },
+    "horizontalOverflowPixels": 0,
+    "initialJourneyCards": 2,
+    "initialPlacementCards": 0,
+    "secondStepJourneyCards": 0,
+    "secondStepPlacementCards": 2
+  },
+  "screenshots": {
+    "desktop": "guided-booking-setup-desktop-chrome.png",
+    "mobile": "guided-booking-setup-mobile-chrome.png",
+    "reference": "booking-setup-selector-user-reference.png"
+  }
+}

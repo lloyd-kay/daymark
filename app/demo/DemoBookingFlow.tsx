@@ -31,6 +31,8 @@ export function DemoBookingFlow({
     previousResetKey.current = resetKey;
     const timer = window.setTimeout(() => {
       setResetMessage(`Demonstration reset for ${resetLabel}.`);
+      const homepagePreview = container.current?.closest<HTMLElement>(".homepage-live-preview");
+      if (homepagePreview && !homepagePreview.contains(document.activeElement)) return;
       container.current?.querySelector<HTMLElement>(".stage-title h3")?.focus();
     }, 0);
     return () => window.clearTimeout(timer);

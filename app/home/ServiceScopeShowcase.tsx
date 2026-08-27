@@ -7,69 +7,86 @@ import type { SetupJourney } from "../../lib/setup-profile";
 import { WidgetHostBrowser } from "./WidgetPreviewChrome";
 
 export function ServiceScopeShowcase({
-  journey,
+  selectedJourney,
   demoService,
   onJourneyChange,
-  onDemoServiceChange,
 }: {
-  journey: SetupJourney;
+  selectedJourney: SetupJourney | null;
   demoService: DemoServiceKey;
   onJourneyChange: (journey: SetupJourney) => void;
-  onDemoServiceChange: (service: DemoServiceKey) => void;
 }) {
   return (
-    <fieldset className="homepage-decision-section homepage-journey-section">
-      <legend>
-        <span>01 · Booking starts</span>
-        <strong>Choose how booking starts</strong>
-      </legend>
+    <section
+      className="homepage-decision-section homepage-journey-section"
+      aria-labelledby="homepage-journey-question"
+    >
+      <div className="homepage-decision-heading">
+        <span>Step 1 of 2 · Starting point</span>
+        <h4
+          id="homepage-journey-question"
+          data-setup-step-heading="journey"
+          tabIndex={-1}
+        >
+          Where will customers start?
+        </h4>
+      </div>
       <p className="homepage-decision-intro">
-        First choose the customer&apos;s opening screen. This controls where they begin—not where the widget appears.
+        Choose the situation customers will be in when they open booking. You will choose how booking appears next.
       </p>
 
       <div className="journey-choice-grid">
         <JourneyChoice
-          bestFor="A general booking link or a button used across the whole website."
-          description="Customers begin with your full catalogue. After they choose a service, Daymark shows only the people qualified to deliver it."
+          bestFor="A homepage, navigation button, contact page, or general Book now link."
+          description="Customers choose what they need first. Daymark then shows only the people who can provide that service."
           journey="catalogue"
-          selected={journey === "catalogue"}
-          title="Let customers choose a service"
+          selected={selectedJourney === "catalogue"}
+          title="Anywhere on my website"
           onSelect={onJourneyChange}
         >
           <CatalogueJourneyPreview />
         </JourneyChoice>
         <JourneyChoice
-          bestFor="A dedicated service page where the customer has already made their choice."
-          description="The page supplies one mapped service automatically. Customers skip the catalogue and begin with the people qualified for that service."
+          bestFor="A page dedicated to one service, such as a consultation or treatment page."
+          description="The page tells Daymark which service the customer is viewing. They go straight to the people qualified for it."
           journey="page-service"
-          selected={journey === "page-service"}
-          title="Start with this service selected"
+          selected={selectedJourney === "page-service"}
+          title="On a specific service page"
           onSelect={onJourneyChange}
         >
           <PageServiceJourneyPreview demoService={demoService} />
         </JourneyChoice>
       </div>
+    </section>
+  );
+}
 
-      {journey === "page-service" ? (
-        <fieldset className="homepage-sample-options">
-          <legend>Service used in this demonstration</legend>
-          <p>Sample only. An administrator maps the real workspace service in Daymark.</p>
-          <SampleServiceOption
-            checked={demoService === "interior"}
-            description="90 minutes · Maya and Jon"
-            label="Interior consultation"
-            onChange={() => onDemoServiceChange("interior")}
-            value="interior"
-          />
-          <SampleServiceOption
-            checked={demoService === "garden"}
-            description="120 minutes · Theo and Priya"
-            label="Garden planning"
-            onChange={() => onDemoServiceChange("garden")}
-            value="garden"
-          />
-        </fieldset>
-      ) : null}
+export function PreviewServicePicker({
+  demoService,
+  onDemoServiceChange,
+}: {
+  demoService: DemoServiceKey;
+  onDemoServiceChange: (service: DemoServiceKey) => void;
+}) {
+  return (
+    <fieldset className="homepage-sample-options">
+      <legend>Preview service</legend>
+      <p>
+        Switch the sample service in this demonstration. This preview choice is not included in the setup you transfer.
+      </p>
+      <SampleServiceOption
+        checked={demoService === "interior"}
+        description="90 minutes · Maya and Jon"
+        label="Interior consultation"
+        onChange={() => onDemoServiceChange("interior")}
+        value="interior"
+      />
+      <SampleServiceOption
+        checked={demoService === "garden"}
+        description="120 minutes · Theo and Priya"
+        label="Garden planning"
+        onChange={() => onDemoServiceChange("garden")}
+        value="garden"
+      />
     </fieldset>
   );
 }
@@ -100,13 +117,13 @@ function JourneyChoice({
       {children}
       <div className="journey-choice-copy">
         <span className="journey-choice-label">
-          {journey === "catalogue" ? "Option A · Catalogue" : "Option B · Page service"}
+          {journey === "catalogue" ? "Option 1 · Site-wide start" : "Option 2 · Service-page start"}
         </span>
-        <h4 id={titleId}>{title}</h4>
+        <h5 id={titleId}>{title}</h5>
         <p id={descriptionId}>{description}</p>
         <p className="journey-choice-best" id={bestForId}><strong>Best for:</strong> {bestFor}</p>
         <span className="journey-choice-action" aria-hidden="true">
-          {selected ? "Selected" : "Choose this journey"}
+          {selected ? "Current choice" : "Choose this starting point"}
         </span>
       </div>
       <button
@@ -117,7 +134,7 @@ function JourneyChoice({
         aria-describedby={`${descriptionId} ${bestForId}`}
         onClick={() => onSelect(journey)}
       >
-        <span className="sr-only">{selected ? "Selected" : "Choose"}</span>
+        <span className="sr-only">{selected ? "Choose current option" : "Choose"}</span>
       </button>
     </article>
   );

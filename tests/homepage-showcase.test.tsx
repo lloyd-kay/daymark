@@ -25,42 +25,177 @@ afterEach(async () => {
 });
 
 describe("unified homepage setup experience", () => {
-  it("renders one semantic setup region with one live host presentation", async () => {
+  it("asks only where customers start before showing placement or a finished setup", async () => {
     const container = await renderBuilder();
-    const legends = Array.from(container.querySelectorAll("legend"))
-      .map((legend) => legend.textContent?.trim());
+
+    expect(container.querySelector(".homepage-journey-section")).not.toBeNull();
+    expect(container.querySelector(".homepage-placement-section")).toBeNull();
+    expect(container.querySelector(".homepage-live-preview")).toBeNull();
+    expect(container.querySelector(".homepage-setup-card")).toBeNull();
+    expect(container.querySelector(".homepage-setup-progress")?.textContent)
+      .toContain("Step 1 of 2");
+    expect(container.querySelector(".homepage-journey-section")?.textContent)
+      .toContain("Where will customers start?");
+    expect(container.textContent).toContain("Anywhere on my website");
+    expect(container.textContent).toContain("On a specific service page");
+    expect(container.textContent).not.toContain("How should booking open?");
+  });
+
+  it("uses labelled sections so multiline question headings stay clear of native fieldset borders", async () => {
+    const container = await renderBuilder();
+    const journey = container.querySelector<HTMLElement>(".homepage-journey-section");
+    const journeyHeading = journey?.querySelector<HTMLElement>(".homepage-decision-heading h4");
+
+    expect(journey?.tagName).toBe("SECTION");
+    expect(journeyHeading?.textContent).toBe("Where will customers start?");
+    expect(journey?.getAttribute("aria-labelledby")).toBe(journeyHeading?.id);
+    expect(journey?.querySelectorAll(".journey-choice-copy h5")).toHaveLength(2);
+    expect(journey?.querySelector(".journey-choice-copy h3, .journey-choice-copy h4")).toBeNull();
+
+    await chooseJourneyCard(container, "catalogue");
+    const placement = container.querySelector<HTMLElement>(".homepage-placement-section");
+    const placementHeading = placement?.querySelector<HTMLElement>(".homepage-decision-heading h4");
+
+    expect(placement?.tagName).toBe("SECTION");
+    expect(placementHeading?.textContent).toBe("How should booking open?");
+    expect(placement?.getAttribute("aria-labelledby")).toBe(placementHeading?.id);
+    expect(placement?.querySelectorAll(".widget-choice-copy h5")).toHaveLength(2);
+    expect(placement?.querySelector(".widget-choice-copy h3, .widget-choice-copy h4")).toBeNull();
+  });
+
+  it("advances to the opening choice and collapses the completed starting point", async () => {
+    const container = await renderBuilder();
+    await chooseJourneyCard(container, "page-service");
+
+    expect(container.querySelector(".homepage-journey-section")).toBeNull();
+    expect(container.querySelector(".homepage-placement-section")).not.toBeNull();
+    expect(container.querySelector(".homepage-placement-section")?.textContent)
+      .toContain("How should booking open?");
+    expect(container.textContent).toContain("Corner button");
+    expect(container.textContent).toContain("Booking section in the page");
+    expect(container.querySelector(".homepage-setup-progress")?.textContent)
+      .toContain("On a specific service page");
+    expect(container.querySelector(".homepage-setup-progress")?.textContent)
+      .toContain("Change starting point");
+    expect(container.querySelector("#widget-options .homepage-sample-options")).toBeNull();
+    expect(container.querySelector(".homepage-live-preview")).toBeNull();
+
+    await clickButton(container, "Change starting point");
+
+    expect(container.querySelector(".homepage-journey-section")).not.toBeNull();
+    expect(container.querySelector(".homepage-placement-section")).toBeNull();
+  });
+
+  it("moves focus to each newly revealed question and the completed result", async () => {
+    const container = await renderBuilder();
+    container.querySelector<HTMLButtonElement>(
+      ".journey-choice-page-service .journey-choice-select",
+    )?.focus();
+
+    await chooseJourneyCard(container, "page-service");
+    expect(document.activeElement).toBe(
+      container.querySelector("#homepage-placement-question"),
+    );
+
+    await chooseLayoutCard(container, "inline");
+    expect(document.activeElement).toBe(
+      container.querySelector("#homepage-setup-complete-title"),
+    );
+
+    await clickButton(container, "Change starting point");
+    expect(document.activeElement).toBe(
+      container.querySelector("#homepage-journey-question"),
+    );
+
+    await clickButton(container, "Change how booking opens");
+    expect(document.activeElement).toBe(
+      container.querySelector("#homepage-placement-question"),
+    );
+  });
+
+  it("keeps focus on the completed result when changing an already confirmed starting point", async () => {
+    const container = await renderBuilder();
+    await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "inline");
+    await clickButton(container, "Change starting point");
+    await chooseJourneyCard(container, "catalogue");
+    await flushReset();
+
+    expect(document.activeElement).toBe(
+      container.querySelector("#homepage-setup-complete-title"),
+    );
+  });
+
+  it("reveals the chosen result and keeps the sample service control inside the live preview", async () => {
+    const container = await renderBuilder();
+    await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "inline");
+
+    const livePreview = container.querySelector<HTMLElement>(".homepage-live-preview");
+    const sampleOptions = livePreview?.querySelector<HTMLElement>(".homepage-sample-options");
+
+    expect(container.querySelector(".homepage-journey-section")).toBeNull();
+    expect(container.querySelector(".homepage-placement-section")).toBeNull();
+    expect(livePreview).not.toBeNull();
+    expect(container.querySelector(".homepage-setup-card")).not.toBeNull();
+    expect(container.querySelector("#widget-options .homepage-sample-options")).toBeNull();
+    expect(sampleOptions?.textContent).toContain("Preview service");
+    expect(sampleOptions?.textContent).toContain("Interior consultation");
+    expect(container.querySelector(".homepage-setup-progress")?.textContent)
+      .toContain("Booking section in the page");
+    expect(container.querySelector(".homepage-setup-progress")?.textContent)
+      .toContain("Change how booking opens");
+
+    await clickButton(container, "Change how booking opens");
+
+    expect(container.querySelector(".homepage-placement-section")).not.toBeNull();
+    expect(container.querySelector<HTMLElement>(".homepage-live-preview")?.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>(".homepage-setup-card")?.hidden).toBe(true);
+  });
+
+  it("renders one semantic choice at a time before showing one live host presentation", async () => {
+    const container = await renderBuilder();
 
     expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
-    expect(container.querySelectorAll(
-      "#widget-options .widget-choice .widget-host-browser",
-    )).toHaveLength(2);
+    expect(container.querySelectorAll(".journey-choice-select")).toHaveLength(2);
+    expect(container.querySelectorAll(".widget-choice-select")).toHaveLength(0);
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(0);
+    expect(container.querySelector(".homepage-journey-section .homepage-decision-heading")?.textContent)
+      .toContain("Where will customers start?");
+
+    await chooseJourneyCard(container, "catalogue");
+
+    expect(container.querySelectorAll(".journey-choice-select")).toHaveLength(0);
+    expect(container.querySelectorAll(".widget-choice-select")).toHaveLength(2);
+    expect(container.querySelector(".homepage-placement-section .homepage-decision-heading")?.textContent)
+      .toContain("How should booking open?");
+
+    await chooseLayoutCard(container, "floating");
+
     expect(container.querySelectorAll(
       ".widget-presentation .widget-host-browser",
     )).toHaveLength(1);
     expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
     expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
-    expect(legends.some((legend) => legend?.includes("Choose how booking starts"))).toBe(true);
-    expect(legends.some((legend) => legend?.includes("Choose where booking appears"))).toBe(true);
-    expect(container.querySelectorAll(".journey-choice-select")).toHaveLength(2);
-    expect(container.querySelectorAll(".widget-choice-select")).toHaveLength(2);
     expect(container.textContent).toContain("Which service do you need?");
   });
 
-  it("separates two illustrated journey choices from two illustrated placement choices", async () => {
+  it("presents two illustrated starting points before two illustrated opening styles", async () => {
     const container = await renderBuilder();
     const journey = container.querySelector<HTMLElement>(".homepage-journey-section");
-    const placement = container.querySelector<HTMLElement>(".homepage-placement-section");
 
     expect(journey).not.toBeNull();
-    expect(placement).not.toBeNull();
     expect(journey?.querySelectorAll(".journey-choice")).toHaveLength(2);
     expect(journey?.querySelectorAll(".journey-choice-preview")).toHaveLength(2);
     expect(journey?.querySelector(".journey-preview-catalogue")).not.toBeNull();
     expect(journey?.querySelector(".journey-preview-page-service")).not.toBeNull();
+    expect(container.querySelector(".homepage-placement-section")).toBeNull();
+
+    await chooseJourneyCard(container, "catalogue");
+    const placement = container.querySelector<HTMLElement>(".homepage-placement-section");
+
     expect(placement?.querySelectorAll(".widget-choice")).toHaveLength(2);
-    expect(journey?.contains(placement as Node)).toBe(false);
-    expect(journey?.compareDocumentPosition(placement as Node) & Node.DOCUMENT_POSITION_FOLLOWING)
-      .toBeTruthy();
+    expect(container.querySelector(".homepage-journey-section")).toBeNull();
   });
 
   it("shows each customer journey inside the same website-preview anatomy as the widget choices", async () => {
@@ -79,9 +214,9 @@ describe("unified homepage setup experience", () => {
     expect(pageService?.querySelector(".journey-preview-result")?.textContent)
       .toContain("Start with qualified people");
     expect(catalogue?.querySelector(".journey-choice-copy")?.textContent)
-      .toContain("Let customers choose a service");
+      .toContain("Anywhere on my website");
     expect(pageService?.querySelector(".journey-choice-copy")?.textContent)
-      .toContain("Start with this service selected");
+      .toContain("On a specific service page");
     const pageServiceControl = pageService?.querySelector<HTMLButtonElement>(".journey-choice-select");
     const describedBy = pageServiceControl?.getAttribute("aria-describedby") ?? "";
     expect(describedBy.split(" ")).toContain("journey-page-service-best-for");
@@ -90,8 +225,10 @@ describe("unified homepage setup experience", () => {
   it("keeps the page-service journey illustration synchronized with the selected demonstration service", async () => {
     const container = await renderBuilder();
     await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "floating");
     await chooseRadio(container, "homepage-demo-service", "garden");
     await flushReset();
+    await clickButton(container, "Change starting point");
 
     const preview = container.querySelector<HTMLElement>(
       ".journey-choice-page-service .journey-choice-preview",
@@ -106,28 +243,24 @@ describe("unified homepage setup experience", () => {
     expect(previewText).not.toContain("Jon");
   });
 
-  it("keeps a plain-language summary of both decisions beside the selector", async () => {
+  it("keeps a plain-language progress summary after both decisions", async () => {
     const container = await renderBuilder();
-    const summary = container.querySelector<HTMLElement>(".homepage-current-selection");
-    const legends = Array.from(container.querySelectorAll("legend"))
-      .map((legend) => legend.textContent?.trim());
+    const summary = container.querySelector<HTMLElement>(".homepage-setup-progress");
 
     expect(container.querySelector("#homepage-setup-title")?.textContent)
-      .toContain("Two choices. One clear setup.");
-    expect(legends.some((legend) => legend?.includes("Choose where booking appears"))).toBe(true);
+      .toContain("Set up booking in two simple steps.");
     expect(summary).not.toBeNull();
-    expect(summary?.getAttribute("aria-live")).toBe("polite");
-    expect(summary?.textContent).toContain("Your current setup");
-    expect(summary?.textContent).toContain("Booking starts");
-    expect(summary?.textContent).toContain("Full catalogue");
-    expect(summary?.textContent).toContain("Widget appears");
-    expect(summary?.textContent).toContain("Floating button");
+    expect(summary?.getAttribute("aria-label")).toBe("Booking setup progress");
+    expect(summary?.textContent).toContain("Step 1 of 2");
+    expect(summary?.textContent).toContain("Choose a starting point");
+    expect(summary?.textContent).toContain("Available after step 1");
 
     await chooseJourneyCard(container, "page-service");
     await chooseLayoutCard(container, "inline");
 
-    expect(summary?.textContent).toContain("This page's service");
-    expect(summary?.textContent).toContain("Inline section");
+    expect(summary?.textContent).toContain("2 of 2 complete");
+    expect(summary?.textContent).toContain("On a specific service page");
+    expect(summary?.textContent).toContain("Booking section in the page");
   });
 
   it("uses a neutral public demonstration without smart-home installation copy", async () => {
@@ -165,6 +298,7 @@ describe("unified homepage setup experience", () => {
   it("keeps the page-specific transfer profile independent from the sample service", async () => {
     const container = await renderBuilder();
     await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "floating");
     await clickButton(container, "Use on another machine");
 
     const link = container.querySelector<HTMLAnchorElement>('a[href^="daymark://"]');
@@ -183,6 +317,8 @@ describe("unified homepage setup experience", () => {
 
   it("filters the catalogue and preserves booking progress when only layout changes", async () => {
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "catalogue");
+    await chooseLayoutCard(container, "floating");
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
     const launcher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
 
@@ -200,6 +336,7 @@ describe("unified homepage setup experience", () => {
     expect(container.textContent).not.toContain("Theo Brooks");
     expect(container.textContent).not.toContain("Priya Shah");
 
+    await clickButton(container, "Change how booking opens");
     await chooseLayoutCard(container, "inline");
 
     expect(surface?.hidden).toBe(false);
@@ -213,6 +350,7 @@ describe("unified homepage setup experience", () => {
     expect(container.querySelector(".homepage-layout-status")?.textContent)
       .toContain("Booking progress kept");
 
+    await clickButton(container, "Change how booking opens");
     await chooseLayoutCard(container, "floating");
 
     const restoredLauncher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
@@ -232,9 +370,11 @@ describe("unified homepage setup experience", () => {
 
   it("resets an advanced page-specific preview when its sample service changes", async () => {
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "page-service");
+    await chooseLayoutCard(container, "floating");
     const surface = container.querySelector<HTMLElement>("#widget-live-booking");
     const launcher = container.querySelector<HTMLButtonElement>(".widget-live-launcher");
-    await chooseJourneyCard(container, "page-service");
+    await clickButton(container, "Book an appointment", ".widget-live-launcher");
     await flushReset();
 
     expect(surface?.hidden).toBe(false);
@@ -273,10 +413,10 @@ describe("unified homepage setup experience", () => {
 
   it("restores two illustrated layout choices and keeps artwork out of the live preview", async () => {
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "catalogue");
     const choiceImages = container.querySelectorAll<HTMLImageElement>(
       '#widget-options .widget-choice img[src="/daymark-widget-art-4x3-background-2x.png"]',
     );
-    const livePreview = container.querySelector<HTMLElement>(".widget-presentation");
 
     expect(container.querySelectorAll("#widget-options .widget-choice")).toHaveLength(2);
     expect(choiceImages).toHaveLength(2);
@@ -291,16 +431,22 @@ describe("unified homepage setup experience", () => {
     expect(container.querySelector(".widget-choice-floating .widget-daymark-fab")).not.toBeNull();
     expect(container.querySelector(".widget-choice-inline .inline-panel")).not.toBeNull();
     expect(container.querySelector(".widget-choice-inline .widget-daymark-fab")).toBeNull();
-    expect(livePreview?.querySelector(".widget-host-art")).toBeNull();
-    expect(livePreview?.querySelector("img")).toBeNull();
     expect(container.querySelectorAll(".widget-choice .widget-host-art-wordmark")).toHaveLength(2);
     expect(container.querySelectorAll(".widget-choice .widget-host-art-tagline")).toHaveLength(2);
-    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
     expect(container.querySelectorAll(".widget-choice .demo-booking-flow")).toHaveLength(0);
+
+    await chooseLayoutCard(container, "floating");
+    const livePreview = container.querySelector<HTMLElement>(".widget-presentation");
+
+    expect(livePreview?.querySelector(".widget-host-art")).toBeNull();
+    expect(livePreview?.querySelector("img")).toBeNull();
+    expect(container.querySelectorAll(".demo-booking-flow")).toHaveLength(1);
   });
 
   it("renders a fuller artwork-free Cedar House studio behind the live booking surface", async () => {
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "catalogue");
+    await chooseLayoutCard(container, "floating");
     const live = container.querySelector<HTMLElement>(".widget-presentation");
     const host = live?.querySelector<HTMLElement>(".widget-live-host-page");
 
@@ -358,6 +504,8 @@ describe("unified homepage setup experience", () => {
       value: { writeText },
     });
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "catalogue");
+    await chooseLayoutCard(container, "floating");
 
     expect(container.querySelector<HTMLInputElement>("#homepage-setup-code")).toBeNull();
     await clickButton(container, "Use on another machine");
@@ -371,6 +519,8 @@ describe("unified homepage setup experience", () => {
 
   it("keeps the portable fallback selectable when clipboard access is unavailable", async () => {
     const container = await renderBuilder();
+    await chooseJourneyCard(container, "catalogue");
+    await chooseLayoutCard(container, "floating");
     await clickButton(container, "Use on another machine");
     await clickButton(container, "Copy setup code");
 
@@ -395,9 +545,11 @@ describe("homepage setup integration", () => {
     expect(experience).not.toBeNull();
     expect(controls && experience?.contains(controls)).toBe(true);
     expect(container.querySelectorAll(".homepage-setup-builder")).toHaveLength(1);
+    await chooseJourneyCard(container, "catalogue");
     expect(container.querySelectorAll(
       "#widget-options .widget-choice .widget-host-browser",
     )).toHaveLength(2);
+    await chooseLayoutCard(container, "floating");
     expect(container.querySelectorAll(
       ".widget-presentation .widget-host-browser",
     )).toHaveLength(1);

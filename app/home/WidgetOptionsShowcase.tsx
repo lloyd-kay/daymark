@@ -8,7 +8,7 @@ export function WidgetOptionsShowcase({
   selected,
   onSelect,
 }: {
-  selected: WidgetPlacement;
+  selected: WidgetPlacement | null;
   onSelect: (placement: WidgetPlacement) => void;
 }) {
   return (
@@ -28,9 +28,9 @@ export function WidgetOptionsShowcase({
           </WidgetHostBrowser>
         </div>
         <div className="widget-choice-copy">
-          <span className="widget-choice-label">Option A · Floating</span>
-          <h3 id="floating-widget-title">Always close, never in the way</h3>
-          <p id="floating-widget-description">A compact corner button opens the booking panel over any page. Best when booking should be available site-wide.</p>
+          <span className="widget-choice-label">Option 1 · Opens over the page</span>
+          <h5 id="floating-widget-title">Corner button</h5>
+          <p id="floating-widget-description">A small Book button stays in the corner. Selecting it opens booking over the current page, and customers can close it again.</p>
           <button
             className="widget-choice-select"
             type="button"
@@ -39,7 +39,7 @@ export function WidgetOptionsShowcase({
             aria-describedby="floating-widget-description"
             onClick={() => onSelect("floating")}
           >
-            {selected === "floating" ? "Selected" : "Choose this layout"}
+            {selected === "floating" ? "Current choice" : "Choose this opening style"}
           </button>
         </div>
       </article>
@@ -61,9 +61,9 @@ export function WidgetOptionsShowcase({
           </WidgetHostBrowser>
         </div>
         <div className="widget-choice-copy">
-          <span className="widget-choice-label">Option B · Inline</span>
-          <h3 id="inline-widget-title">A booking section with presence</h3>
-          <p id="inline-widget-description">The full panel sits inside a page and feels intentional. Best for a dedicated contact or book-now section.</p>
+          <span className="widget-choice-label">Option 2 · Built into the page</span>
+          <h5 id="inline-widget-title">Booking section in the page</h5>
+          <p id="inline-widget-description">The complete booking experience sits inside the page as a dedicated section. Customers do not open a separate panel.</p>
           <button
             className="widget-choice-select"
             type="button"
@@ -72,7 +72,7 @@ export function WidgetOptionsShowcase({
             aria-describedby="inline-widget-description"
             onClick={() => onSelect("inline")}
           >
-            {selected === "inline" ? "Selected" : "Choose this layout"}
+            {selected === "inline" ? "Current choice" : "Choose this opening style"}
           </button>
         </div>
       </article>

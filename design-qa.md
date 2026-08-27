@@ -1,71 +1,55 @@
-# Daymark customer-journey selector design QA
+# Daymark guided booking-setup design QA
 
 - Source visual truth: `qa-evidence/daymark-homepage/booking-setup-selector-user-reference.png`
-- Rendered implementation: `qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg`
-- Responsive and interaction record: `qa-evidence/daymark-homepage/chrome-booking-setup-selector-qa.json`
+- Desktop implementation: `qa-evidence/daymark-homepage/guided-booking-setup-desktop-chrome.png`
+- Mobile implementation: `qa-evidence/daymark-homepage/guided-booking-setup-mobile-chrome.png`
+- Interaction record: `qa-evidence/daymark-homepage/guided-booking-setup-qa.json`
 - Route: `http://localhost:3000/`
-- State: full catalogue journey selected; floating widget selected; selector and placement cards visible
 - Browser: the user-selected Chrome session
+- Runtime: rebuilt packaged Windows stage using disposable, ignored QA data, backup, and log directories under `artifacts/`
 
-## Capture normalization
+## Design decision
 
-- Source pixels: 1196 × 1304. The supplied screenshot is a desktop crop of the setup selector.
-- Implementation pixels: 5351 × 2039.
-- Implementation CSS viewport: 4300 × 1631 CSS px at `devicePixelRatio: 0.8`.
-- Capture density: 1.25 image pixels per CSS pixel in both axes.
-- The source is a tighter crop than the connected Chrome window. Comparison therefore uses the centred selector region and the shared desktop/two-column state rather than treating the surrounding canvas as a design difference.
+The supplied reference showed the two customer-journey cards and two widget-placement cards at the same time. The shared illustrated-card system was retained, but the four-way-looking surface was replaced with progressive disclosure:
 
-## Full-view comparison evidence
+1. “Where will customers start?” shows only the two starting-point cards.
+2. After a choice, “How should booking open?” shows only the two opening-style cards.
+3. Completed choices collapse into a compact progress summary with explicit Change controls.
+4. The live demonstration and installation handoff appear only after both choices are made.
 
-The supplied source and the rendered implementation were opened together in one comparison input. The source establishes two things: the original customer-journey cards were visually lighter and more abstract, while the placement cards directly below them establish the desired large illustrated-card system. The implementation now gives both decisions the same browser-preview, editorial-card anatomy while retaining the pink journey section and green placement section.
+The demonstration-service switch now appears inside the live result. It is clearly labelled as preview-only and is not presented as a third setup decision.
 
-No separate focused-region comparison was required. At the captured resolution, the card titles, option labels, preview stages, selected states, explanatory copy, and placement artwork all remain legible in the full-view comparison.
+## Source comparison
 
-## Required fidelity surfaces
+The source screenshot and fresh desktop capture were inspected together. The new version intentionally differs in information architecture while preserving the established Daymark visual language: paper panels, ink borders and shadows, coral step labels, editorial Fraunces headings, compact DM Sans guidance, and the same illustrated Cedar House previews.
 
-- Fonts and typography: the existing Fraunces display hierarchy and DM Sans UI copy are preserved. Journey titles now use the same scale, weight, line height, and editorial rhythm as placement titles.
-- Spacing and layout rhythm: both decisions use matching two-column card grids, preview-to-copy proportions, borders, shadows, and selected-state outlines. The compact current-setup strip provides orientation without adding another large section.
-- Colors and visual tokens: the established paper, ink, coral, sky, sage, and lilac palette remains intact. Journey and placement remain clearly separated by their existing semantic backgrounds.
-- Image quality and asset fidelity: the existing Daymark/Cedar House artwork in the placement cards is unchanged and remains sharp. Journey previews use the existing browser chrome and real interface components rather than introducing a mismatched illustration style.
-- Copy and content: the ambiguous customer-journey wording is replaced with direct outcomes: customers either choose a service or begin with the page service already selected. Each card includes a concrete “Best for” explanation.
+The comparison confirms that the starting-point choices now have the same visual weight and preview anatomy as the placement choices without presenting all four options as one decision. The progress bar makes the two-step sequence visible before the first choice, and no default is presented as already confirmed.
 
-## Comparison history
+## Responsive and accessibility QA
 
-### Iteration 1
-
-- Earlier finding: **P1 — customer-journey choices were materially less visual and less self-explanatory than the placement choices immediately beneath them.** The abstract boxes did not make the customer’s first screen obvious, and the two independent decisions were easy to conflate.
-- Fixes made: rebuilt both journey previews inside the same Cedar House browser frame used by the widget cards; added explicit first-screen/result stages; rewrote the two decision headings; added “Best for” guidance; made each journey card one large selection target; added a live “Your current setup” summary.
-- Post-fix evidence: `qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg` shows two equal illustrated journey cards followed by the matching two illustrated placement cards, with distinct step backgrounds and clear selection states.
-
-### Iteration 2
-
-- Review finding: **P1 — changing the page-service demonstration to Garden planning left its journey illustration on Interior consultation.** The selector and the live demonstration therefore disagreed.
-- Fixes made: bound the page-service illustration to the same demonstration scenario as the live booking flow; added Garden planning/Theo/Priya regression coverage; included the “Best for” guidance in each card control's accessible description.
-- Responsive evidence: Chrome was set to a 390 × 843 CSS-pixel viewport. Both card pairs and both summary rows stacked, horizontal overflow was 0 px, the complete card activated by pointer and Enter, and sequential Tab focus reached the native journey button with a visible card outline.
+- Chrome was normalized to a 390 × 842 CSS-pixel viewport for the mobile check.
+- Initial and second-step cards stack in one column with 0 px horizontal overflow.
+- A native multi-line fieldset legend initially intersected the question border at mobile width. Both questions were changed to ordinary `section` regions labelled by real headings, then the mobile capture was repeated.
+- The progress list exposes the current step with `aria-current="step"`.
+- Both choice cards retain native button controls and `aria-pressed` state.
+- Selecting an option or using either Change control moves keyboard focus to the newly revealed question or completed-result heading.
+- Change controls restore the relevant question while temporarily hiding, not destroying, the completed live result.
+- The preview-service choices remain native radio controls inside a labelled fieldset.
 
 ## Interaction and runtime checks
 
-- Selecting “Start with this service selected” updated the journey state and revealed the demonstration-service selector.
-- Changing that selector to “Garden planning” updated both the journey illustration and live demonstration to Theo and Priya.
-- Selecting the inline layout updated the live summary to “This page's service · Inline section”.
-- Selected controls reported `aria-pressed="true"`.
-- At the 390 × 843 CSS-pixel viewport, the journey cards, placement cards, and current-setup rows stacked with 0 px horizontal overflow.
-- Sequential keyboard traversal reached the journey control and displayed its card-level focus outline; Enter activated it.
-- The packaged runtime health check passed on port 3000.
-- Chrome console log check returned no errors or warnings.
+- Initial load contains two starting-point cards, no placement cards, no live booking flow, and no installation link.
+- Selecting “On a specific service page” advances to the two opening-style cards and collapses step 1.
+- Selecting “Booking section in the page” reveals the matching inline live demonstration and setup profile.
+- Changing an already confirmed starting point keeps focus on the completed-result heading after the live demonstration resets.
+- Switching the preview to Garden planning shows Theo Brooks and Priya Shah and removes Maya Chen and Jon Bell.
+- Changing either completed choice returns to only that question; the other confirmed choice remains summarized.
+- Desktop interaction monitoring recorded no console errors, uncaught errors, or unhandled rejections.
+- The packaged `/api/health` endpoint reports `ok`, application version `0.1.1`, and migration `0006_service_scope_widget_defaults.sql`.
+- Packaged-runtime QA used isolated state under ignored `artifacts/`; `.daymark/` was not used, edited, staged, or committed by this final verification pass.
 
 ## Findings
 
-- No actionable P0, P1, or P2 findings remain.
-- The wide desktop source comparison is supplemented by measured responsive Chrome evidence at a 390 px CSS viewport.
-
-## Implementation checklist
-
-- [x] Match journey-card anatomy to placement cards.
-- [x] Explain each customer outcome in plain language.
-- [x] Keep journey and placement visually distinct.
-- [x] Show the combined current selection.
-- [x] Preserve keyboard, focus, and pressed-state semantics.
-- [x] Verify the packaged runtime and browser console.
+- No actionable P0, P1, or P2 visual, interaction, responsive, or accessibility findings remain.
 
 final result: passed
