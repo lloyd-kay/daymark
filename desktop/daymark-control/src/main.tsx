@@ -11,7 +11,7 @@ const initialStatus = {
   localUrl: "http://127.0.0.1:3210",
   publicUrl: null,
   version: "0.1.1",
-  latestMigration: "0003_daymark_seed_recovery.sql",
+  latestMigration: "0006_service_scope_widget_defaults.sql",
   message: "Daymark is ready to start.",
 };
 

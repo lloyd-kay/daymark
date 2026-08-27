@@ -12,7 +12,7 @@ export function overlaps(a: TimeRange, b: TimeRange): boolean {
 }
 
 export function computeBookableSlots(_input: SlotSearchInput): BookableSlot[] {
-  const { dateKeys, now, rules, busy, zone } = _input;
+  const { dateKeys, now, rules, busy, durationMinutes, zone } = _input;
   const slots: BookableSlot[] = [];
 
   for (const dateKey of dateKeys) {
@@ -21,13 +21,13 @@ export function computeBookableSlots(_input: SlotSearchInput): BookableSlot[] {
     for (const rule of rules.filter((item) => item.weekday === weekday)) {
       for (
         let startMinute = rule.startMinute;
-        startMinute + rule.slotMinutes <= rule.endMinute;
+        startMinute + durationMinutes <= rule.endMinute;
         startMinute += rule.slotMinutes
       ) {
         const start = londonWallTimeToDate(dateKey, startMinute, zone);
         const end = londonWallTimeToDate(
           dateKey,
-          startMinute + rule.slotMinutes,
+          startMinute + durationMinutes,
           zone,
         );
 

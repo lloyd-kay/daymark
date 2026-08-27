@@ -1,20 +1,26 @@
-import { createBooking, listPublicEmployees, listPublicSlots } from "../../../../../lib/data/repository";
+import {
+  createBooking,
+  listPublicEmployees,
+  listPublicServices,
+  listPublicSlots,
+} from "../../../../../lib/data/repository";
 import { noStoreJson } from "../../../../../lib/http";
 import { createPublicBookingService } from "../../../../../lib/public-booking";
 import { resolvePublicWorkspace } from "../../../../../lib/workspaces/public-scope";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ workspaceSlug: string }> | { workspaceSlug: string } },
 ) {
   const { workspaceSlug } = await context.params;
   const scope = await resolvePublicWorkspace(workspaceSlug);
   if (!scope) return notFound();
   const result = await createPublicBookingService(scope, {
+    listPublicServices,
     listPublicEmployees,
     listPublicSlots,
     createBooking,
-  }).employees();
+  }).employees({ serviceId: new URL(request.url).searchParams.get("serviceId") });
   return noStoreJson(result.body, result.status);
 }
 

@@ -38,6 +38,7 @@ describe("computeBookableSlots", () => {
       now: new Date("2026-08-01T12:00:00.000Z"),
       rules: [mondayRule()],
       busy: [],
+      durationMinutes: 30,
       zone: "Europe/London",
     });
 
@@ -76,6 +77,7 @@ describe("computeBookableSlots", () => {
           endAt: "2026-08-10T09:30:00.000Z",
         },
       ],
+      durationMinutes: 30,
       zone: "Europe/London",
     });
 
@@ -90,6 +92,7 @@ describe("computeBookableSlots", () => {
       now: new Date("2026-08-10T09:00:00.000Z"),
       rules: [mondayRule()],
       busy: [],
+      durationMinutes: 30,
       zone: "Europe/London",
     });
 
@@ -104,6 +107,7 @@ describe("computeBookableSlots", () => {
       now: new Date("2026-03-01T12:00:00.000Z"),
       rules: [mondayRule()],
       busy: [],
+      durationMinutes: 30,
       zone: "Europe/London",
     });
 
@@ -116,10 +120,35 @@ describe("computeBookableSlots", () => {
       now: new Date("2026-10-01T12:00:00.000Z"),
       rules: [mondayRule()],
       busy: [],
+      durationMinutes: 30,
       zone: "Europe/London",
     });
 
     expect(slot.startAt).toBe("2026-10-26T09:00:00.000Z");
+  });
+
+  it("fits a 90-minute service into 30-minute start intervals", () => {
+    const slots = computeBookableSlots({
+      dateKeys: ["2026-08-10"],
+      now: new Date("2026-08-01T12:00:00.000Z"),
+      rules: [mondayRule()],
+      busy: [],
+      durationMinutes: 90,
+      zone: "Europe/London",
+    });
+
+    expect(slots).toEqual([
+      {
+        dateKey: "2026-08-10",
+        startAt: "2026-08-10T08:00:00.000Z",
+        endAt: "2026-08-10T09:30:00.000Z",
+      },
+      {
+        dateKey: "2026-08-10",
+        startAt: "2026-08-10T08:30:00.000Z",
+        endAt: "2026-08-10T10:00:00.000Z",
+      },
+    ]);
   });
 });
 

@@ -1,0 +1,41 @@
+{
+  "browser": "user-selected Chrome",
+  "route": "http://localhost:3000/",
+  "desktopEvidence": {
+    "file": "qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg",
+    "imagePixels": {
+      "width": 5351,
+      "height": 2039
+    },
+    "cssViewport": {
+      "width": 4300,
+      "height": 1631,
+      "devicePixelRatio": 0.8
+    }
+  },
+  "responsiveCheck": {
+    "requestedPhysicalViewport": {
+      "width": 312,
+      "height": 675
+    },
+    "observedCssViewport": {
+      "width": 390,
+      "height": 843,
+      "devicePixelRatio": 0.8
+    },
+    "horizontalOverflowPixels": 0,
+    "journeyCardsStacked": true,
+    "placementCardsStacked": true,
+    "summaryRowsStacked": true
+  },
+  "interactionCheck": {
+    "fullCardPointerActivation": true,
+    "keyboardEnterActivation": true,
+    "selectedAriaPressed": "true",
+    "summaryAfterPageServiceSelection": "Booking starts: This page's service; Widget appears: Floating button",
+    "forwardTabReachedJourneyControl": true,
+    "focusedCardOutlineWidth": "3.75px",
+    "focusedCardOutlineOffset": "5px"
+  },
+  "consoleErrorsOrWarnings": []
+}

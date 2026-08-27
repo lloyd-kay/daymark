@@ -61,6 +61,34 @@ function Assert-DaymarkVcRuntime {
     return $version.ToString()
 }
 
+function Assert-DaymarkProtocolRegistration {
+    $protocolRoot = "Registry::HKEY_CLASSES_ROOT\daymark"
+    if (-not (Test-Path -LiteralPath $protocolRoot)) {
+        throw "The Daymark URL protocol is not registered."
+    }
+    try {
+        Get-ItemPropertyValue -LiteralPath $protocolRoot -Name "URL Protocol" -ErrorAction Stop | Out-Null
+    }
+    catch {
+        throw "The Daymark protocol is missing its URL Protocol marker."
+    }
+
+    $controlPath = Join-Path $env:ProgramFiles "Daymark Control\Daymark Control.exe"
+    if (-not (Test-Path -LiteralPath $controlPath -PathType Leaf)) {
+        throw "The installed Daymark Control executable is missing."
+    }
+    $commandKey = Join-Path $protocolRoot "shell\open\command"
+    if (-not (Test-Path -LiteralPath $commandKey)) {
+        throw "The Daymark protocol open command is missing."
+    }
+    $command = (Get-Item -LiteralPath $commandKey).GetValue("")
+    $expected = '"{0}" "%1"' -f $controlPath
+    if (-not [string]::Equals([string]$command, $expected, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "The Daymark protocol command does not point only to the installed Control executable with one URI argument."
+    }
+    return $true
+}
+
 function Invoke-DaymarkInstaller {
     param([string]$Path)
     $resolved = (Resolve-Path -LiteralPath $Path).Path

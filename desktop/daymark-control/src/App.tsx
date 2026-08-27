@@ -15,6 +15,7 @@ import {
   verifyBackup,
 } from "./control";
 import { PublicAccessPanel } from "./PublicAccessPanel";
+import { listenForSetupProfileLinks } from "./deep-links";
 import { RuntimeModePanel } from "./RuntimeModePanel";
 import { SetupPanel } from "./SetupPanel";
 import {
@@ -52,6 +53,7 @@ export function App({ initialStatus }: AppProps) {
   const status = useRuntimeStatus(initialStatus);
   const [runtimeAction, setRuntimeAction] = useState<"idle" | "working">("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [deepLinkError, setDeepLinkError] = useState(false);
   const [setupConfigured, setSetupConfigured] = useState(true);
   const isRunning = status.state === "running";
   const canRestart = status.state === "running" || status.state === "needs_attention";
@@ -69,6 +71,26 @@ export function App({ initialStatus }: AppProps) {
       });
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let active = true;
+    let stopListening: (() => void) | undefined;
+    void listenForSetupProfileLinks(() => {
+      if (active) setDeepLinkError(true);
+    })
+      .then((stop) => {
+        if (active) stopListening = stop;
+        else stop();
+      })
+      .catch(() => {
+        if (active) setDeepLinkError(true);
+      });
+    return () => {
+      active = false;
+      stopListening?.();
     };
   }, []);
 
@@ -153,6 +175,11 @@ export function App({ initialStatus }: AppProps) {
             </div>
           </dl>
           {runtimeError ? <p className="control-error" role="alert">{runtimeError}</p> : null}
+          {deepLinkError ? (
+            <p className="control-error" role="alert">
+              That Daymark setup link could not be opened. Use the setup code instead.
+            </p>
+          ) : null}
           <div className="primary-actions">
             <button
               type="button"

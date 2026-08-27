@@ -14,6 +14,7 @@ import {
   Settings2,
   ShieldCheck,
   UsersRound,
+  Wrench,
   X,
 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
@@ -22,11 +23,14 @@ import type {
   EmployeeAvailability,
   ScheduleEntry,
   TeamProfile,
+  WorkspaceEmbedPreference,
+  WorkspaceService,
 } from "../../lib/data/contracts";
 import { EmbedPanel } from "./EmbedPanel";
+import { ServicesPanel } from "./ServicesPanel";
 import { TeamAccessPanel } from "./TeamAccessPanel";
 
-type WorkspaceView = "schedule" | "availability" | "team" | "embed";
+type WorkspaceView = "schedule" | "availability" | "team" | "services" | "embed";
 
 const WEEKDAYS = [
   [1, "Mon"],
@@ -41,6 +45,9 @@ const WEEKDAYS = [
 export function WorkspaceClient({
   actor,
   profiles: initialProfiles,
+  initialServices,
+  initialEmbedPreference,
+  initialView = "schedule",
   initialEntries,
   initialAvailability,
   initialRange,
@@ -48,13 +55,18 @@ export function WorkspaceClient({
 }: {
   actor: WorkspaceActor;
   profiles: TeamProfile[];
+  initialServices: WorkspaceService[];
+  initialEmbedPreference: WorkspaceEmbedPreference | null;
+  initialView?: "schedule" | "embed";
   initialEntries: ScheduleEntry[];
   initialAvailability: EmployeeAvailability | null;
   initialRange: { from: string; to: string };
   nowIso: string;
 }) {
-  const [view, setView] = useState<WorkspaceView>("schedule");
+  const [view, setView] = useState<WorkspaceView>(initialView);
   const [profiles, setProfiles] = useState(initialProfiles);
+  const [services, setServices] = useState(initialServices);
+  const [embedPreference, setEmbedPreference] = useState(initialEmbedPreference);
   const [entries, setEntries] = useState(initialEntries);
   const [range, setRange] = useState(initialRange);
   const [scheduleFilter, setScheduleFilter] = useState(
@@ -265,6 +277,9 @@ export function WorkspaceClient({
               <button className={view === "team" ? "is-active" : ""} onClick={() => setView("team")}>
                 <UsersRound size={16} /> Team
               </button>
+              <button className={view === "services" ? "is-active" : ""} onClick={() => setView("services")}>
+                <Wrench size={16} /> Services
+              </button>
               <button className={view === "embed" ? "is-active" : ""} onClick={() => setView("embed")}>
                 <Code2 size={16} /> Embed
               </button>
@@ -370,6 +385,9 @@ export function WorkspaceClient({
                               >
                                 <time>{formatTime(entry.startAt)}</time>
                                 {actor.role === "admin" ? <small>{entry.employeeName}</small> : null}
+                                <small className="appointment-service">
+                                  {entry.serviceName} · {formatDuration(entry.serviceDurationMinutes)}
+                                </small>
                                 <strong>{entry.clientName}</strong>
                                 <span>{entry.clientAddress}</span>
                                 {entry.clientEmail ? <span>{entry.clientEmail}</span> : null}
@@ -498,8 +516,23 @@ export function WorkspaceClient({
             <TeamAccessPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} onProfilesChange={setProfiles} />
           ) : null}
 
+          {view === "services" && actor.role === "admin" ? (
+            <ServicesPanel
+              workspaceSlug={actor.workspaceSlug}
+              profiles={profiles}
+              initialServices={services}
+              onServicesChange={setServices}
+            />
+          ) : null}
+
           {view === "embed" && actor.role === "admin" ? (
-            <EmbedPanel workspaceSlug={actor.workspaceSlug} profiles={profiles} />
+            <EmbedPanel
+              workspaceSlug={actor.workspaceSlug}
+              profiles={profiles}
+              services={services}
+              initialPreference={embedPreference}
+              onPreferenceSaved={setEmbedPreference}
+            />
           ) : null}
         </section>
       </div>
@@ -554,6 +587,13 @@ function formatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatDuration(minutes: number) {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
 function formatFullDate(value: string) {

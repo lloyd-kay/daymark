@@ -1,46 +1,55 @@
-# Daymark homepage design QA
+# Daymark guided booking-setup design QA
 
-## Scope and result
+- Source visual truth: `qa-evidence/daymark-homepage/booking-setup-selector-user-reference.png`
+- Desktop implementation: `qa-evidence/daymark-homepage/guided-booking-setup-desktop-chrome.png`
+- Mobile implementation: `qa-evidence/daymark-homepage/guided-booking-setup-mobile-chrome.png`
+- Interaction record: `qa-evidence/daymark-homepage/guided-booking-setup-qa.json`
+- Route: `http://localhost:3000/`
+- Browser: the user-selected Chrome session
+- Runtime: rebuilt packaged Windows stage using disposable, ignored QA data, backup, and log directories under `artifacts/`
 
-- selected background: `public/daymark-widget-art-4x3-background-2x.png` (2896 x 2172, 4,675,881 bytes)
-- live wordmark font: `public/fonts/libre-bodoni-latin-400.woff2`
-- live tagline font: `public/fonts/dm-sans-latin-variable.woff2`
-- rollback artwork: `public/daymark-widget-art-4x3-readable.png`, `public/daymark-widget-art-4x3-readable-2x.png`, and `public/daymark-widget-art-4x3-textured.png` remain untouched
-- desktop evidence: `qa-evidence/daymark-homepage/live-wordmark-desktop-chrome.png`
-- mobile evidence: `qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png` and `qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png`
-- reference comparison: `qa-evidence/daymark-homepage/live-wordmark-reference-comparison.png`
-- browser record: `qa-evidence/daymark-homepage/chrome-live-wordmark-qa.json`
-- P0-P2 findings: none after the live-type and responsive-scale pass
+## Design decision
 
-## Same-state visual comparison
+The supplied reference showed the two customer-journey cards and two widget-placement cards at the same time. The shared illustrated-card system was retained, but the four-way-looking surface was replaced with progressive disclosure:
 
-The supplied pixelated widget screenshot and the corrected Chrome rendering were placed together in one comparison image. The paper grain, orange binding, folder colours, artwork crop, Cedar House framing, option order, blue section, controls, and selected state remain aligned with the approved source.
+1. “Where will customers start?” shows only the two starting-point cards.
+2. After a choice, “How should booking open?” shows only the two opening-style cards.
+3. Completed choices collapse into a compact progress summary with explicit Change controls.
+4. The live demonstration and installation handoff appear only after both choices are made.
 
-The raster background no longer contains the tiny `DAYMARK` or tagline pixels. Chrome now draws one live Libre Bodoni wordmark and one live DM Sans tagline over the same intrinsic 4:3 coordinate plane in each widget preview. At the 1303 x 1231 desktop viewport, that plane renders at 224 x 168 px; the wordmark is 140.0625 x 25.53125 px and the tagline is 139.9375 x 6.15625 px. The inline copy is unobstructed, while the floating copy remains naturally covered by the unchanged booking panel.
+The demonstration-service switch now appears inside the live result. It is clearly labelled as preview-only and is not presented as a third setup decision.
 
-At 390 x 844, the cards stack in the approved order and the 4:3 planes fit by width. The complete wordmark remains visible in both cards, the tagline scales proportionally instead of being enlarged or clipped, the 205 px floating panel remains present, and `scrollWidth === clientWidth`.
+## Source comparison
 
-## Required fidelity surfaces
+The source screenshot and fresh desktop capture were inspected together. The new version intentionally differs in information architecture while preserving the established Daymark visual language: paper panels, ink borders and shadows, coral step labels, editorial Fraunces headings, compact DM Sans guidance, and the same illustrated Cedar House previews.
 
-- typography and copy: passed; both previews contain the exact live `DAYMARK` and `Book the right person. Keep every calendar private.` strings
-- typography delivery: passed; Chrome observed both self-hosted WOFF2 files as loaded font resources
-- spacing and layout: passed; the 170 px art cutout, desktop columns, mobile stacking, option order, and controls retain their existing geometry
-- colours and visual tokens: passed; the cream paper, coral binding, sage, lilac, ochre, and sky folder palette remains intact
-- image fidelity: passed; both previews load the text-free 2896 x 2172 sibling while all earlier artwork stays recoverable
-- image delivery: passed; both decorative images remain lazy-loaded with asynchronous decoding
-- crop quality: passed; desktop fills the cutout and mobile preserves the complete wordmark without horizontal overflow
-- floating panel preservation: passed; the panel remains visible at 205 px wide and was not moved or hidden
-- interaction: passed; initial pressed state is `[true, false]`, inline activation is `[false, true]`, the URL remains unchanged, and the unit regression records no fetch call
-- console: passed; Chrome recorded zero warnings and zero errors
-- publishing: not performed
+The comparison confirms that the starting-point choices now have the same visual weight and preview anatomy as the placement choices without presenting all four options as one decision. The progress bar makes the two-step sequence visible before the first choice, and no default is presented as already confirmed.
 
-## Verification
+## Responsive and accessibility QA
 
-- focused red-green regression: passed; missing local font assets failed before implementation and all 5 focused widget tests passed afterward
-- full unit suite: 21 files and 149 tests passed
-- lint: passed with zero errors
-- Vinext production build: passed across all five build stages
-- rendered-route checks: 6 passed, 0 failed
-- whitespace validation: `git diff --check` exited 0
+- Chrome was normalized to a 390 × 842 CSS-pixel viewport for the mobile check.
+- Initial and second-step cards stack in one column with 0 px horizontal overflow.
+- A native multi-line fieldset legend initially intersected the question border at mobile width. Both questions were changed to ordinary `section` regions labelled by real headings, then the mobile capture was repeated.
+- The progress list exposes the current step with `aria-current="step"`.
+- Both choice cards retain native button controls and `aria-pressed` state.
+- Selecting an option or using either Change control moves keyboard focus to the newly revealed question or completed-result heading.
+- Change controls restore the relevant question while temporarily hiding, not destroying, the completed live result.
+- The preview-service choices remain native radio controls inside a labelled fieldset.
+
+## Interaction and runtime checks
+
+- Initial load contains two starting-point cards, no placement cards, no live booking flow, and no installation link.
+- Selecting “On a specific service page” advances to the two opening-style cards and collapses step 1.
+- Selecting “Booking section in the page” reveals the matching inline live demonstration and setup profile.
+- Changing an already confirmed starting point keeps focus on the completed-result heading after the live demonstration resets.
+- Switching the preview to Garden planning shows Theo Brooks and Priya Shah and removes Maya Chen and Jon Bell.
+- Changing either completed choice returns to only that question; the other confirmed choice remains summarized.
+- Desktop interaction monitoring recorded no console errors, uncaught errors, or unhandled rejections.
+- The packaged `/api/health` endpoint reports `ok`, application version `0.1.1`, and migration `0006_service_scope_widget_defaults.sql`.
+- Packaged-runtime QA used isolated state under ignored `artifacts/`; `.daymark/` was not used, edited, staged, or committed by this final verification pass.
+
+## Findings
+
+- No actionable P0, P1, or P2 visual, interaction, responsive, or accessibility findings remain.
 
 final result: passed

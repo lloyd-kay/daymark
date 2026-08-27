@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
-import { appointments, loginAttempts } from "../db/schema";
+import {
+  appointments,
+  employeeServiceQualifications,
+  loginAttempts,
+} from "../db/schema";
 import {
   appointmentInsertValues,
+  bookedAppointmentOverlapPredicate,
   PUBLIC_PROFILE_SEEDS,
   expiredAppointmentsPredicate,
   profileIdsForScope,
   projectTeamProfile,
   projectScheduleEntry,
+  publicQualificationPredicate,
   retentionCutoffIso,
   sha256,
   shouldRepairPartialSeed,
@@ -92,6 +98,7 @@ describe("privacy retention", () => {
 
 describe("appointment persistence and protected schedule projection", () => {
   const booking: CreateBookingInput = {
+    serviceId: "service-camera",
     employeeId: "maya-chen",
     startAt: "2026-08-10T08:00:00.000Z",
     clientName: "Lloyd Example",
@@ -106,6 +113,11 @@ describe("appointment persistence and protected schedule projection", () => {
       { workspaceId: "workspace-cedar", workspaceSlug: "cedar-house", workspaceName: "Cedar House" },
       booking,
       {
+        id: "service-camera",
+        name: "Camera installation",
+        durationMinutes: 90,
+      },
+      {
         dateKey: "2026-08-10",
         startAt: booking.startAt,
         endAt: "2026-08-10T08:30:00.000Z",
@@ -118,6 +130,9 @@ describe("appointment persistence and protected schedule projection", () => {
       id: "appointment-1",
       workspaceId: "workspace-cedar",
       publicReference: "DM-7K4P2Q",
+      serviceId: "service-camera",
+      serviceName: "Camera installation",
+      serviceDurationMinutes: 90,
       employeeProfileId: "maya-chen",
       clientAddress: "14 Example Street, London, N1 1AA",
       clientEmail: "lloyd@example.com",
@@ -130,6 +145,8 @@ describe("appointment persistence and protected schedule projection", () => {
     const row: ScheduleEntry = {
       id: "appointment-1",
       reference: "DM-7K4P2Q",
+      serviceName: "Camera installation",
+      serviceDurationMinutes: 90,
       employeeProfileId: "maya-chen",
       employeeName: "Maya Chen",
       accent: "coral",
@@ -144,6 +161,48 @@ describe("appointment persistence and protected schedule projection", () => {
     };
 
     expect(projectScheduleEntry(row)).toEqual(row);
+  });
+
+  it("builds current workspace-scoped qualification and overlap guards", () => {
+    const qualification = new SQLiteSyncDialect().sqlToQuery(
+      sql`select 1 from ${employeeServiceQualifications} where ${publicQualificationPredicate(
+        "workspace-cedar",
+        "2026-08-10",
+        "service-camera",
+        "maya-chen",
+      )}`,
+    );
+    expect(qualification.sql).toContain('"employee_service_qualifications"."workspace_id" = ?');
+    expect(qualification.sql).toContain('"employee_service_qualifications"."service_id" = ?');
+    expect(qualification.sql).toContain('"employee_service_qualifications"."employee_profile_id" = ?');
+    expect(qualification.sql).toContain('"employee_service_qualifications"."method" = ?');
+    expect(qualification.sql).toContain('"employee_service_qualifications"."expires_on" >= ?');
+    expect(qualification.params).toEqual(expect.arrayContaining([
+      "workspace-cedar",
+      "service-camera",
+      "maya-chen",
+      "manual",
+      "certificate",
+      "2026-08-10",
+    ]));
+
+    const overlap = new SQLiteSyncDialect().sqlToQuery(
+      sql`select 1 from ${appointments} where ${bookedAppointmentOverlapPredicate(
+        "workspace-cedar",
+        "maya-chen",
+        "2026-08-10T08:30:00.000Z",
+        "2026-08-10T10:00:00.000Z",
+      )}`,
+    );
+    expect(overlap.sql).toContain('"appointments"."start_at" < ?');
+    expect(overlap.sql).toContain('"appointments"."end_at" > ?');
+    expect(overlap.params).toEqual(expect.arrayContaining([
+      "workspace-cedar",
+      "maya-chen",
+      "booked",
+      "2026-08-10T10:00:00.000Z",
+      "2026-08-10T08:30:00.000Z",
+    ]));
   });
 });
 

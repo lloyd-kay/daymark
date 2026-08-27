@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LiveBookingFlow } from "../booking/LiveBookingFlow";
-import { listPublicEmployees } from "../../lib/data/repository";
+import {
+  listPublicEmployees,
+  listPublicServices,
+} from "../../lib/data/repository";
 import { resolvePublicWorkspace } from "../../lib/workspaces/public-scope";
+import { resolveWidgetBooking } from "../../lib/widget/booking-selection";
 import { normalizeWidgetConfig } from "../../lib/widget/protocol";
 import { EmbedBridge } from "./EmbedBridge";
 
@@ -26,24 +30,38 @@ export default async function EmbedPage({
   if (!scope) notFound();
   if (Array.isArray(query.employee)) notFound();
   const employee = singleValue(query.employee) ?? "all";
+  if (Array.isArray(query.service)) notFound();
+  const service = singleValue(query.service) ?? "all";
   const channel = singleValue(query.channel);
-  const config = normalizeWidgetConfig({ mode: "inline", employee });
+  const config = normalizeWidgetConfig({ mode: "inline", employee, service });
 
-  if (config.employee !== employee || !channel || !CHANNEL_PATTERN.test(channel)) {
+  if (
+    config.employee !== employee
+    || config.service !== service
+    || !channel
+    || !CHANNEL_PATTERN.test(channel)
+  ) {
     notFound();
   }
-  const employees = await listPublicEmployees(scope);
-  if (employee !== "all" && !employees.some((candidate) => candidate.id === employee)) {
-    notFound();
-  }
+  const selection = await resolveWidgetBooking(
+    scope,
+    config,
+    {
+      listServices: listPublicServices,
+      listEmployees: listPublicEmployees,
+    },
+  );
+  if (!selection) notFound();
 
   return (
     <main className="embed-shell">
       <LiveBookingFlow
         workspaceSlug={scope.workspaceSlug}
         embedded
-        initialEmployees={employees}
-        initialEmployeeId={employee === "all" ? undefined : employee}
+        initialServices={selection.initialServices}
+        initialEmployees={selection.initialEmployees}
+        initialServiceId={selection.initialServiceId}
+        initialEmployeeId={selection.initialEmployeeId}
       />
       <EmbedBridge channel={channel} />
     </main>

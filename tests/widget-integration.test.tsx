@@ -7,7 +7,8 @@ import { BookingFlow } from "../app/booking/BookingFlow";
 import { DemoBookingFlow } from "../app/demo/DemoBookingFlow";
 import { EmbedBridge } from "../app/embed/EmbedBridge";
 import type { BookingTransport } from "../lib/booking/transport";
-import type { PublicEmployee } from "../lib/data/contracts";
+import type { PublicEmployee, PublicService } from "../lib/data/contracts";
+import { resolveWidgetBooking } from "../lib/widget/booking-selection";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -140,7 +141,7 @@ describe("BookingFlow embed lifecycle", () => {
     await act(async () => {
       window.dispatchEvent(new Event("daymark:reset"));
     });
-    expect(embedded.container.textContent).toContain("Who would you like to meet?");
+    expect(embedded.container.textContent).toContain("Who should deliver this service?");
     expect(embedded.container.textContent).not.toContain("Your time is marked.");
     expect(embedded.container.querySelector("input[name='name']")).toBeNull();
     await act(async () => embedded.root.unmount());
@@ -154,8 +155,141 @@ describe("BookingFlow embed lifecycle", () => {
   });
 });
 
+describe("Embed service resolution", () => {
+  it("keeps catalogue mode unlocked while limiting services for a fixed employee", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn();
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "all" },
+      { listServices, listEmployees },
+    )).resolves.toEqual({
+      initialServices: [service],
+      initialEmployees: [],
+      initialEmployeeId: "maya-chen",
+    });
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).not.toHaveBeenCalled();
+  });
+
+  it("locks an explicit service and validates a fixed employee against its qualified team", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([service]);
+    const listEmployees = vi.fn().mockResolvedValue([employee]);
+
+    const booking = await resolveWidgetBooking(
+      scope,
+      { employee: "maya-chen", service: "camera-installation" },
+      { listServices, listEmployees },
+    );
+
+    expect(listServices).toHaveBeenCalledWith(scope, "maya-chen");
+    expect(listEmployees).toHaveBeenCalledWith(scope, service.id);
+    expect(booking).toMatchObject({
+      initialServices: [service],
+      initialServiceId: service.id,
+      initialEmployees: [employee],
+      initialEmployeeId: "maya-chen",
+    });
+  });
+
+  it("keeps catalogue mode explicit and rejects an unavailable employee-service pair", async () => {
+    const scope = {
+      workspaceId: "workspace-cedar",
+      workspaceSlug: "cedar-house",
+      workspaceName: "Cedar House",
+    };
+    const listServices = vi.fn().mockResolvedValue([]);
+    const listEmployees = vi.fn().mockResolvedValue([]);
+
+    await expect(resolveWidgetBooking(
+      scope,
+      { employee: "theo-brooks", service: "camera-installation" },
+      { listServices, listEmployees },
+    )).resolves.toBeNull();
+  });
+});
+
 describe("DemoBookingFlow", () => {
-  it("completes a non-Maya demonstration without a network request or widget event", async () => {
+  it("resets a controlled page-specific demonstration when its sample service changes", async () => {
+    const view = await render(createElement(DemoBookingFlow, {
+      journey: "page-service",
+      demoService: "interior",
+    }));
+
+    expect(view.container.textContent).toContain("Who should deliver this service?");
+    expect(view.container.textContent).toContain("Interior consultation");
+    expect(view.container.textContent).toContain("1 hr 30 min");
+    expect(view.container.textContent).toContain("Maya Chen");
+    expect(view.container.textContent).toContain("Jon Bell");
+    expect(view.container.textContent).not.toContain("Theo Brooks");
+    expect(view.container.textContent).not.toContain("Priya Shah");
+    expect(view.container.textContent).not.toContain("Which service do you need?");
+
+    const maya = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".person-tab"))
+      .find((button) => button.textContent?.includes("Maya Chen"));
+    await click(maya!);
+    expect(view.container.textContent).toContain("Which day suits you?");
+
+    await act(async () => {
+      view.root.render(createElement(DemoBookingFlow, {
+        journey: "page-service",
+        demoService: "garden",
+      }));
+    });
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
+
+    expect(view.container.textContent).toContain("Who should deliver this service?");
+    expect(view.container.textContent).toContain("Garden planning");
+    expect(view.container.textContent).toContain("2 hours");
+    expect(view.container.textContent).toContain("Theo Brooks");
+    expect(view.container.textContent).toContain("Priya Shah");
+    expect(view.container.textContent).not.toContain("Maya Chen");
+    expect(view.container.textContent).not.toContain("Jon Bell");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .toContain("Demonstration reset for Garden planning");
+    expect(document.activeElement).toBe(
+      view.container.querySelector(".stage-title h3"),
+    );
+
+    await act(async () => view.root.unmount());
+  });
+
+  it("announces the catalogue rather than a sample service when scope resets", async () => {
+    const view = await render(createElement(DemoBookingFlow, {
+      journey: "page-service",
+      demoService: "garden",
+    }));
+
+    await act(async () => {
+      view.root.render(createElement(DemoBookingFlow, {
+        journey: "catalogue",
+        demoService: "garden",
+      }));
+    });
+    await act(async () => new Promise((resolve) => window.setTimeout(resolve, 0)));
+
+    expect(view.container.textContent).toContain("Which service do you need?");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .toContain("Demonstration reset for the full service catalogue.");
+    expect(view.container.querySelector('[role="status"]')?.textContent)
+      .not.toContain("Garden planning");
+    expect(document.activeElement).toBe(view.container.querySelector(".stage-title h3"));
+
+    await act(async () => view.root.unmount());
+  });
+
+  it("filters the neutral service catalogue and completes locally without a widget event", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const complete = vi.fn();
     window.addEventListener("daymark:complete", complete);
@@ -163,6 +297,26 @@ describe("DemoBookingFlow", () => {
 
     try {
       view = await render(createElement(DemoBookingFlow));
+      expect(view.container.textContent).toContain("Which service do you need?");
+      const interior = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Interior consultation"));
+      expect(interior).toBeDefined();
+      await click(interior!);
+      expect(view.container.textContent).toContain("Maya Chen");
+      expect(view.container.textContent).toContain("Jon Bell");
+      expect(view.container.textContent).not.toContain("Theo Brooks");
+      expect(view.container.textContent).not.toContain("Priya Shah");
+
+      await click(view.container.querySelector<HTMLButtonElement>(".back-button")!);
+      const garden = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".service-choice-card"))
+        .find((button) => button.textContent?.includes("Garden planning"));
+      expect(garden).toBeDefined();
+      await click(garden!);
+      expect(view.container.textContent).toContain("Theo Brooks");
+      expect(view.container.textContent).toContain("Priya Shah");
+      expect(view.container.textContent).not.toContain("Maya Chen");
+      expect(view.container.textContent).not.toContain("Jon Bell");
+
       const theo = Array.from(view.container.querySelectorAll<HTMLButtonElement>(".person-tab"))
         .find((button) => button.textContent?.includes("Theo Brooks"));
       expect(theo).toBeDefined();
@@ -182,6 +336,7 @@ describe("DemoBookingFlow", () => {
       expect(text).toContain("Demonstration complete");
       expect(text).toContain("No appointment was created.");
       expect(text).toContain("Theo Brooks");
+      expect(text).toContain("Garden planning (2 hours)");
       expect(text).toContain("Demo reference");
       expect(text).toContain("DEMO-ONLY");
       expect(text).not.toContain("Appointment confirmed");
@@ -204,15 +359,27 @@ const employee: PublicEmployee = {
   accent: "coral",
 };
 
+const service: PublicService = {
+  id: "service-camera",
+  slug: "camera-installation",
+  name: "Camera installation",
+  category: "Smart security",
+  description: "Install and configure a camera.",
+  durationMinutes: 90,
+};
+
 async function completeBooking(embedded: boolean) {
   const startAt = "2026-08-06T09:00:00.000Z";
   const transport: BookingTransport = {
+    loadEmployees: vi.fn().mockResolvedValue([employee]),
     loadSlots: vi.fn().mockResolvedValue({
       dateKeys: ["2026-08-06"],
       slots: [{ dateKey: "2026-08-06", startAt, endAt: "2026-08-06T09:30:00.000Z" }],
     }),
     createBooking: vi.fn().mockResolvedValue({
       reference: "DM-TEST",
+      serviceName: "Camera installation",
+      serviceDurationMinutes: 90,
       employeeName: "Maya Chen",
       startAt,
       endAt: "2026-08-06T09:30:00.000Z",
@@ -221,6 +388,8 @@ async function completeBooking(embedded: boolean) {
     }),
   };
   const view = await render(createElement(BookingFlow, {
+    initialServices: [service],
+    initialServiceId: service.id,
     initialEmployees: [employee],
     transport,
     embedded,

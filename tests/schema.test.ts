@@ -8,10 +8,13 @@ import {
   availabilityRules,
   blockedPeriods,
   credentials,
+  employeeServiceQualifications,
   employeeProfiles,
   invitations,
   loginAttempts,
   memberships,
+  services,
+  workspaceEmbedPreferences,
   workspaces,
 } from "../db/schema";
 
@@ -21,6 +24,9 @@ describe("Daymark schema", () => {
     expect(accounts).toBeDefined();
     expect(memberships).toBeDefined();
     expect(employeeProfiles).toBeDefined();
+    expect(services).toBeDefined();
+    expect(employeeServiceQualifications).toBeDefined();
+    expect(workspaceEmbedPreferences).toBeDefined();
     expect(invitations).toBeDefined();
     expect(availabilityRules).toBeDefined();
     expect(blockedPeriods).toBeDefined();
@@ -32,10 +38,58 @@ describe("Daymark schema", () => {
     expect(getTableColumns(memberships).workspaceId.notNull).toBe(true);
     expect(getTableColumns(memberships).accountId.notNull).toBe(true);
     expect(getTableColumns(employeeProfiles).workspaceId.notNull).toBe(true);
+    expect(getTableColumns(services).workspaceId.notNull).toBe(true);
+    expect(getTableColumns(employeeServiceQualifications).workspaceId.notNull).toBe(true);
     expect(getTableColumns(invitations).workspaceId.notNull).toBe(true);
     expect(getTableColumns(availabilityRules).workspaceId.notNull).toBe(true);
     expect(getTableColumns(blockedPeriods).workspaceId.notNull).toBe(true);
     expect(getTableColumns(appointments).workspaceId.notNull).toBe(true);
+  });
+});
+
+describe("workspace embed preference schema", () => {
+  it("stores one constrained default per workspace", () => {
+    const columns = getTableColumns(workspaceEmbedPreferences);
+    expect(columns.workspaceId.primary).toBe(true);
+    expect(columns.workspaceId.notNull).toBe(true);
+    expect(columns.defaultMode.notNull).toBe(true);
+    expect(columns.defaultServiceScope.notNull).toBe(true);
+    expect(columns.defaultServiceId.notNull).toBe(false);
+    expect(columns.createdAt.notNull).toBe(true);
+    expect(columns.updatedAt.notNull).toBe(true);
+  });
+
+  it("backfills existing workspaces with the current floating catalogue default", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0005_daymark_embed_preferences.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration).toMatch(/default_mode[^;]+check[^;]+floating[^;]+inline/is);
+    expect(migration).toMatch(/default_service_scope[^;]+check[^;]+all/is);
+    expect(migration).toMatch(
+      /insert into `workspace_embed_preferences`[\s\S]+select `id`, 'floating', 'all'[\s\S]+from `workspaces`/i,
+    );
+  });
+
+  it("migrates catalogue preferences to the constrained service-scope schema", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0006_service_scope_widget_defaults.sql", import.meta.url),
+      "utf8",
+    );
+
+    expect(migration).toMatch(/pragma foreign_keys\s*=\s*off/i);
+    expect(migration).toMatch(/create unique index `idx_services_workspace_id`/i);
+    expect(migration).toMatch(/`default_service_id` text/i);
+    expect(migration).toMatch(
+      /foreign key \(`workspace_id`,`default_service_id`\) references `services`\(`workspace_id`,`id`\)/i,
+    );
+    expect(migration).toMatch(
+      /select "workspace_id", "default_mode", 'all', null, "created_at", "updated_at" from `workspace_embed_preferences`/i,
+    );
+    expect(migration).toMatch(/pragma foreign_key_check/i);
+    expect(migration).toMatch(/pragma optimize/i);
+    expect(migration).toMatch(/pragma foreign_keys\s*=\s*on/i);
   });
 });
 
@@ -75,6 +129,13 @@ describe("Daymark widget auth migration", () => {
       migration.lastIndexOf("PRAGMA foreign_keys=ON"),
     );
   });
+
+  it("stores a resilient service relationship and immutable appointment snapshot", () => {
+    const columns = getTableColumns(appointments);
+    expect(columns.serviceId.notNull).toBe(false);
+    expect(columns.serviceName.notNull).toBe(true);
+    expect(columns.serviceDurationMinutes.notNull).toBe(true);
+  });
 });
 
 describe("company workspace migration", () => {
@@ -94,6 +155,26 @@ describe("company workspace migration", () => {
     expect(migration.lastIndexOf("PRAGMA foreign_keys=ON")).toBeGreaterThan(
       migration.indexOf("drop table `appointments`"),
     );
+    expect(migration).toMatch(/PRAGMA foreign_key_check/);
+    expect(migration).toMatch(/PRAGMA optimize/);
+  });
+});
+
+describe("service catalogue migration", () => {
+  it("backfills General appointment services before attaching legacy appointments", async () => {
+    const migration = await readFile(
+      new URL("../drizzle/0004_daymark_service_catalog.sql", import.meta.url),
+      "utf8",
+    );
+
+    const serviceInsert = migration.indexOf("insert into `services`");
+    const qualificationInsert = migration.indexOf(
+      "insert into `employee_service_qualifications`",
+    );
+    const appointmentBackfill = migration.indexOf("update `appointments`");
+    expect(serviceInsert).toBeGreaterThan(-1);
+    expect(qualificationInsert).toBeGreaterThan(serviceInsert);
+    expect(appointmentBackfill).toBeGreaterThan(qualificationInsert);
     expect(migration).toMatch(/PRAGMA foreign_key_check/);
     expect(migration).toMatch(/PRAGMA optimize/);
   });

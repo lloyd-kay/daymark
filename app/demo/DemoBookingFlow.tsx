@@ -1,22 +1,54 @@
 "use client";
 
-import { demoBookingTransport } from "../../lib/booking/transport";
-import type { PublicEmployee } from "../../lib/data/contracts";
+import { useEffect, useRef, useState } from "react";
+import {
+  DEMO_SERVICES,
+  demoBookingTransport,
+  demoScenario,
+  type DemoServiceKey,
+} from "../../lib/booking/demo";
 import { BookingFlow } from "../booking/BookingFlow";
 
-const DEMO_EMPLOYEES: PublicEmployee[] = [
-  { id: "maya-chen", publicName: "Maya Chen", title: "Client partner", bio: "Thoughtful planning and project conversations.", accent: "coral" },
-  { id: "theo-brooks", publicName: "Theo Brooks", title: "Operations specialist", bio: "Practical sessions for keeping work moving.", accent: "sage" },
-  { id: "priya-shah", publicName: "Priya Shah", title: "Project adviser", bio: "Focused support for decisions and next steps.", accent: "lilac" },
-  { id: "jon-bell", publicName: "Jon Bell", title: "Team coordinator", bio: "Clear, friendly appointments for general enquiries.", accent: "ochre" },
-];
+export function DemoBookingFlow({
+  journey = "catalogue",
+  demoService = "interior",
+}: {
+  journey?: "catalogue" | "page-service";
+  demoService?: DemoServiceKey;
+} = {}) {
+  const scenario = demoScenario(demoService);
+  const fixedService = journey === "page-service";
+  const resetKey = `${journey}:${demoService}`;
+  const resetLabel = fixedService
+    ? scenario.service.name
+    : "the full service catalogue";
+  const container = useRef<HTMLDivElement>(null);
+  const previousResetKey = useRef(resetKey);
+  const [resetMessage, setResetMessage] = useState("");
 
-export function DemoBookingFlow() {
+  useEffect(() => {
+    if (previousResetKey.current === resetKey) return;
+    previousResetKey.current = resetKey;
+    const timer = window.setTimeout(() => {
+      setResetMessage(`Demonstration reset for ${resetLabel}.`);
+      const homepagePreview = container.current?.closest<HTMLElement>(".homepage-live-preview");
+      if (homepagePreview && !homepagePreview.contains(document.activeElement)) return;
+      container.current?.querySelector<HTMLElement>(".stage-title h3")?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [resetKey, resetLabel]);
+
   return (
-    <BookingFlow
-      initialEmployees={DEMO_EMPLOYEES}
-      transport={demoBookingTransport}
-      demonstration
-    />
+    <div className="demo-booking-flow" ref={container}>
+      <span className="sr-only" role="status" aria-live="polite">{resetMessage}</span>
+      <BookingFlow
+        key={resetKey}
+        initialServices={fixedService ? [scenario.service] : DEMO_SERVICES}
+        initialServiceId={fixedService ? scenario.service.id : undefined}
+        initialEmployees={fixedService ? scenario.employees : []}
+        transport={demoBookingTransport}
+        demonstration
+      />
+    </div>
   );
 }

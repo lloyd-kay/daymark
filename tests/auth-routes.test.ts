@@ -86,6 +86,47 @@ describe("authentication routes", () => {
     expect(auth.setup).not.toHaveBeenCalled();
   });
 
+  it("passes an optional transferable setup profile separately from the installer secret", async () => {
+    auth.setup.mockResolvedValue({ status: 200, body: { ok: true } });
+    const { POST } = await import("../app/api/auth/setup/route");
+    const response = await POST(request("/api/auth/setup", {
+      setupCode: "setup-secret",
+      setupProfileCode: "DM2-P-I-2Y6D",
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
+      displayName: "Maya Chen",
+      email: "maya@example.com",
+      password: "a secure password",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(auth.setup).toHaveBeenCalledWith({
+      setupCode: "setup-secret",
+      setupProfileCode: "DM2-P-I-2Y6D",
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
+      displayName: "Maya Chen",
+      email: "maya@example.com",
+      password: "a secure password",
+    }, "setup-secret");
+  });
+
+  it("rejects a non-string setup profile before calling authentication", async () => {
+    const { POST } = await import("../app/api/auth/setup/route");
+    const response = await POST(request("/api/auth/setup", {
+      setupCode: "setup-secret",
+      setupProfileCode: { code: "DM1-C-I-355C" },
+      workspaceName: "Cedar House",
+      workspaceSlug: "cedar-house",
+      displayName: "Maya Chen",
+      email: "maya@example.com",
+      password: "a secure password",
+    }));
+
+    expect(response.status).toBe(400);
+    expect(auth.setup).not.toHaveBeenCalled();
+  });
+
   it("sets the session cookie and supplies a request fingerprint on sign-in", async () => {
     auth.signIn.mockResolvedValue({
       status: 200,

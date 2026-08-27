@@ -24,6 +24,7 @@ function isSetupBody(value: unknown): value is {
   displayName: string;
   email: string;
   password: string;
+  setupProfileCode?: string;
 } {
   if (!value || typeof value !== "object") return false;
   const body = value as Record<string, unknown>;
@@ -32,7 +33,8 @@ function isSetupBody(value: unknown): value is {
     && typeof body.workspaceSlug === "string"
     && typeof body.displayName === "string"
     && typeof body.email === "string"
-    && typeof body.password === "string";
+    && typeof body.password === "string"
+    && (body.setupProfileCode === undefined || typeof body.setupProfileCode === "string");
 }
 
 function authResponse(result: Awaited<ReturnType<ReturnType<typeof authService>["setup"]>>) {

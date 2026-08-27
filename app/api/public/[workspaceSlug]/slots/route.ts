@@ -1,4 +1,9 @@
-import { createBooking, listPublicEmployees, listPublicSlots } from "../../../../../lib/data/repository";
+import {
+  createBooking,
+  listPublicEmployees,
+  listPublicServices,
+  listPublicSlots,
+} from "../../../../../lib/data/repository";
 import { noStoreJson } from "../../../../../lib/http";
 import { createPublicBookingService } from "../../../../../lib/public-booking";
 import { resolvePublicWorkspace } from "../../../../../lib/workspaces/public-scope";
@@ -12,10 +17,12 @@ export async function GET(
   if (!scope) return notFound();
   const url = new URL(request.url);
   const result = await createPublicBookingService(scope, {
+    listPublicServices,
     listPublicEmployees,
     listPublicSlots,
     createBooking,
   }).slots({
+    serviceId: url.searchParams.get("serviceId"),
     employeeId: url.searchParams.get("employeeId"),
     from: url.searchParams.get("from"),
   });

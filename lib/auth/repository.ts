@@ -15,11 +15,16 @@ import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   accounts,
   authSessions,
+  availabilityRules,
   credentials,
+  employeeServiceQualifications,
   employeeProfiles,
   invitations,
   loginAttempts,
   memberships,
+  runtimeState,
+  services,
+  workspaceEmbedPreferences,
   workspaces,
 } from "../../db/schema";
 import type {
@@ -29,6 +34,15 @@ import type {
   WorkspaceMembershipRecord,
 } from "../data/contracts";
 import type { PasswordVerifier } from "./password";
+import {
+  generalQualificationValues,
+  generalServiceValues,
+} from "../services/defaults";
+import {
+  INITIAL_AVAILABILITY_MARKER,
+  initialAvailabilityValues,
+  initialProfileValues,
+} from "../data/initial-roster";
 
 const IDLE_SESSION_MS = 12 * 60 * 60 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -108,6 +122,11 @@ export async function createInitialWorkspaceAdministrator(input: {
   displayName: string;
   verifier: PasswordVerifier;
   mustChangePassword: false;
+  embedPreference: {
+    defaultMode: "floating" | "inline";
+    defaultServiceScope: "all";
+    defaultServiceId: null;
+  };
 }): Promise<{ accountId: string; workspaceSlug: string }> {
   const db = await database();
   const workspaceId = crypto.randomUUID();
@@ -115,6 +134,8 @@ export async function createInitialWorkspaceAdministrator(input: {
   const membershipId = crypto.randomUUID();
   const now = new Date().toISOString();
   const email = normalizedEmail(input.email);
+  const initialProfiles = initialProfileValues(workspaceId);
+  const initialAvailability = initialAvailabilityValues(workspaceId);
   await db.batch([
     db.insert(workspaces).values({
       id: workspaceId,
@@ -124,6 +145,32 @@ export async function createInitialWorkspaceAdministrator(input: {
       createdAt: now,
       updatedAt: now,
     }),
+    db.insert(workspaceEmbedPreferences).values({
+      workspaceId,
+      defaultMode: input.embedPreference.defaultMode,
+      defaultServiceScope: input.embedPreference.defaultServiceScope,
+      defaultServiceId: input.embedPreference.defaultServiceId,
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(services).values({
+      ...generalServiceValues(workspaceId),
+      createdAt: now,
+      updatedAt: now,
+    }),
+    db.insert(employeeProfiles).values(initialProfiles),
+    db.insert(employeeServiceQualifications).values(
+      initialProfiles.map(generalQualificationValues),
+    ),
+    ...initialProfiles.map((profile) =>
+      db.insert(availabilityRules).values(
+        initialAvailability.filter((rule) => rule.employeeProfileId === profile.id),
+      )),
+    db.insert(runtimeState).values({
+      key: INITIAL_AVAILABILITY_MARKER,
+      value: "complete",
+      updatedAt: now,
+    }).onConflictDoNothing(),
     db.insert(accounts).values({
       id: accountId,
       email,

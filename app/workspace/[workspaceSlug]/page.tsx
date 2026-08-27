@@ -8,7 +8,12 @@ import {
   listSchedule,
   listTeamProfiles,
 } from "../../../lib/data/repository";
-import type { TeamProfile } from "../../../lib/data/contracts";
+import type {
+  TeamProfile,
+  WorkspaceEmbedPreference,
+} from "../../../lib/data/contracts";
+import { getWorkspaceEmbedPreference } from "../../../lib/data/embed-preference-repository";
+import { listWorkspaceServices } from "../../../lib/data/service-repository";
 import { normalizeWorkspaceSlug } from "../../../lib/workspaces/slug";
 import { PasswordChangeGate } from "../PasswordChangeGate";
 import { WorkspaceClient } from "../WorkspaceClient";
@@ -22,10 +27,13 @@ export const metadata: Metadata = {
 
 export default async function CompanyWorkspacePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workspaceSlug: string }> | { workspaceSlug: string };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { workspaceSlug: rawSlug } = await params;
+  const query = searchParams ? await searchParams : {};
   const workspaceSlug = normalizeWorkspaceSlug(rawSlug);
   const actor = await getWorkspaceActor(workspaceSlug);
   if (!actor) {
@@ -82,17 +90,26 @@ export default async function CompanyWorkspacePage({
   const selectedProfileId = actor.employeeProfileId
     ?? profiles.find((profile) => profile.active)?.id
     ?? null;
-  const [entries, availability] = await Promise.all([
+  const [entries, availability, initialServices, initialEmbedPreference] = await Promise.all([
     listSchedule(scope, { from, to }, actor.employeeProfileId ?? undefined),
     selectedProfileId
       ? getEmployeeAvailability(scope, selectedProfileId)
       : Promise.resolve(null),
+    actor.role === "admin"
+      ? listWorkspaceServices({ workspaceId: actor.workspaceId })
+      : Promise.resolve([]),
+    actor.role === "admin"
+      ? getWorkspaceEmbedPreference({ workspaceId: actor.workspaceId })
+      : Promise.resolve<WorkspaceEmbedPreference | null>(null),
   ]);
 
   return (
     <WorkspaceClient
       actor={actor}
       profiles={profiles}
+      initialServices={initialServices}
+      initialEmbedPreference={initialEmbedPreference}
+      initialView={actor.role === "admin" && query.view === "embed" ? "embed" : "schedule"}
       initialEntries={entries}
       initialAvailability={availability}
       initialRange={{ from, to }}

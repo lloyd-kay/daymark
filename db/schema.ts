@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  foreignKey,
   index,
   integer,
   sqliteTable,
@@ -94,6 +95,118 @@ export const employeeProfiles = sqliteTable(
       table.workspaceId,
       table.active,
       table.sortOrder,
+    ),
+  ],
+);
+
+export const services = sqliteTable(
+  "services",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    category: text("category").notNull(),
+    description: text("description").notNull().default(""),
+    durationMinutes: integer("duration_minutes").notNull().default(30),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("idx_services_workspace_slug").on(table.workspaceId, table.slug),
+    uniqueIndex("idx_services_workspace_id").on(table.workspaceId, table.id),
+    index("idx_services_workspace_active_sort").on(
+      table.workspaceId,
+      table.active,
+      table.sortOrder,
+    ),
+    check(
+      "services_duration_check",
+      sql`${table.durationMinutes} between 15 and 480 and ${table.durationMinutes} % 15 = 0`,
+    ),
+  ],
+);
+
+export const workspaceEmbedPreferences = sqliteTable(
+  "workspace_embed_preferences",
+  {
+    workspaceId: text("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    defaultMode: text("default_mode")
+      .$type<"floating" | "inline">()
+      .notNull(),
+    defaultServiceScope: text("default_service_scope")
+      .$type<"all" | "service">()
+      .notNull(),
+    defaultServiceId: text("default_service_id"),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "workspace_embed_preferences_default_mode_check",
+      sql`${table.defaultMode} in ('floating', 'inline')`,
+    ),
+    check(
+      "workspace_embed_preferences_service_scope_check",
+      sql`(
+        ${table.defaultServiceScope} = 'all' and ${table.defaultServiceId} is null
+      ) or (
+        ${table.defaultServiceScope} = 'service' and ${table.defaultServiceId} is not null
+      )`,
+    ),
+    foreignKey({
+      name: "workspace_embed_preferences_service_workspace_fk",
+      columns: [table.workspaceId, table.defaultServiceId],
+      foreignColumns: [services.workspaceId, services.id],
+    }),
+  ],
+);
+
+export const employeeServiceQualifications = sqliteTable(
+  "employee_service_qualifications",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    employeeProfileId: text("employee_profile_id")
+      .notNull()
+      .references(() => employeeProfiles.id, { onDelete: "cascade" }),
+    serviceId: text("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    method: text("method").$type<"manual" | "certificate">().notNull(),
+    certificateName: text("certificate_name"),
+    certificateReference: text("certificate_reference"),
+    issuedOn: text("issued_on"),
+    expiresOn: text("expires_on"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("idx_employee_service_qualifications_pair").on(
+      table.workspaceId,
+      table.employeeProfileId,
+      table.serviceId,
+    ),
+    index("idx_employee_service_qualifications_service_active").on(
+      table.workspaceId,
+      table.serviceId,
+      table.active,
+      table.expiresOn,
+    ),
+    index("idx_employee_service_qualifications_employee_active").on(
+      table.workspaceId,
+      table.employeeProfileId,
+      table.active,
+    ),
+    check(
+      "employee_service_qualifications_method_check",
+      sql`${table.method} in ('manual', 'certificate')`,
     ),
   ],
 );
@@ -198,6 +311,11 @@ export const appointments = sqliteTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     publicReference: text("public_reference").notNull(),
+    serviceId: text("service_id").references(() => services.id, {
+      onDelete: "set null",
+    }),
+    serviceName: text("service_name").notNull().default("General appointment"),
+    serviceDurationMinutes: integer("service_duration_minutes").notNull().default(30),
     employeeProfileId: text("employee_profile_id")
       .notNull()
       .references(() => employeeProfiles.id, { onDelete: "cascade" }),
@@ -220,6 +338,7 @@ export const appointments = sqliteTable(
       table.endAt,
     ),
     index("idx_appointments_retention").on(table.endAt),
+    index("idx_appointments_service").on(table.workspaceId, table.serviceId),
     uniqueIndex("idx_appointments_employee_start_booked")
       .on(table.workspaceId, table.employeeProfileId, table.startAt)
       .where(sql`${table.status} = 'booked'`),
@@ -228,6 +347,10 @@ export const appointments = sqliteTable(
       sql`${table.status} in ('booked', 'cancelled')`,
     ),
     check("appointments_window_check", sql`${table.startAt} < ${table.endAt}`),
+    check(
+      "appointments_service_duration_check",
+      sql`${table.serviceDurationMinutes} between 15 and 480 and ${table.serviceDurationMinutes} % 15 = 0`,
+    ),
   ],
 );
 

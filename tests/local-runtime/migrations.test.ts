@@ -15,6 +15,9 @@ describe("local migrations", () => {
       "0001_daymark_widget_auth.sql",
       "0002_daymark_company_workspaces.sql",
       "0003_daymark_seed_recovery.sql",
+      "0004_daymark_service_catalog.sql",
+      "0005_daymark_embed_preferences.sql",
+      "0006_service_scope_widget_defaults.sql",
     ]);
   });
 
@@ -31,8 +34,8 @@ describe("local migrations", () => {
       });
 
       expect(result).toEqual({
-        appliedCount: 4,
-        latestMigration: "0003_daymark_seed_recovery.sql",
+        appliedCount: 7,
+        latestMigration: "0006_service_scope_widget_defaults.sql",
       });
       expect(calls).toHaveLength(1);
       expect(calls[0]).toEqual(expect.arrayContaining(["d1", "migrations", "apply", "DB", "--local"]));

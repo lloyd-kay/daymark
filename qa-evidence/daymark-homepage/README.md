@@ -46,5 +46,8 @@ All paths below are relative to the project root and are intended to remain port
 - `qa-evidence/daymark-homepage/live-wordmark-mobile-floating-chrome.png` - final 390 x 844 floating-card state with the booking panel unchanged
 - `qa-evidence/daymark-homepage/live-wordmark-mobile-inline-chrome.png` - final 390 x 844 inline-card state with the full live Daymark wordmark visible
 - `qa-evidence/daymark-homepage/chrome-live-wordmark-qa.json` - self-hosted font observation, live overlay geometry, responsive fit, interaction state, and console result
+- `qa-evidence/daymark-homepage/booking-setup-selector-user-reference.png` - supplied customer-journey selector reference, 1196 x 1304 px
+- `qa-evidence/daymark-homepage/booking-setup-selector-desktop-chrome.jpg` - final desktop booking-setup selector in the packaged Chrome runtime, 5351 x 2039 px
+- `qa-evidence/daymark-homepage/chrome-booking-setup-selector-qa.json` - desktop and 390 px responsive geometry, card activation, keyboard focus, selected state, and console result
 
 The older `keyboard-traversal.json` and `keyboard-traversal-blocked.png` remain as historical evidence of the in-app-browser limitation. The final Chrome run supersedes that tooling blocker without using direct DOM focus on either target.
